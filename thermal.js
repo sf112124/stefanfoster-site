@@ -7,14 +7,23 @@ float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
 float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
 uniform vec3 P[5];
-// five colour stops from the edge of the heat to its core, set per project and eased between
+// five colour stops from the edge of the heat to its core. Blended in OKLab (how the eye sees colour) instead of raw RGB,
+// so two colours meeting never pass through grey or brown on the way
+vec3 toLab(vec3 c){c=pow(max(c,0.),vec3(2.2));
+  vec3 l=vec3(.4122*c.r+.5363*c.g+.0514*c.b,.2119*c.r+.6807*c.g+.1074*c.b,.0883*c.r+.2817*c.g+.63*c.b);l=pow(l,vec3(1./3.));
+  return vec3(.2105*l.x+.7936*l.y-.0041*l.z,1.978*l.x-2.4286*l.y+.4506*l.z,.0259*l.x+.7828*l.y-.8087*l.z);}
+vec3 toRGB(vec3 L){vec3 l=vec3(L.x+.3963*L.y+.2158*L.z,L.x-.1056*L.y-.0639*L.z,L.x-.0895*L.y-1.2915*L.z);l=l*l*l;
+  vec3 c=vec3(4.0767*l.x-3.3077*l.y+.2310*l.z,-1.2684*l.x+2.6098*l.y-.3413*l.z,-.0042*l.x-.7034*l.y+1.7076*l.z);
+  return pow(clamp(c,0.,1.),vec3(1./2.2));}
 vec3 ramp(float f){
-  vec3 c=mix(BG,P[0],smoothstep(.04,.2,f));
-  c=mix(c,P[1],smoothstep(.18,.38,f));
-  c=mix(c,P[2],smoothstep(.36,.56,f));
-  c=mix(c,P[3],smoothstep(.54,.76,f));
-  c=mix(c,P[4],smoothstep(.76,1.05,f));
-  return c;
+  vec3 c=mix(toLab(BG),toLab(P[0]),smoothstep(.04,.2,f));
+  c=mix(c,toLab(P[1]),smoothstep(.18,.38,f));
+  c=mix(c,toLab(P[2]),smoothstep(.36,.56,f));
+  c=mix(c,toLab(P[3]),smoothstep(.54,.76,f));
+  c=mix(c,toLab(P[4]),smoothstep(.76,1.05,f));
+  // keep the colour singing where stops meet: a touch more chroma in the middle of the heat
+  c.yz*=1.+.25*smoothstep(.1,.5,f)*(1.-smoothstep(.8,1.05,f));
+  return toRGB(c);
 }
 vec3 hue(vec3 c,float a){const mat3 toY=mat3(.299,.596,.211,.587,-.274,-.523,.114,-.322,.312);const mat3 toR=mat3(1.,1.,1.,.956,-.272,-1.106,.621,-.647,1.703);
   vec3 y=toY*c;float h0=atan(y.z,y.y)+a,ch=length(y.yz);return toR*vec3(y.x,ch*cos(h0),ch*sin(h0));}
