@@ -13,6 +13,8 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
 document.documentElement.classList.toggle("touch", touch);
 const url = (slug, f) => ASSETS[`${slug}/${f}`] || `media/${slug}/${f}`;
+// YouTube doesn't make a big thumbnail for every film: fall back to the smaller one (cropped to 16:9 by the tile)
+addEventListener("error", (e) => { const t = e.target; if (t.tagName === "IMG" && t.src.includes("maxresdefault")) t.src = t.src.replace("maxresdefault", "hqdefault"); }, true);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const fmt = (s) => `${Math.floor(s / 60)}:${pad(Math.round(s % 60))}`;
 // letters stay grouped by word, so a long title wraps between words and never mid-word
@@ -23,7 +25,7 @@ PROJECTS.forEach((p, pi) => {
   const lib = MEDIA[p.slug] || {};
   let sec = null;
   p.pieces = [];
-  (p.youtube || []).forEach((y) => p.pieces.push({ pi, slug: p.slug, yt: y, w: 16, h: 9, caption: y.title, stat: y.note }));
+  (p.youtube || []).forEach((y) => { const th = `https://i.ytimg.com/vi/${y.id}/maxresdefault.jpg`; p.pieces.push({ pi, slug: p.slug, yt: y, w: 16, h: 9, caption: y.title, stat: y.note, thumb: th, still: th }); });
   p.items.forEach((it) => {
     if (it.head) { sec = it; return; }
     const m = lib[it.file]; if (!m) return;
@@ -65,6 +67,9 @@ let viewOpen = false;
 // ---------- the home: a lattice of work on a thermal field, with the index on a curve ----------
 const label = $("label");
 const thermal = new Thermal($("heat"), { reduce, lite: touch });
+// the dream: every piece of work, drifting through the heat
+const dreamPool = (pi) => ALL.filter((x) => !x.yt && (pi == null || x.pi === pi)).map((x) => x.thumb);
+thermal.images(dreamPool());
 const HUES = [0, .35, -.35, .6, -.6, .9, -.2, .45];
 let fam = null;
 const wheel = new Wheel($("wheel"), PROJECTS, {
@@ -82,9 +87,9 @@ const field = new Field($("field"), ALL, {
     label.innerHTML = `<span class="mono">${pad(it.pi + 1)} / ${esc(p.title.toUpperCase())} :: ${esc(p.client.toUpperCase())}</span>${it.caption ? `<b>${esc(it.caption)}</b>` : ""}${it.stat ? `<em class="mono">${esc(it.stat.toUpperCase())}</em>` : ""}`;
     label.classList.add("in");
     sound.rod(sound.note(n.bx / field.W, 1 - n.by / field.H), .014, 4);
-    wheel.set(it.pi); setFam(it.pi);
+    wheel.set(it.pi); setFam(it.pi); if (!it.yt) thermal.show(it.thumb);
   },
-  onOpen: (it, b) => { sound.unlock(); if (it.yt) { window.open(`https://youtu.be/${it.yt.id}`, "_blank", "noopener"); return; } openFromHome(it, b); },
+  onOpen: (it, b) => { sound.unlock(); openFromHome(it, b); },
   onMove: (() => { let lx = 0, ly = 0, lt = 0; return (x, y) => { const t = performance.now(), sp = Math.min(1, Math.hypot(x - lx, y - ly) / Math.max(16, t - lt) * 60); lx = x; ly = y; lt = t; sound.touch(x, 1 - y, sp); }; })(),
   onPad: (x, y, e) => sound.pad(x, y, e),
   onPadEnd: () => sound.padEnd(),
@@ -92,6 +97,7 @@ const field = new Field($("field"), ALL, {
 });
 let palBase = 0;
 function setFam(i) {
+  if (i !== fam) thermal.images(dreamPool(i));
   fam = i; palBase = i == null ? 0 : HUES[i % HUES.length];
   $("readout").innerHTML = i == null ? `INDEX` : `${pad(i + 1)} :: ${esc(PROJECTS[i].title.toUpperCase())}`;
 }
@@ -109,7 +115,9 @@ setTimeout(() => { wheel.maxW = 0; field.layout(); }, 1200);
     trip = viewOpen || !document.getElementById("lb").hidden ? Math.max(0, trip - dt * .5) : Math.min(touch ? .45 : 1, trip + dt / 40);
     field.trip = reduce ? 0 : trip;
     thermal.palT = palBase + (reduce ? 0 : Math.sin(now / 9000) * trip * 1.1);
-    thermal.boost = trip; document.documentElement.style.setProperty("--trip", trip.toFixed(3)); }
+    thermal.boost = entered ? trip : 1.3;
+    thermal.baseT = entered ? (innerWidth <= 700 ? .24 : .1) : .72; thermal.dreamT = entered ? .95 : 1;
+    document.documentElement.style.setProperty("--trip", trip.toFixed(3)); }
   const S = [], r = fr || (fr = field.el.getBoundingClientRect());
   trail[0].x += (hand.x - trail[0].x) * .08; trail[0].y += (hand.y - trail[0].y) * .08;
   trail[1].x += (trail[0].x - trail[1].x) * .05; trail[1].y += (trail[0].y - trail[1].y) * .05;
@@ -134,7 +142,7 @@ setTimeout(() => { wheel.maxW = 0; field.layout(); }, 1200);
 const lb = $("lb"), lbm = $("lbm");
 let deck = null, lbk = -1, lbv = null;
 function fitRect(it) {
-  const barH = 92, W = innerWidth * .94, H = innerHeight - barH - 56, a = it.w / it.h;
+  const barH = innerWidth <= 700 ? 140 : 92, W = innerWidth * .94, H = innerHeight - barH - 56, a = it.w / it.h;
   const w = Math.min(W, H * a), h = w / a;
   return { x: (innerWidth - w) / 2, y: 28 + (H - h) / 2, w, h };
 }
@@ -147,7 +155,14 @@ function lbFill(k) {
   place(fitRect(it));
   lbm.innerHTML = `<img src="${it.still}" alt="">`;
   lbm.classList.remove("live");
-  if (it.film) {
+  lb.classList.toggle("isyt", !!it.yt);
+  if (it.yt) {
+    const f = document.createElement("iframe");
+    f.src = `https://www.youtube-nocookie.com/embed/${it.yt.id}?autoplay=1&rel=0&modestbranding=1&playsinline=1&color=white`;
+    f.allow = "autoplay; fullscreen; encrypted-media; picture-in-picture"; f.allowFullscreen = true; f.title = it.caption || "";
+    f.addEventListener("load", () => lbm.classList.add("live"), { once: true });
+    lbm.appendChild(f); sound.duck(true);
+  } else if (it.film) {
     const v = document.createElement("video");
     v.playsInline = true; v.src = it.film; v.loop = it.film === it.loop; v.muted = sound.films === false;
     v.addEventListener("playing", () => lbm.classList.add("live"), { once: true });
@@ -167,8 +182,9 @@ function lbFill(k) {
 }
 const grab = (el) => { const v = el.querySelector("video"); return { from: R(el.getBoundingClientRect()), src: v && v.readyState >= 2 && !v.paused ? v : el.querySelector("img") }; };
 async function lbOpen(list, k, fromEl, { home = false, blob = 0, from: from0, src: src0 } = {}) {
-  const it = list[k]; if (!it || it.yt) return;
+  const it = list[k]; if (!it) return;
   deck = { list, home };
+  if (it.yt) { lb.hidden = false; lb.classList.remove("shown"); lb.getBoundingClientRect(); lb.classList.add("open"); lbFill(k); lb.classList.add("shown"); return; }
   const g0 = from0 ? { from: from0, src: src0 } : grab(fromEl), from = g0.from, src = g0.src, to = fitRect(it);
   lb.hidden = false; lb.classList.remove("shown"); lb.getBoundingClientRect(); lb.classList.add("open");
   fromEl?.classList.add("lifted");
@@ -189,9 +205,8 @@ function openFromHome(it, b) {
     const k = page.pieces.indexOf(it.src), tile = page.tiles[k]; if (!tile) return;
     view.scrollTop = Math.max(0, tile.offsetTop - (innerHeight - tile.offsetHeight) / 2);
     const tm = tile.querySelector(".tm");
-    tile.classList.add("lifted"); vin.querySelector(".work")?.classList.add("picking");
-    await melt.run({ el: src, from, to: R(tm.getBoundingClientRect()), blobFrom: 1, blobTo: 0, dur: reduce ? 1 : 900 });
-    tile.classList.remove("lifted");
+    vin.querySelector(".work")?.classList.add("picking");
+    if (!it.yt) { tile.classList.add("lifted"); await melt.run({ el: src, from, to: R(tm.getBoundingClientRect()), blobFrom: 1, blobTo: 0, dur: reduce ? 1 : 900 }); tile.classList.remove("lifted"); }
     pick(tile);
   }));
 }
@@ -208,7 +223,7 @@ function pick(tile) {
 function lbStep(d) {
   if (lbk < 0) return;
   let k = lbk;
-  do { k = (k + d + deck.list.length) % deck.list.length; } while (deck.list[k].yt && k !== lbk);
+  k = (k + d + deck.list.length) % deck.list.length;
   lbFill(k);
   lbm.animate([{ opacity: 0, filter: "blur(14px)", transform: `translateX(${d * 30}px) scale(.985)` }, { opacity: 1, filter: "blur(0)", transform: "none" }], { duration: reduce ? 0 : 320, easing: "cubic-bezier(.2,.8,.2,1)" });
   if (!viewOpen) sound.blip(k);
@@ -217,7 +232,7 @@ async function lbClose(instant) {
   if (lbk < 0) return;
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   const it = deck.list[lbk], r = R(lbm.getBoundingClientRect()), src = lbv && lbv.readyState >= 2 ? lbv : lbm.querySelector("img");
-  const back = !instant && (deck.home ? field.nodes[lbk]?.b : page?.tiles[lbk]?.querySelector(".tm"));
+  const back = !instant && !it.yt && (deck.home ? field.nodes[lbk]?.b : page?.tiles[lbk]?.querySelector(".tm"));
   const to = back && back.getBoundingClientRect();
   lb.classList.remove("open", "shown");
   lbk = -1; sound.duck(false);
@@ -233,6 +248,7 @@ async function lbClose(instant) {
 // from the player straight into the project: the footage floods the room and dissolves into the page
 async function lbToProject() {
   const it = deck.list[lbk], r = R(lbm.getBoundingClientRect()), src = lbv && lbv.readyState >= 2 ? lbv : lbm.querySelector("img");
+  if (it.yt) { lb.classList.remove("open", "shown"); lb.hidden = true; lbm.innerHTML = ""; lbk = -1; sound.duck(false); location.hash = PROJECTS[it.pi].slug; return; }
   const big = { x: -innerWidth * .35, y: -innerHeight * .35, w: innerWidth * 1.7, h: innerHeight * 1.7 };
   lb.classList.remove("open", "shown"); lb.hidden = true; lbm.innerHTML = "";
   if (lbv) { lbv.pause(); lbv = null; } lbk = -1; sound.duck(false);
@@ -267,18 +283,18 @@ function renderProject(i) {
   const tile = (it) => {
     const k = pieces.indexOf(it);
     const media = it.yt
-      ? `<a class="ytc" href="https://youtu.be/${it.yt.id}" target="_blank" rel="noopener"><span>${esc(it.yt.title)}</span><em class="mono">Watch on YouTube ↗</em></a>`
+      ? `<img src="${it.thumb}" alt="" loading="lazy"><i class="play" aria-hidden="true"></i>`
       : it.loop
         ? `<img src="${it.thumb}" alt="" loading="lazy"><video muted loop playsinline preload="none" data-loop="${it.loop}"></video><i class="play" aria-hidden="true"></i>`
         : `<img src="${big ? it.still : it.thumb}" alt="" loading="lazy">`;
-    return `<figure class="tile${it.loop ? " vid" : ""}" data-k="${k}" style="--a:${it.w / it.h}">
+    return `<figure class="tile${it.loop || it.yt ? " vid" : ""}" data-k="${k}" style="--a:${it.w / it.h}">
       <div class="tm">${media}</div>
       <figcaption class="mono"><span>${pad(k + 1)}</span>${it.caption ? `<b>${esc(it.caption)}</b>` : ""}${it.stat ? `<em data-count="${esc(it.stat)}">${esc(it.stat)}</em>` : ""}${it.loop && it.dur ? `<em>${fmt(it.dur)}</em>` : ""}</figcaption>
     </figure>`;
   };
-  const body = groups.map((g) => `
+  const body = groups.map((g) => `<section class="grp${g.sec ? " has" : ""}">
     ${g.sec ? `<div class="gsec"><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p>${esc(g.sec.text)}</p>` : ""}</div>` : ""}
-    <div class="rows">${g.items.map(tile).join("")}</div>`).join("");
+    <div class="rows">${g.items.map(tile).join("")}</div></section>`).join("");
   vin.innerHTML = `<article class="proj">
     <header class="ph">
       <div class="phl"><span class="n mono">${pad(i + 1)} <em>/ ${pad(PROJECTS.length)}</em></span><h1 class="rise">${chars(p.title)}</h1><p class="cli mono">${esc(p.client)}</p></div>
@@ -289,6 +305,7 @@ function renderProject(i) {
   </article>`;
   $("vt").textContent = p.title;
   page = { p, pieces, big, tiles: [...vin.querySelectorAll(".tile")], tall: pieces.every((x) => !x.yt && x.w / x.h < .8) };
+  if (page.tall) vin.querySelector(".work")?.classList.add("tall");
   wireTiles();
   fitTitle(); document.fonts?.ready?.then(fitTitle);
   requestAnimationFrame(() => requestAnimationFrame(() => vin.querySelectorAll(".rise,.lead").forEach((h) => h.classList.add("in"))));
@@ -347,7 +364,6 @@ addEventListener("resize", fitTitle);
 function wireTiles() {
   page.tiles.forEach((t) => {
     const k = +t.dataset.k, it = page.pieces[k];
-    if (it.yt) return;
     const v = t.querySelector("video");
     if (v) {
       t.addEventListener("mouseenter", () => { if (!v.src) v.src = v.dataset.loop; v.play().then(() => t.classList.add("live")).catch(() => {}); });
@@ -399,8 +415,18 @@ function countUp(el) {
 }
 
 // ---------- routing ----------
+// every page is a real step in the browser's history, so back (the button, a two-finger swipe, the phone's edge swipe) walks you back out
+let depth = 0;
+function goHome() {
+  const d = history.state?.d || 0;
+  if (d > 0) history.go(-d);
+  else { history.replaceState({ d: 0 }, "", location.pathname + location.search); route(); }
+}
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
+  if (!h) { depth = 0; if (history.state?.d !== 0) history.replaceState({ d: 0 }, ""); }
+  else if (history.state?.d == null) { depth += 1; history.replaceState({ d: depth }, ""); }
+  else depth = history.state.d;
   const i = PROJECTS.findIndex((p) => p.slug === h);
   if (i >= 0 || h === "about") enter(true);
   if (i >= 0) { renderProject(i); open(); }
@@ -423,11 +449,11 @@ function close() {
 }
 document.addEventListener("click", (e) => {
   const h = e.target.closest("[data-home]");
-  if (h) { e.preventDefault(); history.pushState("", "", location.pathname + location.search); route(); }
+  if (h) { e.preventDefault(); if (viewOpen) goHome(); }
 });
 addEventListener("hashchange", route);
 // click the blurred home around a project to pull focus back to it
-view.addEventListener("click", (e) => { if (e.target === view || e.target === vin) { history.pushState("", "", location.pathname + location.search); route(); } });
+view.addEventListener("click", (e) => { if (e.target === view || e.target === vin) goHome(); });
 addEventListener("keydown", (e) => {
   if (lbk >= 0) {
     if (e.key === "Escape") { if (!document.fullscreenElement) lbClose(); return; }
@@ -437,7 +463,7 @@ addEventListener("keydown", (e) => {
     if (e.key === "f") $("lbf").click();
     return;
   }
-  if (viewOpen && e.key === "Escape") { history.pushState("", "", location.pathname + location.search); route(); }
+  if (viewOpen && e.key === "Escape") goHome();
 });
 
 $("snd").addEventListener("click", () => $("snd").setAttribute("aria-pressed", sound.toggle()));

@@ -42,7 +42,8 @@ export class Wheel {
       const d = this.td; if (!d || e.pointerType !== "touch") return;
       this.td = null; const i = this.hit(e);
       this.over = -1;
-      if (i >= 0 && !d.moved && d.was === i) { this.onPick?.(i); return; }
+      // phones have no grid to preview into, so a tap on a name goes straight in
+      if (i >= 0 && !d.moved && (this.compact || d.was === i)) { this.onPick?.(i); return; }
       const k = i >= 0 ? i : d.i >= 0 && !d.moved ? d.i : -1;
       if (k >= 0) { this.onFocus?.(k); this.armed = k; this.target = k; this.lit = true; }
       this.mx = this.my = -1e4;
@@ -63,7 +64,7 @@ export class Wheel {
   }
   frame = (now) => {
     if (!this.H || !this.fs || this._h !== innerHeight + innerWidth) { this._h = innerHeight + innerWidth; this.maxW = 0; this.fs = parseFloat(getComputedStyle(this.items[0]).fontSize) || 40; this.H = this.el.clientHeight; }
-    const H = this.H, fs = this.fs, n = this.items.length, R = (this.R = Math.max(H * .8, 420)), step = (fs * (this.compact ? 1.12 : 1.3)) / R, x0 = this.compact ? 14 : 64, mid = (n - 1) / 2, t = now / 1000;
+    const H = this.H, fs = this.fs, n = this.items.length, R = (this.R = Math.max(H * .8, 420)), step = (this.compact ? Math.min(fs * 1.75, (H * .8) / n) : fs * 1.3) / R, x0 = this.compact ? 14 : 64, mid = (n - 1) / 2, t = now / 1000;
     this.items.forEach((a, i) => {
       // not fixed, not scrolling: the arc breathes slowly, and the names near your hand lean out towards it
       const th = (i - mid) * step * (1 + .035 * Math.sin(t * .35)), y = H / 2 + R * Math.sin(th);
@@ -87,7 +88,7 @@ export class Wheel {
         }
         ch.g += (want - ch.g) * .16;
         const g = ch.g;
-        ch.c.style.fontVariationSettings = `"wdth" ${(100 + g * 50 - (this.over === i ? (1 - g) * 12 : 0)).toFixed(1)}, "wght" ${(420 + k * 120 + g * 330).toFixed(0)}`;
+        ch.c.style.fontVariationSettings = `"wdth" ${(100 + g * (this.compact ? 32 : 50) - (this.over === i ? (1 - g) * 12 : 0)).toFixed(1)}, "wght" ${(420 + k * 120 + g * 330).toFixed(0)}`;
       });
     });
     requestAnimationFrame(this.frame);

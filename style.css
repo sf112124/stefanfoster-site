@@ -38,7 +38,7 @@ body.entered .enter{opacity:0}
 
 /* ---------- home: thermal field, curved index, lattice of work, technical labels ---------- */
 .heat{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block;transition:opacity 1.2s var(--ease)}
-body:not(.entered) .heat{opacity:0}
+
 .app{height:100%;display:grid;grid-template-rows:auto 1fr auto;padding-inline:var(--pad);padding-block:16px;position:relative;z-index:1}
 .top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;position:relative;z-index:6;font-size:10px;letter-spacing:.08em}
 .chip{justify-self:start;line-height:1.35;display:flex;gap:10px;align-items:center}
@@ -289,3 +289,37 @@ body.viewing .app{opacity:.7;filter:blur(18px) saturate(1.1);transform:scale(.93
 .ph .cli{grid-row:3;grid-column:1}
 .ph .lead{grid-row:2 / span 2;grid-column:2;align-self:start;margin-top:calc(clamp(44px,6vw,104px) * .13 - clamp(15px,1.2vw,18px) * .36)}
 @media (max-width:820px){.ph .lead{grid-row:4;grid-column:1;margin-top:10px}}
+.lbm iframe{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:inherit;opacity:0;transition:opacity .5s}
+.lbm.live iframe{opacity:1}
+.lb.isyt .lbpb{visibility:hidden}
+/* phones: no grid, the home is just the index on its curve, big enough to tap */
+@media (max-width:700px){
+  .home .field,.home .label{display:none}
+  .home .wheel{inset:0;height:auto}
+  .wi{font-size:clamp(26px,8.2vw,40px)}
+  .wi .wc{display:none}
+}
+/* let the browser's own back swipe through */
+.view{overscroll-behavior-x:auto;overscroll-behavior-y:contain}
+/* a proper, reachable way back to the index */
+.vbar a[data-home]{padding:11px 16px 11px 13px;margin:-8px 0 -8px -12px;border-radius:99px;background:rgba(246,245,241,.72);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);font-size:11px;transition:background .25s,opacity .25s}
+.vbar a[data-home]:hover{opacity:1;background:rgba(246,245,241,.95)}
+@media (max-width:700px){
+  .vbar a[data-home]{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);margin:0;z-index:30;padding:14px 22px;font-size:12px;background:rgba(246,245,241,.86);box-shadow:0 0 0 1px rgba(13,13,14,.06)}
+  .lb:not([hidden]) ~ .view .vbar a[data-home],body:has(.lb:not([hidden])) .vbar a[data-home]{display:none}
+  .lbbar{flex-direction:column;align-items:stretch;gap:10px}
+}
+/* sections: the words sit in a quiet column and stay with you while the work scrolls past beside them */
+.work{gap:clamp(28px,6vh,64px)}
+.grp{display:grid;gap:18px}
+.work.tall .rows{justify-content:center}
+@media (min-width:821px){
+  .grp.has{grid-template-columns:minmax(220px,27%) minmax(0,1fr);column-gap:clamp(24px,3.4vw,56px);border-top:1px solid var(--line);padding-top:clamp(18px,3vh,32px)}
+  .grp.has .gsec{display:block;border:0;padding:0;position:sticky;top:70px;align-self:start}
+  .grp.has .gsec p{margin-top:12px;max-width:34ch}
+}
+
+/* the splash is the dream at full strength: all the work swimming through the heat, the name floating over it */
+.splash{background:transparent}
+body:not(.entered) .top,body:not(.entered) .bot{opacity:0;pointer-events:none}
+.top,.bot{transition:opacity 1s var(--ease) .4s}

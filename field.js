@@ -36,9 +36,9 @@ export class Field {
   }
   node(it, i) {
     const b = document.createElement("button");
-    b.type = "button"; b.className = "node" + (it.yt ? " yt" : "");
+    b.type = "button"; b.className = "node";
     b.setAttribute("aria-label", `${it.title}${it.caption ? ", " + it.caption : ""}`);
-    b.innerHTML = `<span class="dm">` + (it.yt ? `<span class="ytn"><b>${it.title}</b><em>${it.caption}</em></span>` : `<img src="${it.thumb}" alt="" draggable="false" decoding="async">${it.loop ? `<video muted loop playsinline preload="none"></video>` : ""}`) + `</span>`
+    b.innerHTML = `<span class="dm">` + (false ? "" : `<img src="${it.thumb}" alt="" draggable="false" decoding="async">${it.loop ? `<video muted loop playsinline preload="none"></video>` : ""}`) + `</span>`
       ;
     this.el.appendChild(b);
     // each node wears its own piece's colours: a tiny orb sampled from the work itself
