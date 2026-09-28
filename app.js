@@ -67,9 +67,6 @@ let viewOpen = false;
 // ---------- the home: a lattice of work on a thermal field, with the index on a curve ----------
 const label = $("label");
 const thermal = new Thermal($("heat"), { reduce, lite: touch });
-// the dream: every piece of work, drifting through the heat
-const dreamPool = (pi) => ALL.filter((x) => !x.yt && (pi == null || x.pi === pi)).map((x) => x.thumb);
-thermal.images(dreamPool());
 const HUES = [0, .35, -.35, .6, -.6, .9, -.2, .45];
 let fam = null;
 const wheel = new Wheel($("wheel"), PROJECTS, {
@@ -87,7 +84,7 @@ const field = new Field($("field"), ALL, {
     label.innerHTML = `<span class="mono">${pad(it.pi + 1)} / ${esc(p.title.toUpperCase())} :: ${esc(p.client.toUpperCase())}</span>${it.caption ? `<b>${esc(it.caption)}</b>` : ""}${it.stat ? `<em class="mono">${esc(it.stat.toUpperCase())}</em>` : ""}`;
     label.classList.add("in");
     sound.rod(sound.note(n.bx / field.W, 1 - n.by / field.H), .014, 4);
-    wheel.set(it.pi); setFam(it.pi); if (!it.yt) thermal.show(it.thumb);
+    wheel.set(it.pi); setFam(it.pi);
   },
   onOpen: (it, b) => { sound.unlock(); openFromHome(it, b); },
   onMove: (() => { let lx = 0, ly = 0, lt = 0; return (x, y) => { const t = performance.now(), sp = Math.min(1, Math.hypot(x - lx, y - ly) / Math.max(16, t - lt) * 60); lx = x; ly = y; lt = t; sound.touch(x, 1 - y, sp); }; })(),
@@ -97,7 +94,6 @@ const field = new Field($("field"), ALL, {
 });
 let palBase = 0;
 function setFam(i) {
-  if (i !== fam) thermal.images(dreamPool(i));
   fam = i; palBase = i == null ? 0 : HUES[i % HUES.length];
   $("readout").innerHTML = i == null ? `INDEX` : `${pad(i + 1)} :: ${esc(PROJECTS[i].title.toUpperCase())}`;
 }
@@ -115,8 +111,7 @@ setTimeout(() => { wheel.maxW = 0; field.layout(); }, 1200);
     trip = viewOpen || !document.getElementById("lb").hidden ? Math.max(0, trip - dt * .5) : Math.min(touch ? .45 : 1, trip + dt / 40);
     field.trip = reduce ? 0 : trip;
     thermal.palT = palBase + (reduce ? 0 : Math.sin(now / 9000) * trip * 1.1);
-    thermal.boost = entered ? trip : 1.3;
-    thermal.baseT = entered ? (innerWidth <= 700 ? .24 : .1) : .72; thermal.dreamT = entered ? .95 : 1;
+    thermal.boost = trip;
     document.documentElement.style.setProperty("--trip", trip.toFixed(3)); }
   const S = [], r = fr || (fr = field.el.getBoundingClientRect());
   trail[0].x += (hand.x - trail[0].x) * .08; trail[0].y += (hand.y - trail[0].y) * .08;

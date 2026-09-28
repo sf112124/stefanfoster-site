@@ -319,7 +319,6 @@ body.viewing .app{opacity:.7;filter:blur(18px) saturate(1.1);transform:scale(.93
   .grp.has .gsec p{margin-top:12px;max-width:34ch}
 }
 
-/* the splash is the dream at full strength: all the work swimming through the heat, the name floating over it */
-.splash{background:transparent}
+body:not(.entered) .heat{opacity:0}
 body:not(.entered) .top,body:not(.entered) .bot{opacity:0;pointer-events:none}
 .top,.bot{transition:opacity 1s var(--ease) .4s}
