@@ -428,3 +428,7 @@ body.viewing:not(.isabout) .app{filter:blur(10px) saturate(1.15);opacity:.9}
 .splash.winding .sf{transform:scale(calc(1 + var(--wind,0) * .08));filter:blur(calc(var(--wind,0) * 1.2px))}
 .splash.winding .enter{animation:breath .5s ease-in-out infinite}
 body.entered .splash.winding .sf{transform:scale(1.9) rotate(-4deg);filter:blur(40px);opacity:0}
+/* the reel's edges feather into the white, and its near-whites are lifted to pure white, so no box ever shows */
+.splash video.sf{filter:brightness(1.05) contrast(1.06);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent),linear-gradient(0deg,transparent,#000 14%,#000 86%,transparent);
+  -webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent),linear-gradient(0deg,transparent,#000 14%,#000 86%,transparent);mask-composite:intersect}
