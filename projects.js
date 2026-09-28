@@ -9,7 +9,7 @@ export const PROJECTS = [
     items: [
       { head: "Le Tableau" },
       { file: "JACQUEMUS_TABLEAU_916_VFX_GRADE_250204_STEN.mp4", caption: "Just a normal day at Jacquemus" },
-      { head: "Social content" },
+      { head: "Social content", text: "Working with The Butter Service." },
       { file: "JACQUEMUS_TABLEAU_916_VFX_GRADE_250204_STEN_1.mp4", caption: "Dolling around 🤳" },
       { file: "2PRANKPHONE_R4.mp4", caption: "Shhhh 👉🏼👈🏼" },
       { file: "FRFR_MAKINGOF_DIGITAL_916AR_31s_IPHN_CMR_NA_WM_AMXcode_v01_METAS.mp4", caption: "Just a normal day at the #Jacquemus atelier 🪡🧵" },
@@ -17,7 +17,7 @@ export const PROJECTS = [
   },
   {
     slug: "ai-commissions", title: "Ai Commissions", client: "Jacquemus", kind: "AI social films",
-    blurb: "",
+    blurb: "Working with The Butter Service.",
     items: [
       { file: "TRUCK-WITH-AUDIO.mov", caption: "Ibiza, we are here", stat: "3.9M views" },
       { file: "ICE-CREAM-5_1.mp4", caption: "The process of making « Plage » Popsicles", stat: "4.1M views" },
