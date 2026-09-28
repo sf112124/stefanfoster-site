@@ -82,7 +82,7 @@ const field = new Field($("field"), ALL, {
     if (!it) { label.classList.remove("in"); wheel.set(null); if (wheel.over < 0) setFam(null); return; }
     const p = PROJECTS[it.pi];
     label.innerHTML = `<span class="mono">${pad(it.pi + 1)} / ${esc(p.title.toUpperCase())} :: ${esc(p.client.toUpperCase())}</span>${it.caption ? `<b>${esc(it.caption)}</b>` : ""}${it.stat ? `<em class="mono">${esc(it.stat.toUpperCase())}</em>` : ""}`;
-    label.classList.add("in");
+    label.classList.add("in"); label.sz = [label.offsetWidth || 330, label.offsetHeight || 60];
     sound.rod(sound.note(n.bx / field.W, 1 - n.by / field.H), .014, 4);
     wheel.set(it.pi); setFam(it.pi);
   },
@@ -108,11 +108,10 @@ document.fonts?.ready?.then(() => { wheel.maxW = 0; field.layout(); });
 setTimeout(() => { wheel.maxW = 0; field.layout(); }, 1200);
 (function heat() {
   { const now = performance.now(), dt = Math.min(.1, (now - tripT) / 1000); tripT = now;
-    trip = viewOpen || !document.getElementById("lb").hidden ? Math.max(0, trip - dt * .5) : Math.min(touch ? .45 : 1, trip + dt / 40);
+    trip = viewOpen || !document.getElementById("lb").hidden ? Math.max(0, trip - dt * .5) : Math.min(touch ? .4 : .6, trip + dt / 60);
     field.trip = reduce ? 0 : trip;
     thermal.palT = palBase + (reduce ? 0 : Math.sin(now / 9000) * trip * 1.1);
-    thermal.boost = trip;
-    document.documentElement.style.setProperty("--trip", trip.toFixed(3)); }
+    thermal.boost = trip; }
   const S = [], r = fr || (fr = field.el.getBoundingClientRect());
   trail[0].x += (hand.x - trail[0].x) * .08; trail[0].y += (hand.y - trail[0].y) * .08;
   trail[1].x += (trail[0].x - trail[1].x) * .05; trail[1].y += (trail[0].y - trail[1].y) * .05;
@@ -129,7 +128,7 @@ setTimeout(() => { wheel.maxW = 0; field.layout(); }, 1200);
   if (fam != null) field.famNodes(fam).slice(0, 10).forEach((n) => S.push({ x: r.left + n.x, y: r.top + n.y, r: 80, a: .3 }));
   thermal.set(S);
   const n = field.nodes[field.hot];
-  if (n) { const lw = label.offsetWidth || 330, lh = label.offsetHeight || 60; label.style.transform = `translate(${Math.min(innerWidth - lw - 12, Math.max(12, n.x - n.w / 2 + r.left))}px,${Math.min(innerHeight - lh - 12, n.y + n.h / 2 + r.top + 12)}px)`; }
+  if (n) { const [lw, lh] = label.sz || [330, 60]; label.style.transform = `translate(${Math.min(innerWidth - lw - 12, Math.max(12, n.x - n.w / 2 + r.left))}px,${Math.min(innerHeight - lh - 12, n.y + n.h / 2 + r.top + 12)}px)`; }
   requestAnimationFrame(heat);
 })();
 
@@ -450,6 +449,11 @@ document.addEventListener("click", (e) => {
   if (h) { e.preventDefault(); if (viewOpen) goHome(); }
 });
 addEventListener("hashchange", route);
+document.addEventListener("visibilitychange", () => {
+  const on = !document.hidden;
+  thermal.setActive(on); if (!viewOpen) field.setActive(on);
+  tripT = performance.now();
+});
 // remember when the page is moving, so a finger stopping a scroll doesn't open something
 { let st = 0; view.addEventListener("scroll", () => { view.scrolling = true; clearTimeout(st); st = setTimeout(() => (view.scrolling = false), 180); }, { passive: true }); }
 // click the blurred home around a project to pull focus back to it

@@ -65,10 +65,10 @@ export class Wheel {
   frame = (now) => {
     if (!this.H || !this.fs || this._h !== innerHeight + innerWidth) { this._h = innerHeight + innerWidth; this.maxW = 0; this.fs = parseFloat(getComputedStyle(this.items[0]).fontSize) || 40; this.H = this.el.clientHeight; }
     const H = this.H, fs = this.fs, n = this.items.length, R = (this.R = Math.max(H * .8, 420)), step = (this.compact ? Math.min(fs * 1.75, (H * .8) / n) : fs * 1.3) / R, x0 = this.compact ? 14 : 64, mid = (n - 1) / 2, t = now / 1000;
+    const er = this.el.getBoundingClientRect(), ly = this.my - er.top, lx = this.mx - er.left;
     this.items.forEach((a, i) => {
       // not fixed, not scrolling: the arc breathes slowly, and the names near your hand lean out towards it
       const th = (i - mid) * step * (1 + .035 * Math.sin(t * .35)), y = H / 2 + R * Math.sin(th);
-      const er = this.el.getBoundingClientRect(), ly = this.my - er.top, lx = this.mx - er.left;
       const near = lx > -40 && lx < (this.maxW || 500) + 120 && ly > -40 && ly < H + 40 && !this.reduce ? Math.exp(-((ly - y) ** 2) / (fs * fs * 2.6)) : 0;
       a.pull = (a.pull || 0) + (near - (a.pull || 0)) * .1;
       const x = x0 + R * (1 - Math.cos(th)) + a.pull * fs * .9 + (this.reduce ? 0 : Math.sin(t * .5 + i * 1.3) * 3);

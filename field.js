@@ -101,17 +101,22 @@ export class Field {
   setHot(k) {
     if (k === this.hot) return;
     const old = this.nodes[this.hot];
-    if (old) { const v = old.b.querySelector("video"); if (v) v.pause(); old.b.classList.remove("hot", "live"); }
+    if (old) { const v = old.b.querySelector("video"); if (v) this.park(v, old); old.b.classList.remove("hot", "live"); }
     this.hot = k;
     const n = this.nodes[k];
     if (n) {
       n.b.classList.add("hot");
       const v = n.b.querySelector("video");
-      if (v && !this.reduce) { if (!v.src) v.src = n.it.loop; v.play().then(() => n.b.classList.add("live")).catch(() => {}); }
+      if (v && !this.reduce) { clearTimeout(v.park); if (!v.getAttribute("src")) v.src = n.it.loop; v.play().then(() => n.b.classList.add("live")).catch(() => {}); }
     }
     this.onHover?.(n ? n.it : null, n);
   }
   focus(pi) { this.focusSet = pi; }
+  // pause a film, and if nobody comes back to it soon, let go of it completely so idle time doesn't pile up decoders
+  park(v, n) {
+    v.pause(); clearTimeout(v.park);
+    v.park = setTimeout(() => { if (!n.sib && this.nodes[this.hot] !== n && v.getAttribute("src")) { v.removeAttribute("src"); v.load(); } }, 8000);
+  }
   dragMove(e) {
     const d = this.drag; if (!d) return;
     const now = performance.now(), dist = Math.hypot(e.clientX - d.x0, e.clientY - d.y0);
@@ -159,12 +164,12 @@ export class Field {
       n.va = Math.atan2(vy, vx);
       const st = n.b.style;
       const isBig = n.o > .02 || n.sib, sm = isBig && !this.reduce ? n.vb : 0, str = 1 + Math.min(.35, sm * .03);
-      st.transform = `translate(${n.x - n.w / 2}px,${n.y - n.h / 2}px)` + (sm > .4 ? ` rotate(${n.va}rad) scale(${str},${1 / str}) rotate(${-n.va}rad)` : "");
+      st.transform = `translate(${n.x - n.w / 2}px,${n.y - n.h / 2}px)` + (sm > 1.2 ? ` rotate(${n.va}rad) scale(${str},${1 / str}) rotate(${-n.va}rad)` : "");
       st.width = `${n.w}px`; st.height = `${n.h}px`;
       // an opened piece is a dream surfacing: its edges swirl and melt through the dream filter
       const open = n.o > .3;
       if (open !== n.open) { n.open = open; n.b.classList.toggle("open", open); }
-      st.filter = [open && !this.reduce ? "url(#dream)" : "", sm > .4 ? `blur(${(sm * .7).toFixed(1)}px)` : ""].join(" ").trim();
+      st.filter = [open && !this.reduce ? "url(#dream)" : "", sm > 1.2 ? `blur(${(sm * .6).toFixed(1)}px)` : ""].join(" ").trim();
       // opened pieces aren't boxes: soft, slowly shifting organic shapes
 
       st.setProperty("--o", n.o.toFixed(3)); st.zIndex = n === hot ? 5 : n.it.pi === fam ? 3 : 1;
@@ -173,12 +178,12 @@ export class Field {
       if (sib !== n.sib) {
         n.sib = sib; n.b.classList.toggle("sib", sib);
         const v = n.b.querySelector("video");
-        if (v && !this.reduce) { if (sib) { if (!v.src) v.src = n.it.loop; v.play().then(() => n.sib && n.b.classList.add("live")).catch(() => {}); } else if (n !== hot) { v.pause(); n.b.classList.remove("live"); } }
+        if (v && !this.reduce) { if (sib) { clearTimeout(v.park); if (!v.getAttribute("src")) v.src = n.it.loop; v.play().then(() => n.sib && n.b.classList.add("live")).catch(() => {}); } else if (n !== hot) { this.park(v, n); n.b.classList.remove("live"); } }
       }
     });
     // the lattice, and spokes from whatever is lit
     if (!this.turb) this.turb = document.getElementById("dreamTurb");
-    if (this.turb && hot) this.turb.setAttribute("baseFrequency", `${(.009 + .004 * Math.sin(t * .31)).toFixed(4)} ${(.013 + .004 * Math.cos(t * .23)).toFixed(4)}`);
+    if (this.turb && hot && (this.fc = (this.fc || 0) + 1) % 6 === 0) this.turb.setAttribute("baseFrequency", `${(.009 + .004 * Math.sin(t * .31)).toFixed(4)} ${(.013 + .004 * Math.cos(t * .23)).toFixed(4)}`);
     // tracers: the longer you stay, the more everything leaves a trail behind it
     const g = this.g;
     g.globalCompositeOperation = "destination-out"; g.fillStyle = `rgba(0,0,0,${1 - this.trip * .78})`; g.fillRect(0, 0, this.W, this.H); g.globalCompositeOperation = "source-over";
