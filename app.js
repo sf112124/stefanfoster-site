@@ -580,6 +580,17 @@ addEventListener("keydown", (e) => {
 });
 
 $("snd").addEventListener("click", () => $("snd").setAttribute("aria-pressed", sound.toggle()));
+// night: the whole site flips dark, the heat glowing out of black. Remembered for next time on this browser.
+function setNight(on) {
+  document.documentElement.classList.toggle("night", on);
+  $("nite").setAttribute("aria-pressed", on); $("nite").querySelector("span").textContent = on ? "DAY" : "NIGHT";
+  if (thermal.bgc) thermal.bgc = on ? [.043, .043, .05] : [.957, .952, .937];
+  melt.paper = on ? [.043, .043, .05] : [.953, .945, .925];
+  field.inkRGB = on ? "237,235,230" : "13,13,14";
+  try { localStorage.setItem("night", on ? "1" : "0"); } catch (e) {}
+}
+$("nite").addEventListener("click", () => { sound.pluck?.(sound.note(.5, document.documentElement.classList.contains("night") ? .7 : .3), .03); setNight(!document.documentElement.classList.contains("night")); });
+try { if (localStorage.getItem("night") === "1") setNight(true); } catch (e) {}
 $("snd").setAttribute("aria-pressed", "true");
 $("mail").textContent = ABOUT.email;
 route();

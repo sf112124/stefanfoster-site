@@ -2,12 +2,12 @@
 // pointing at lives; it smears, drifts and mashes colours like a thermal camera looking at something alive.
 const VS = `attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}`;
 const FS = `precision highp float;
-uniform vec2 res;uniform float T,pal;uniform vec4 S[20];
+uniform vec2 res;uniform vec3 BG;uniform float T,pal;uniform vec4 S[20];
 float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
 float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
 vec3 ramp(float f){
-  vec3 bg=vec3(.957,.952,.937),c1=vec3(1.,.72,.5),c2=vec3(1.,.55,.6),c3=vec3(.45,.55,1.),c4=vec3(.72,.86,1.),c5=vec3(1.,.95,.5);
+  vec3 bg=BG,c1=vec3(1.,.72,.5),c2=vec3(1.,.55,.6),c3=vec3(.45,.55,1.),c4=vec3(.72,.86,1.),c5=vec3(1.,.95,.5);
   vec3 c=mix(bg,c1,smoothstep(.06,.26,f));
   c=mix(c,c2,smoothstep(.26,.44,f));
   c=mix(c,c3,smoothstep(.44,.62,f));
@@ -35,7 +35,7 @@ export class Thermal {
     if (!gl) return;
     const mk = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); return x; };
     const p = gl.createProgram(); gl.attachShader(p, mk(gl.VERTEX_SHADER, VS)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(p); gl.useProgram(p);
-    this.u = { res: gl.getUniformLocation(p, "res"), T: gl.getUniformLocation(p, "T"), pal: gl.getUniformLocation(p, "pal"), S: gl.getUniformLocation(p, "S") };
+    this.bgc = [.957, .952, .937]; this.u = { BG: gl.getUniformLocation(p, "BG"), res: gl.getUniformLocation(p, "res"), T: gl.getUniformLocation(p, "T"), pal: gl.getUniformLocation(p, "pal"), S: gl.getUniformLocation(p, "S") };
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(p, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     this.buf = new Float32Array(80);
@@ -71,7 +71,7 @@ export class Thermal {
     this.buf.fill(0);
     this.cur.slice(0, 20).forEach((c, i) => { this.buf[i * 4] = c.x / H; this.buf[i * 4 + 1] = (H - c.y) / H; this.buf[i * 4 + 2] = c.r / H; this.buf[i * 4 + 3] = c.a; });
     gl.viewport(0, 0, w, h);
-    gl.uniform2f(this.u.res, w, h); gl.uniform1f(this.u.T, t); gl.uniform1f(this.u.pal, this.pal); gl.uniform4fv(this.u.S, this.buf);
+    gl.uniform3fv(this.u.BG, this.bgc); gl.uniform2f(this.u.res, w, h); gl.uniform1f(this.u.T, t); gl.uniform1f(this.u.pal, this.pal); gl.uniform4fv(this.u.S, this.buf);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     requestAnimationFrame(this.frame);
   };

@@ -49,7 +49,7 @@ export class Melt {
     this.dpr = dpr;
   }
   // from/to: {x,y,w,h} in CSS px. blob: roundness at each end (1 = a round node, 0 = a crisp rectangle).
-  run({ el, from, to, blobFrom = 0, blobTo = 0, dur = 700, fadeOut = false, fadeIn = false, paper = [.953, .945, .925] }) {
+  run({ el, from, to, blobFrom = 0, blobTo = 0, dur = 700, fadeOut = false, fadeIn = false, paper = this.paper || [.953, .945, .925] }) {
     const gl = this.gl;
     if (!gl) return Promise.resolve();
     this.size(); this.c.classList.add("on");
