@@ -4,8 +4,8 @@
 const rng = (seed) => { let s = seed; return () => ((s = (s * 16807) % 2147483647) / 2147483647); };
 
 export class Field {
-  constructor(el, items, { reduce = false, touch = false, onHover, onOpen, onPad, onPadEnd, onMove, onLeave, onEmpty, band } = {}) {
-    Object.assign(this, { el, items, reduce, touch, onHover, onOpen, onPad, onPadEnd, onMove, onLeave, onEmpty, band });
+  constructor(el, items, { reduce = false, touch = false, lite = false, onHover, onOpen, onPad, onPadEnd, onMove, onLeave, onEmpty, band } = {}) {
+    Object.assign(this, { el, items, reduce, touch, lite, onHover, onOpen, onPad, onPadEnd, onMove, onLeave, onEmpty, band });
     this.trip = 0;
     this.cv = document.createElement("canvas"); this.cv.className = "net"; el.appendChild(this.cv);
     this.g = this.cv.getContext("2d");
@@ -164,7 +164,7 @@ export class Field {
       n.vb = (n.vb || 0) + (Math.min(14, v * .55) - (n.vb || 0)) * .35;
       n.va = Math.atan2(vy, vx);
       const st = n.b.style;
-      const isBig = n.o > .02 || n.sib, sm = isBig && !this.reduce ? n.vb : 0, str = 1 + Math.min(.35, sm * .03);
+      const isBig = n.o > .02 || n.sib, sm = isBig && !this.reduce && !this.lite ? n.vb : 0, str = 1 + Math.min(.35, sm * .03);
       // only touch the page when something actually changed (sizes rounded, so a settled node costs nothing)
       const S = n.s || (n.s = {}), put = (k, v) => { if (S[k] !== v) { S[k] = v; if (k[0] === "-") st.setProperty(k, v); else st[k] = v; } };
       put("transform", `translate(${(n.x - n.w / 2).toFixed(1)}px,${(n.y - n.h / 2).toFixed(1)}px)` + (sm > 1.2 ? ` rotate(${n.va.toFixed(2)}rad) scale(${str.toFixed(3)},${(1 / str).toFixed(3)}) rotate(${(-n.va).toFixed(2)}rad)` : ""));

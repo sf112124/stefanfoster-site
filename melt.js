@@ -26,7 +26,8 @@ const ease = (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const lerp = (a, b, k) => a + (b - a) * k;
 
 export class Melt {
-  constructor() {
+  constructor({ off = false } = {}) {
+    if (off) { this.gl = null; return; }
     const c = (this.c = document.createElement("canvas"));
     c.className = "melt"; c.setAttribute("aria-hidden", "true"); document.body.appendChild(c);
     const gl = (this.gl = c.getContext("webgl", { premultipliedAlpha: true, alpha: true, antialias: false }));
