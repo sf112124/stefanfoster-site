@@ -50,7 +50,7 @@ const ALL = (() => {
     if ($("splash").hidden) return;
     if (v.videoWidth) {
       if (c.width !== v.videoWidth) { c.width = v.videoWidth; c.height = v.videoHeight; }
-      x.globalCompositeOperation = "source-over"; x.fillStyle = "#F4F3EF"; x.fillRect(0, 0, c.width, c.height);
+      x.globalCompositeOperation = "source-over"; x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, c.width, c.height);
       x.globalCompositeOperation = "multiply"; x.drawImage(v, 0, 0);
     }
     requestAnimationFrame(draw);
