@@ -43,7 +43,8 @@ export class Wheel {
       this.td = null; const i = this.hit(e);
       this.over = -1;
       // phones have no grid to preview into, so a tap on a name goes straight in
-      if (i >= 0 && !d.moved && (this.compact || d.was === i)) { this.onPick?.(i); return; }
+      // a tap opens the name your finger landed on, even if the type has shifted under it since
+      if (!d.moved && d.i >= 0 && (this.compact || d.was === d.i)) { this.onPick?.(d.i); return; }
       const k = i >= 0 ? i : d.i >= 0 && !d.moved ? d.i : -1;
       if (k >= 0) { this.onFocus?.(k); this.armed = k; this.target = k; this.lit = true; }
       this.mx = this.my = -1e4;
@@ -53,7 +54,13 @@ export class Wheel {
   }
   get hovering() { return this.over >= 0; }
   get compact() { return innerWidth <= 700; }
-  hit(e) { const a = document.elementFromPoint(e.clientX, e.clientY)?.closest?.(".wi"); return a ? this.items.indexOf(a) : -1; }
+  // what's under a finger: the name itself, or failing that the nearest name within easy reach (fingers are wide, names are thin)
+  hit(e) {
+    const a = document.elementFromPoint(e.clientX, e.clientY)?.closest?.(".wi"); if (a) return this.items.indexOf(a);
+    let best = -1, bd = 26;
+    this.items.forEach((it, i) => { const r = it.querySelector(".wt").getBoundingClientRect(); if (e.clientX < r.left - 20 || e.clientX > r.right + 20) return; const d = Math.abs(e.clientY - (r.top + r.height / 2)); if (d < bd) { bd = d; best = i; } });
+    return best;
+  }
   set(i) { this.target = i; this.lit = i != null; if (i == null) this.armed = -1; }
   // the right edge of the space the type needs at a given height: the curve plus the longest name, with room to swell
   band(y) {
@@ -69,7 +76,7 @@ export class Wheel {
     this.items.forEach((a, i) => {
       // not fixed, not scrolling: the arc breathes slowly, and the names near your hand lean out towards it
       const th = (i - mid) * step * (1 + .035 * Math.sin(t * .35)), y = H / 2 + R * Math.sin(th);
-      const near = lx > -40 && lx < (this.maxW || 500) + 120 && ly > -40 && ly < H + 40 && !this.reduce ? Math.exp(-((ly - y) ** 2) / (fs * fs * 2.6)) : 0;
+      const near = lx > -40 && lx < (this.maxW || 500) + 120 && ly > -40 && ly < H + 40 && !this.reduce && this.lastType !== "touch" ? Math.exp(-((ly - y) ** 2) / (fs * fs * 2.6)) : 0;
       a.pull = (a.pull || 0) + (near - (a.pull || 0)) * .1;
       const x = x0 + R * (1 - Math.cos(th)) + a.pull * fs * .9 + (this.reduce ? 0 : Math.sin(t * .5 + i * 1.3) * 3);
       const on = this.over === i || (this.over < 0 && this.target === i && this.lit);
