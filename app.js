@@ -14,7 +14,9 @@ const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
 document.documentElement.classList.toggle("touch", touch);
 const url = (slug, f) => ASSETS[`${slug}/${f}`] || `media/${slug}/${f}`;
 // YouTube doesn't make a big thumbnail for every film: fall back to the smaller one (cropped to 16:9 by the tile)
-addEventListener("error", (e) => { const t = e.target; if (t.tagName === "IMG" && t.src.includes("maxresdefault")) t.src = t.src.replace("maxresdefault", "hqdefault"); }, true);
+// (YouTube sometimes answers with a tiny grey placeholder instead of an error, so check the size too)
+const ytFallback = (e) => { const t = e.target; if (t.tagName === "IMG" && t.src.includes("maxresdefault") && (e.type === "error" || t.naturalWidth <= 120)) t.src = t.src.replace("maxresdefault", "hqdefault"); };
+addEventListener("error", ytFallback, true); addEventListener("load", ytFallback, true);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const fmt = (s) => `${Math.floor(s / 60)}:${pad(Math.round(s % 60))}`;
 // letters stay grouped by word, so a long title wraps between words and never mid-word
