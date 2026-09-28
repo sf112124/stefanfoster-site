@@ -26,11 +26,13 @@ void main(){
   vec3 c=hue(ramp(clamp(f,0.,1.2)),pal*smoothstep(.1,.4,f));
   // night: black, into deep green, into neon green, into a pale mint core. Brightest in the middle, dark at the edges.
   if(NI>.5){float g=clamp(f,0.,1.2);
-    vec3 n=mix(vec3(0.),vec3(.0,.09,.05),smoothstep(.04,.22,g));
-    n=mix(n,vec3(.05,.42,.2),smoothstep(.2,.45,g));
-    n=mix(n,vec3(.25,1.,.45),smoothstep(.42,.7,g));
-    n=mix(n,vec3(.85,1.,.86),smoothstep(.72,1.05,g));
-    c=n;}
+    vec3 n=mix(vec3(0.),vec3(.02,.02,.16),smoothstep(.04,.2,g));
+    n=mix(n,vec3(.3,.08,.8),smoothstep(.18,.38,g));
+    n=mix(n,vec3(.04,.72,.95),smoothstep(.36,.55,g));
+    n=mix(n,vec3(.28,1.,.5),smoothstep(.52,.74,g));
+    n=mix(n,vec3(.9,1.,.93),smoothstep(.76,1.05,g));
+    // each project tints the bright core its own way; the dark edges stay deep blue-black so nothing goes muddy
+    c=hue(n,pal*smoothstep(.45,.8,g)*.7);}
   c+=(h(gl_FragCoord.xy+fract(T)*37.)-.5)*.025;
   gl_FragColor=vec4(c,1.);
 }`;

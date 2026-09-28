@@ -193,7 +193,7 @@ export class Field {
     const g = this.g;
     if (this.lite) g.clearRect(0, 0, this.W, this.H);
     else { g.globalCompositeOperation = "destination-out"; g.fillStyle = `rgba(0,0,0,${1 - this.trip * .78})`; g.fillRect(0, 0, this.W, this.H); g.globalCompositeOperation = "source-over"; }
-    this.pts.forEach((p) => { if (p.used) return; const [x, y] = this.wave(p.x, p.y, t); p.wx = x; p.wy = y; g.fillStyle = p.fog ? `rgba(${this.inkRGB || "13,13,14"},${this.night ? .35 : .14})` : `rgba(${this.inkRGB || "13,13,14"},${this.night ? .9 : .5})`; if (p.fog) { g.beginPath(); g.arc(x, y, 1.1, 0, 7); g.fill(); return; } const d = Math.hypot(x - this.mx, y - this.my), s = 1.5 + 2.4 * Math.exp(-(d * d) / (this.sp * this.sp * 2)) + .5 * Math.sin(t * 1.3 + p.x * .02 + p.y * .03); g.beginPath(); g.arc(x, y, Math.max(.8, s * .8), 0, 7); g.fill(); });
+    this.pts.forEach((p) => { if (p.used) return; const [x, y] = this.wave(p.x, p.y, t); p.wx = x; p.wy = y; g.fillStyle = p.fog ? `rgba(${this.inkRGB || "13,13,14"},${this.night ? 1 : .14})` : `rgba(${this.inkRGB || "13,13,14"},${this.night ? 1 : .5})`; if (p.fog) { g.beginPath(); g.arc(x, y, 1.1, 0, 7); g.fill(); return; } const d = Math.hypot(x - this.mx, y - this.my), s = 1.5 + 2.4 * Math.exp(-(d * d) / (this.sp * this.sp * 2)) + .5 * Math.sin(t * 1.3 + p.x * .02 + p.y * .03); g.beginPath(); g.arc(x, y, Math.max(.8, s * .8), 0, 7); g.fill(); });
     // the family is strung together with light: soft strings that curve and hum, plucked each time you land on something
     if (fam != null) {
       const fl = this.nodes.filter((n) => n.it.pi === fam), src = hot || fl[0];
@@ -211,7 +211,7 @@ export class Field {
         }
         g.lineCap = "round"; g.lineJoin = "round";
         g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
-        g.strokeStyle = `rgba(${this.inkRGB || "13,13,14"},${(this.night ? .55 : .34) + pluck * .2})`; g.lineWidth = .8; g.stroke();
+        g.strokeStyle = `rgba(${this.inkRGB || "13,13,14"},${(this.night ? .8 : .34) + pluck * .2})`; g.lineWidth = .8; g.stroke();
       });
     }
     requestAnimationFrame(this.frame);

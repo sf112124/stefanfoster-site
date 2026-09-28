@@ -469,3 +469,11 @@ html.night{--bg:#000;--ink:#fff;--mute:rgba(255,255,255,.72);--line:rgba(255,255
 .night .lead,.night .alead,.night .gsec p{color:rgba(255,255,255,.88)}
 .night .node{background:#fff}
 .lite.night body,.night.lite body{background:radial-gradient(34vmax 28vmax at 66% 42%,rgba(60,255,120,.28),rgba(0,90,50,.18) 45%,transparent 72%),#000}
+
+/* night: no boxes or rims behind the popouts and the little family circles, and everything solid white */
+.night .node.open,.night .node.sib{background:transparent}
+html.night{--mute:#fff;--line:rgba(255,255,255,.3)}
+.night .wi,.night .wi .wn,.night .wi .wc{color:#fff}
+.night .lead,.night .alead,.night .gsec p,.night .tile figcaption,.night .tile figcaption b,.night .tile figcaption em{color:#fff}
+.night .wi:not(.on) .wt{opacity:1}
+.night .node.far{opacity:1}
