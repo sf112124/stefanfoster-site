@@ -322,3 +322,9 @@ body.viewing .app{opacity:.7;filter:blur(18px) saturate(1.1);transform:scale(.93
 body:not(.entered) .heat{opacity:0}
 body:not(.entered) .top,body:not(.entered) .bot{opacity:0;pointer-events:none}
 .top,.bot{transition:opacity 1s var(--ease) .4s}
+/* scrolling on phones: the films and pictures never take the touch, the page does */
+.view{-webkit-overflow-scrolling:touch}
+.tm img,.tm video,.tm .play{pointer-events:none}
+.tile,.tm{touch-action:pan-y pinch-zoom}
+.rows.hero{justify-content:flex-start}
+@media (max-width:700px){.rows{justify-content:center}}

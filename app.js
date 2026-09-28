@@ -289,7 +289,7 @@ function renderProject(i) {
   };
   const body = groups.map((g) => `<section class="grp${g.sec ? " has" : ""}">
     ${g.sec ? `<div class="gsec"><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p>${esc(g.sec.text)}</p>` : ""}</div>` : ""}
-    <div class="rows">${g.items.map(tile).join("")}</div></section>`).join("");
+    <div class="rows${g.sec && g.items.length === 1 ? " hero" : ""}">${g.items.map(tile).join("")}</div></section>`).join("");
   vin.innerHTML = `<article class="proj">
     <header class="ph">
       <div class="phl"><span class="n mono">${pad(i + 1)} <em>/ ${pad(PROJECTS.length)}</em></span><h1 class="rise">${chars(p.title)}</h1><p class="cli mono">${esc(p.client)}</p></div>
@@ -311,11 +311,12 @@ function justify() {
     const tiles = [...row.children], W = row.clientWidth, gap = 10;
     const A = (t) => +t.style.getPropertyValue("--a"), size = (t, w, h) => { t.style.width = `${w}px`; t.querySelector(".tm").style.height = `${h}px`; };
     const hOf = (ts) => (W - gap * (ts.length - 1) - 2) / ts.reduce((s, t) => s + A(t), 0);
-    if (innerWidth < 700) { tiles.forEach((t) => size(t, W, Math.min(W / A(t), innerHeight * .8))); return; }
+    if (innerWidth < 700) { tiles.forEach((t) => { const h = Math.min(W / A(t), innerHeight * .8); size(t, A(t) * h, h); }); return; }
+    if (row.classList.contains("hero")) { const t = tiles[0], h = Math.min(W / A(t), innerHeight * .86); size(t, A(t) * h, h); return; }
     if (page.tall) {
       // phone-shaped films: equal columns, the same size every time (rows of three, or all of them if there are four or fewer)
-      const n = page.pieces.length <= 4 ? page.pieces.length : 3, w = (W - gap * (n - 1) - 2) / n;
-      tiles.forEach((t) => size(t, w, w / A(t)));
+      const n = tiles.length <= 4 ? tiles.length : 3;
+      tiles.forEach((t) => { const w = Math.min((W - gap * (n - 1) - 2) / n, innerHeight * .86 * A(t)); size(t, w, w / A(t)); });
       return;
     }
     if (page.big) {
@@ -364,7 +365,9 @@ function wireTiles() {
       t.addEventListener("mouseenter", () => { if (!v.src) v.src = v.dataset.loop; v.play().then(() => t.classList.add("live")).catch(() => {}); });
       t.addEventListener("mouseleave", () => { if (!page.big) { v.pause(); t.classList.remove("live"); } });
     }
-    t.addEventListener("click", () => lbOpen(page.pieces, k, t.querySelector(".tm")));
+    let tx = 0, ty = 0, tt = 0;
+    t.addEventListener("pointerdown", (e) => { tx = e.clientX; ty = e.clientY; tt = performance.now(); });
+    t.addEventListener("click", (e) => { if (touch && (Math.hypot(e.clientX - tx, e.clientY - ty) > 10 || performance.now() - tt > 600 || view.scrolling)) return; lbOpen(page.pieces, k, t.querySelector(".tm")); });
   });
   vin.querySelectorAll("[data-count]").forEach(countUp);
   if (page.big || touch) {
@@ -447,6 +450,8 @@ document.addEventListener("click", (e) => {
   if (h) { e.preventDefault(); if (viewOpen) goHome(); }
 });
 addEventListener("hashchange", route);
+// remember when the page is moving, so a finger stopping a scroll doesn't open something
+{ let st = 0; view.addEventListener("scroll", () => { view.scrolling = true; clearTimeout(st); st = setTimeout(() => (view.scrolling = false), 180); }, { passive: true }); }
 // click the blurred home around a project to pull focus back to it
 view.addEventListener("click", (e) => { if (e.target === view || e.target === vin) goHome(); });
 addEventListener("keydown", (e) => {

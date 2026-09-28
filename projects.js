@@ -7,7 +7,9 @@ export const PROJECTS = [
     slug: "la-croisiere", title: "La Croisière", client: "Jacquemus × Apple", kind: "Shot on iPhone",
     blurb: "A ‘Shot on iPhone’ Jacquemus campaign that redefined how Apple shows up on social.",
     items: [
+      { head: "Le Tableau" },
       { file: "JACQUEMUS_TABLEAU_916_VFX_GRADE_250204_STEN.mp4", caption: "Just a normal day at Jacquemus" },
+      { head: "Social content" },
       { file: "JACQUEMUS_TABLEAU_916_VFX_GRADE_250204_STEN_1.mp4", caption: "Dolling around 🤳" },
       { file: "2PRANKPHONE_R4.mp4", caption: "Shhhh 👉🏼👈🏼" },
       { file: "FRFR_MAKINGOF_DIGITAL_916AR_31s_IPHN_CMR_NA_WM_AMXcode_v01_METAS.mp4", caption: "Just a normal day at the #Jacquemus atelier 🪡🧵" },
@@ -21,9 +23,9 @@ export const PROJECTS = [
       { file: "ICE-CREAM-5_1.mp4", caption: "The process of making « Plage » Popsicles", stat: "4.1M views" },
       { file: "boat-rider-final.mp4", caption: "On our way to « Plage »", stat: "5.9M views" },
       { file: "4e03a731-6491-428d-bce0-eea8105e10d6.mp4", caption: "Guys, St Tropez never stops surprising me 😭🐐", stat: "5M views" },
-      { file: "Horsey-2.mp4", caption: "On my way to the Le Paysan show", stat: "1.3M views" },
       { file: "tikmate.app_7506517951919426838_hd.mp4", caption: "Just another day at the Jacquemus Los Angeles boutique 😭🐐", stat: "8.7M views" },
       { file: "Titanique.mp4", caption: "On my way to « Le Bonheur »", stat: "1.4M views" },
+      { file: "Horsey-2.mp4", caption: "On my way to the Le Paysan show", stat: "1.3M views" },
     ],
   },
   {
