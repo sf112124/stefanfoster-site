@@ -53,6 +53,8 @@ export const PROJECTS = [
       { file: "Sequence-01_1.mp4" },
       { head: "Samurai Barber" },
       { file: "barbershop-chop--aigeneratedart--animefyp--nujabes--seedance--7630960936584498454.mp4" },
+      { head: "Samurai Bounty Hunter" },
+      { file: "samurai-bounty-hunter.mp4" },
       { head: "100 million Goat", text: "Before AI video was everywhere, I faked a goat standing on a power line. A few weeks later the goat had 101M views on TikTok, I’d gained 160K followers, and the Daily Mail thought it was real." },
       { file: "All-that-for-a-snack--7489488781532302614.mp4", caption: "Original video: All that for a snack?", stat: "101M views, 2.1M shares" },
     ],
