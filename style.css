@@ -482,3 +482,7 @@ html.night{--mute:#fff;--line:rgba(255,255,255,.3)}
 .nite{gap:9px;padding:7px 13px 7px 10px;margin:-7px 0;border-radius:99px;border:1px solid var(--line);color:var(--ink);font-size:11px;letter-spacing:.1em;transition:background .3s,border-color .3s}
 .nite:hover{background:rgba(127,127,127,.12)}
 .nite i{width:12px;height:12px;box-shadow:inset -4px -2px 0 0 var(--bg)}
+/* a very fine, still film grain at full screen resolution (the old grain was drawn at the heat's low resolution, so it looked chunky) */
+.app::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.07;mix-blend-mode:multiply;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.6 -.3'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23f)'/%3E%3C/svg%3E");background-size:110px 110px}
+.night .app::after{mix-blend-mode:screen;opacity:.05;filter:invert(1)}

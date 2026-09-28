@@ -35,7 +35,7 @@ void main(){
   f+=(n(p*3.1+T*.03)-.5)*.07;
   vec3 c=ramp(clamp(f,0.,1.2));
 
-  c+=(h(gl_FragCoord.xy+fract(T)*37.)-.5)*.025;
+
   gl_FragColor=vec4(c,1.);
 }`;
 
