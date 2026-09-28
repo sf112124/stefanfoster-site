@@ -208,6 +208,9 @@ function openFromHome(it, b) {
     vin.querySelector(".work")?.classList.add("picking");
     if (!it.yt) { tile.classList.add("lifted"); await melt.run({ el: src, from, to: R(tm.getBoundingClientRect()), blobFrom: 1, blobTo: 0, dur: reduce ? 1 : 900 }); tile.classList.remove("lifted"); }
     pick(tile);
+    // a moment on the piece you chose, then the page glides up to the top of the project
+    const here = page;
+    setTimeout(() => { if (page !== here || !viewOpen || lbk >= 0) return; view.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); vin.querySelector(".work")?.classList.remove("picking"); tile.classList.remove("sel"); }, 1400);
   }));
 }
 function pick(tile) {
