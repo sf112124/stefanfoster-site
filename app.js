@@ -308,6 +308,7 @@ function renderProject(i) {
   if (page.tall) vin.querySelector(".work")?.classList.add("tall");
   wireTiles();
   fitTitle(); document.fonts?.ready?.then(fitTitle);
+  glassPage();
   requestAnimationFrame(() => requestAnimationFrame(() => vin.querySelectorAll(".rise,.lead").forEach((h) => h.classList.add("in"))));
 }
 function justify() {
@@ -344,6 +345,36 @@ function justify() {
   });
 }
 addEventListener("resize", justify);
+// project pages share the About glass: light follows your hand across the sheet, and the header leans towards you
+// while you're up top. Once you scroll into the work everything holds still.
+function glassPage() {
+  const proj = vin.querySelector(".proj"); if (!proj || touch) return;
+  const sh = document.createElement("i"); sh.className = "pshine"; sh.setAttribute("aria-hidden", "true"); proj.prepend(sh);
+  const ph = proj.querySelector(".ph"), ls = [...ph.querySelectorAll("h1 .ch")].map((c) => ({ c, g: 0 }));
+  let mx = -1e4, my = -1e4, tx = 0, ty = 0, cx = 0, cy = 0, fs = 80, lastTf = "";
+  const mv = (e) => { mx = e.clientX; my = e.clientY; tx = e.clientX / innerWidth - .5; ty = e.clientY / innerHeight - .5; };
+  addEventListener("pointermove", mv);
+  (function loop() {
+    if (!proj.isConnected) { removeEventListener("pointermove", mv); return; }
+    // measure everything first, then move things
+    const r = proj.getBoundingClientRect(), hr = ph.getBoundingClientRect(), up = hr.bottom > 40 && !reduce;
+    const rs = up ? ls.map((l) => l.c.getBoundingClientRect()) : null;
+    sh.style.transform = `translate(${(mx - r.left - 380).toFixed(0)}px,${(my - r.top - 380).toFixed(0)}px)`;
+    const k = up ? 1 : 0; cx += (tx * k - cx) * .08; cy += (ty * k - cy) * .08;
+    const tf = `rotateX(${(-cy * 4).toFixed(2)}deg) rotateY(${(cx * 5.5).toFixed(2)}deg)`;
+    if (tf !== lastTf) { lastTf = tf; ph.style.transform = tf; }
+    if (up) {
+      fs = parseFloat(getComputedStyle(ls[0].c).fontSize) || fs;
+      ls.forEach((l, i) => {
+        const q = rs[i], d = Math.hypot(mx - (q.left + q.width / 2), (my - (q.top + q.height / 2)) * 1.4);
+        l.g += (Math.exp(-(d * d) / (fs * fs * 1.4)) - l.g) * .14;
+        const fv = `"wdth" ${Math.round(100 + l.g * 30)}, "wght" ${Math.round((600 + l.g * 300) / 10) * 10}`;
+        if (l.fv !== fv) { l.fv = fv; l.c.style.fontVariationSettings = fv; }
+      });
+    }
+    requestAnimationFrame(loop);
+  })();
+}
 // the title always fits its half of the header with a clear gutter, so the description beside it never gets crowded
 function fitTitle() {
   const h = vin.querySelector(".ph h1"); if (!h) return;

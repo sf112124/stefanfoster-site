@@ -385,3 +385,16 @@ body.isabout .vbar .vt{opacity:0}
 .agrid dd{margin:0;font-family:var(--sans);font-size:15px;font-weight:500;letter-spacing:0}
 .agrid a:hover,.agrid .copy:hover{opacity:.6}
 @media (max-width:700px){.agrid{grid-template-columns:1fr}.acard{border-radius:22px}.astage{place-items:start center;padding-top:10px}}
+/* ---------- project pages: the same glass as About ---------- */
+.proj{background:linear-gradient(160deg,rgba(255,255,255,.66),rgba(250,248,244,.5) 40%,rgba(255,255,255,.58));
+  -webkit-backdrop-filter:blur(22px) saturate(1.4);backdrop-filter:blur(22px) saturate(1.4);
+  box-shadow:0 0 0 1px rgba(255,255,255,.75) inset,0 1px 0 rgba(255,255,255,.95) inset,0 0 70px 8px rgba(255,255,255,.5),0 0 160px 30px rgba(255,236,220,.28);
+  overflow:hidden;perspective:1400px;animation:arise .9s var(--ease) both}
+.pshine{position:absolute;left:0;top:0;width:760px;height:760px;pointer-events:none;z-index:0;border-radius:50%;will-change:transform;
+  background:radial-gradient(circle,rgba(255,255,255,.55),rgba(255,236,246,.18) 35%,rgba(255,255,255,0) 68%)}
+.proj>*:not(.pshine){position:relative;z-index:1}
+.ph{transform-origin:30% 60%;transform-style:preserve-3d;will-change:transform}
+.ph h1{font-family:"Anybody",var(--sans);font-weight:600;letter-spacing:-.025em}
+.ph h1 .ch{transition:none}
+body.viewing:not(.isabout) .app{filter:blur(10px) saturate(1.15);opacity:.9}
+.ph h1{text-transform:uppercase;letter-spacing:-.015em}
