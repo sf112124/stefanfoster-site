@@ -423,3 +423,8 @@ body.viewing:not(.isabout) .app{filter:blur(10px) saturate(1.15);opacity:.9}
 .lite .home{transition:opacity .6s ease}
 .lite .acard,.lite .proj{animation-name:arise-lite}
 @keyframes arise-lite{from{opacity:0;transform:translateY(24px)}}
+/* winding up: the logo spins faster, swells a touch and the Enter prompt becomes a loading pulse */
+.splash.winding{cursor:progress}
+.splash.winding .sf{transform:scale(calc(1 + var(--wind,0) * .08));filter:blur(calc(var(--wind,0) * 1.2px))}
+.splash.winding .enter{animation:breath .5s ease-in-out infinite}
+body.entered .splash.winding .sf{transform:scale(1.9) rotate(-4deg);filter:blur(40px);opacity:0}

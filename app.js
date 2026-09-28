@@ -51,19 +51,42 @@ const ALL = (() => {
   return a;
 })();
 
+window.__sf = true; // the site's own door is here now; the inline fallback in the page stands down
 const sound = new Sound();
 let entered = false;
 // ---------- splash ----------
+function warmLoops() {
+  const urls = [...new Set(ALL.filter((x) => x.loop).map((x) => x.loop))];
+  let i = 0; const next = () => { if (i >= urls.length) return; fetch(urls[i++], { priority: "low" }).catch(() => {}).finally(() => setTimeout(next, 120)); };
+  setTimeout(next, 1500);
+}
 function enter(fast) {
-  if (entered) return; entered = true;
+  if (entered) return; entered = true; warmLoops();
   document.body.classList.add("entered");
   if (fast) $("splash").hidden = true;
   sound.unlock();
   if (!fast) sound.warp();
   setTimeout(() => { $("sf").pause(); $("splash").hidden = true; }, fast ? 0 : 1800);
 }
-$("splash").addEventListener("click", () => enter());
-addEventListener("keydown", (e) => { if (!entered && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); enter(); } });
+// clicking the logo winds it up: it spins faster and faster while the home finishes loading, then lets go
+let winding = false;
+function windUp() {
+  if (entered || winding) return; winding = true; sound.unlock();
+  const v = $("sf"), sp = $("splash"), t0 = performance.now();
+  sp.classList.add("winding"); v.play?.().catch(() => {});
+  const imgs = () => [...document.querySelectorAll(".node img")];
+  const ready = () => imgs().every((i) => i.complete) && (!document.fonts || document.fonts.status === "loaded");
+  (function spin(now) {
+    const k = Math.min(1, (now - t0) / 2400), rate = 1 + k * k * 5;
+    try { v.playbackRate = Math.min(6, rate); } catch (e) {}
+    sp.style.setProperty("--wind", k.toFixed(3));
+    const el = now - t0;
+    if ((el > 900 && ready()) || el > 6000) { try { v.playbackRate = 6; } catch (e) {} enter(); return; }
+    requestAnimationFrame(spin);
+  })(t0);
+}
+$("splash").addEventListener("click", windUp);
+addEventListener("keydown", (e) => { if (!entered && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); windUp(); } });
 addEventListener("pointerdown", () => sound.unlock(), { passive: true });
 addEventListener("keydown", () => sound.unlock());
 if (document.body.classList.contains("entered")) enter(true);

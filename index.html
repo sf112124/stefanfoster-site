@@ -79,7 +79,7 @@
 (function () {
   var s = document.getElementById("splash");
   function go() {
-    if (document.body.classList.contains("entered")) return;
+    if (window.__sf || document.body.classList.contains("entered")) return;
     document.body.classList.add("entered");
     setTimeout(function () { s.hidden = true; try { document.getElementById("sf").pause(); } catch (e) {} }, 1800);
   }
