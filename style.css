@@ -328,3 +328,9 @@ body:not(.entered) .top,body:not(.entered) .bot{opacity:0;pointer-events:none}
 .tile,.tm{touch-action:pan-y pinch-zoom}
 .rows.hero{justify-content:flex-start}
 @media (max-width:700px){.rows{justify-content:center}}
+/* the hero film sits in the middle of the page, its section name floating up in the corner */
+.rows.hero{justify-content:center}
+@media (min-width:1300px){
+  .grp.has:has(.rows.hero){grid-template-columns:1fr;position:relative}
+  .grp.has:has(.rows.hero) .gsec{position:absolute;left:0;top:clamp(18px,3vh,32px)}
+}
