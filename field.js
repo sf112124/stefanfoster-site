@@ -209,7 +209,7 @@ export class Field {
         }
         g.lineCap = "round"; g.lineJoin = "round";
         g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
-        g.strokeStyle = `rgba(255,255,255,${.75 + pluck * .2})`; g.lineWidth = .7; g.stroke();
+        g.strokeStyle = `rgba(13,13,14,${.34 + pluck * .2})`; g.lineWidth = .8; g.stroke();
       });
     }
     requestAnimationFrame(this.frame);

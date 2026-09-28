@@ -274,6 +274,7 @@ addEventListener("resize", () => { if (lbk >= 0) place(fitRect(deck.list[lbk]));
 const view = $("view"), vin = $("vin");
 let page = null;
 function renderProject(i) {
+  document.body.classList.remove("isabout");
   if (lbk >= 0) lbClose(true);
   const p = PROJECTS[i], nx = PROJECTS[(i + 1) % PROJECTS.length], pieces = p.pieces;
   const groups = [];
@@ -384,23 +385,53 @@ function wireTiles() {
   justify();
 }
 
+// about: a pane of glowing frosted glass floating over the home, tilting towards your hand, the name swelling under it
 function renderAbout() {
   const a = ABOUT;
-  vin.innerHTML = `<article class="proj about"><header class="ph"><div class="phl"><h1 class="rise">${chars(a.name)}</h1></div>
-    <p class="lead">${esc(a.role)} ${esc(a.line)}</p></header>
-    <dl class="acols mono">
-      <div><dt>Get in touch</dt><dd><button class="copy" data-copy="${esc(a.email)}">${esc(a.email)}</button></dd>
-        ${a.socials.map((s) => `<dd><a href="${s.url}" target="_blank" rel="noopener">${esc(s.label)} ↗</a></dd>`).join("")}</div>
-      <div><dt>Currently at</dt>${a.now.map((x) => `<dd>${esc(x)}</dd>`).join("")}</div>
-      <div><dt>Previously at</dt>${a.before.map((x) => `<dd>${esc(x)}</dd>`).join("")}</div>
-    </dl></article>`;
+  const letters = (t) => t.split(" ").map((w) => `<span class="aw">${[...w].map((c) => `<i>${esc(c)}</i>`).join("")}</span>`).join(`<span class="asp"> </span>`);
+  vin.innerHTML = `<div class="astage"><article class="acard" id="acard">
+      <i class="ashine" aria-hidden="true"></i>
+      <p class="akick mono">About</p>
+      <h1 class="aname">${letters(a.name)}</h1>
+      <p class="alead">${esc(a.role)} ${esc(a.line)}</p>
+      <dl class="agrid mono">
+        <div><dt>Get in touch</dt><dd><button class="copy" data-copy="${esc(a.email)}">${esc(a.email)}</button></dd>
+          ${a.socials.map((x) => `<dd><a href="${x.url}" target="_blank" rel="noopener">${esc(x.label)} ↗</a></dd>`).join("")}</div>
+        <div><dt>Currently at</dt>${a.now.map((x) => `<dd>${esc(x)}</dd>`).join("")}</div>
+        <div><dt>Previously at</dt>${a.before.map((x) => `<dd>${esc(x)}</dd>`).join("")}</div>
+      </dl>
+    </article></div>`;
   $("vt").textContent = "About"; page = null;
+  document.body.classList.add("isabout");
   vin.querySelectorAll(".copy").forEach((b) => b.addEventListener("click", () => {
     const t = b.dataset.copy, done = () => { b.textContent = "Copied"; setTimeout(() => (b.textContent = t), 1400); };
     const sel = () => { const r = document.createRange(); r.selectNodeContents(b); getSelection().removeAllRanges(); getSelection().addRange(r); };
     try { navigator.clipboard.writeText(t).then(done, sel); } catch (e) { sel(); }
   }));
-  requestAnimationFrame(() => requestAnimationFrame(() => vin.querySelectorAll(".rise,.lead").forEach((h) => h.classList.add("in"))));
+  const card = $("acard"), ls = [...card.querySelectorAll(".aname i")].map((c) => ({ c, g: 0 }));
+  let tx = 0, ty = 0, cx = 0, cy = 0, mx = -1e4, my = -1e4, fs = 60;
+  const mv = (e) => { mx = e.clientX; my = e.clientY; tx = e.clientX / innerWidth - .5; ty = e.clientY / innerHeight - .5; };
+  addEventListener("pointermove", mv);
+  const t0 = performance.now();
+  (function loop(now) {
+    if (!card.isConnected) { removeEventListener("pointermove", mv); return; }
+    const t = (now - t0) / 1000, idle = reduce ? 0 : 1;
+    // a slow float when you're still, a lean towards you when you move
+    const fx = tx + Math.sin(t * .5) * .04 * idle, fy = ty + Math.cos(t * .43) * .04 * idle;
+    cx += (fx - cx) * .08; cy += (fy - cy) * .08;
+    if (!reduce) card.style.transform = `rotateX(${(-cy * 14).toFixed(2)}deg) rotateY(${(cx * 18).toFixed(2)}deg) translateZ(0)`;
+    card.style.setProperty("--lx", `${(50 + cx * 90).toFixed(1)}%`); card.style.setProperty("--ly", `${(40 + cy * 90).toFixed(1)}%`);
+    fs = parseFloat(getComputedStyle(ls[0].c).fontSize) || fs;
+    const rs = ls.map((l) => l.c.getBoundingClientRect());
+    ls.forEach((l, k) => {
+      const r = rs[k], d = Math.hypot(mx - (r.left + r.width / 2), (my - (r.top + r.height / 2)) * 1.4);
+      const want = reduce ? 0 : Math.exp(-(d * d) / (fs * fs * 1.6));
+      l.g += (want - l.g) * .14;
+      const fv = `"wdth" ${Math.round(100 + l.g * 50)}, "wght" ${Math.round((560 + l.g * 340) / 10) * 10}`;
+      if (l.fv !== fv) { l.fv = fv; l.c.style.fontVariationSettings = fv; l.c.style.transform = l.g > .02 ? `translateY(${(-l.g * fs * .06).toFixed(1)}px)` : ""; }
+    });
+    requestAnimationFrame(loop);
+  })(t0);
 }
 function countUp(el) {
   if (reduce) return;
@@ -443,7 +474,7 @@ function open() {
 }
 function close() {
   if (!viewOpen) return;
-  viewOpen = false; view.classList.remove("open"); document.body.classList.remove("viewing"); view.setAttribute("aria-hidden", "true");
+  viewOpen = false; view.classList.remove("open"); document.body.classList.remove("viewing"); setTimeout(() => { if (!viewOpen) document.body.classList.remove("isabout"); }, 600); view.setAttribute("aria-hidden", "true");
   if (lbk >= 0) lbClose(true);
   page?.io?.disconnect(); page = null;
   sound.quiet(false); field.setActive(innerWidth > 700);
@@ -462,7 +493,7 @@ document.addEventListener("visibilitychange", () => {
 // remember when the page is moving, so a finger stopping a scroll doesn't open something
 { let st = 0; view.addEventListener("scroll", () => { view.scrolling = true; clearTimeout(st); st = setTimeout(() => (view.scrolling = false), 180); }, { passive: true }); }
 // click the blurred home around a project to pull focus back to it
-view.addEventListener("click", (e) => { if (e.target === view || e.target === vin) goHome(); });
+view.addEventListener("click", (e) => { if (e.target === view || e.target === vin || e.target.classList?.contains("astage")) goHome(); });
 addEventListener("keydown", (e) => {
   if (lbk >= 0) {
     if (e.key === "Escape") { if (!document.fullscreenElement) lbClose(); return; }
