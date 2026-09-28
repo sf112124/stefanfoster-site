@@ -44,6 +44,18 @@ const ALL = (() => {
   return a;
 })();
 
+// the splash reel is white-backed; phones won't blend a playing video into the page, so it's printed onto the paper here instead
+{ const v = $("sf"), c = $("sfc"), x = c.getContext("2d");
+  const draw = () => {
+    if ($("splash").hidden) return;
+    if (v.videoWidth) {
+      if (c.width !== v.videoWidth) { c.width = v.videoWidth; c.height = v.videoHeight; }
+      x.globalCompositeOperation = "source-over"; x.fillStyle = "#F4F3EF"; x.fillRect(0, 0, c.width, c.height);
+      x.globalCompositeOperation = "multiply"; x.drawImage(v, 0, 0);
+    }
+    requestAnimationFrame(draw);
+  };
+  requestAnimationFrame(draw); v.play?.().catch(() => {}); }
 const sound = new Sound();
 let entered = false;
 // ---------- splash ----------
@@ -92,6 +104,8 @@ const field = new Field($("field"), ALL, {
   onPadEnd: () => sound.padEnd(),
   onLeave: () => { sound.release(); if (wheel.over < 0) setFam(null); },
 });
+field.setActive(innerWidth > 700);
+addEventListener("resize", () => { if (!viewOpen && !document.hidden) field.setActive(innerWidth > 700); });
 let palBase = 0;
 function setFam(i) {
   fam = i; palBase = i == null ? 0 : HUES[i % HUES.length];
@@ -441,7 +455,7 @@ function close() {
   viewOpen = false; view.classList.remove("open"); document.body.classList.remove("viewing"); view.setAttribute("aria-hidden", "true");
   if (lbk >= 0) lbClose(true);
   page?.io?.disconnect(); page = null;
-  sound.quiet(false); field.setActive(true);
+  sound.quiet(false); field.setActive(innerWidth > 700);
   setTimeout(() => { if (!viewOpen) vin.innerHTML = ""; }, 600);
 }
 document.addEventListener("click", (e) => {
@@ -451,7 +465,7 @@ document.addEventListener("click", (e) => {
 addEventListener("hashchange", route);
 document.addEventListener("visibilitychange", () => {
   const on = !document.hidden;
-  thermal.setActive(on); if (!viewOpen) field.setActive(on);
+  thermal.setActive(on); if (!viewOpen) field.setActive(on && innerWidth > 700);
   tripT = performance.now();
 });
 // remember when the page is moving, so a finger stopping a scroll doesn't open something
