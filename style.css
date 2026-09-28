@@ -461,3 +461,11 @@ html,body,.splash,.app,.proj,.acard,.label{transition:background-color .6s var(-
 .lite.night .proj{background:rgba(20,20,24,.97)}.lite.night .acard{background:rgba(24,24,30,.96)}.lite.night .label{background:rgba(20,20,24,.96)}
 .night .proj{background:linear-gradient(160deg,rgba(22,22,27,.86),rgba(12,12,15,.8) 40%,rgba(22,22,27,.84))}
 .night .acard{background:linear-gradient(135deg,rgba(30,30,37,.82),rgba(14,14,18,.7) 55%,rgba(26,26,33,.78))}
+
+/* night, take two: proper black, pure white type and dots */
+html.night{--bg:#000;--ink:#fff;--mute:rgba(255,255,255,.72);--line:rgba(255,255,255,.18)}
+.night .wi{color:rgba(255,255,255,calc(.78 + var(--k,0) * .22))}
+.night .wi .wn,.night .wi .wc{color:rgba(255,255,255,.7)}
+.night .lead,.night .alead,.night .gsec p{color:rgba(255,255,255,.88)}
+.night .node{background:#fff}
+.lite.night body,.night.lite body{background:radial-gradient(34vmax 28vmax at 66% 42%,rgba(60,255,120,.28),rgba(0,90,50,.18) 45%,transparent 72%),#000}

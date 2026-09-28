@@ -584,9 +584,9 @@ $("snd").addEventListener("click", () => $("snd").setAttribute("aria-pressed", s
 function setNight(on) {
   document.documentElement.classList.toggle("night", on);
   $("nite").setAttribute("aria-pressed", on); $("nite").querySelector("span").textContent = on ? "DAY" : "NIGHT";
-  if (thermal.bgc) thermal.bgc = on ? [.043, .043, .05] : [.957, .952, .937];
-  melt.paper = on ? [.043, .043, .05] : [.953, .945, .925];
-  field.inkRGB = on ? "237,235,230" : "13,13,14";
+  if (thermal.bgc) { thermal.bgc = on ? [0, 0, 0] : [.957, .952, .937]; thermal.night = on ? 1 : 0; }
+  melt.paper = on ? [0, 0, 0] : [.953, .945, .925];
+  field.inkRGB = on ? "255,255,255" : "13,13,14"; field.night = on;
   try { localStorage.setItem("night", on ? "1" : "0"); } catch (e) {}
 }
 $("nite").addEventListener("click", () => { sound.pluck?.(sound.note(.5, document.documentElement.classList.contains("night") ? .7 : .3), .03); setNight(!document.documentElement.classList.contains("night")); });
