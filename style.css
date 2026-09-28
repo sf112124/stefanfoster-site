@@ -482,3 +482,11 @@ html.night{--mute:#fff;--line:rgba(255,255,255,.3)}
 .nite{gap:9px;padding:7px 13px 7px 10px;margin:-7px 0;border-radius:99px;border:1px solid var(--line);color:var(--ink);font-size:11px;letter-spacing:.1em;transition:background .3s,border-color .3s}
 .nite:hover{background:rgba(127,127,127,.12)}
 .nite i{width:12px;height:12px;box-shadow:inset -4px -2px 0 0 var(--bg)}
+
+/* PLAY: the sequencer switch, same family as night/day */
+.seqb{display:flex;align-items:center;gap:9px;padding:7px 13px 7px 11px;margin:-7px 0;border-radius:99px;border:1px solid var(--line);color:var(--ink);font:inherit;font-size:11px;letter-spacing:.1em;transition:background .3s}
+.seqb:hover{background:rgba(127,127,127,.12)}
+.seqb i{width:0;height:0;border-left:8px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent}
+.seqb[aria-pressed="true"] i{width:8px;height:8px;border:0;background:currentColor;border-radius:1px;animation:beat 1.2s ease-in-out infinite}
+html.seq .home{cursor:crosshair}
+html.seq .wi,html.seq .node{cursor:pointer}

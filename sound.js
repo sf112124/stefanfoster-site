@@ -82,7 +82,13 @@ export class Sound {
     s.connect(f); f.connect(g); this.out(g, 0, .6); s.start(t); s.stop(t + dur + .05);
   }
   // soft, plucky, slightly warped notes: a dreamy scale, each note bending into tune like old tape
-  pluck(f, vol = .03, pan = 0, bend = 1) {
+  // the sequencer's voices: 0 a soft pluck, 1 a round warm bass, 2 a glassy bell
+  voice(kind, f, vol, pan, bend = 1) {
+    if (kind === 1) return this.pluck(f / 2, vol * 1.6, pan * .3, bend, { t1: "sine", t2: "sine", h: 1.001, mix: .12, lp0: 900, lp1: 260, dec: 1.1 });
+    if (kind === 2) return this.pluck(f * 2, vol * .8, pan, bend * .6, { t1: "sine", t2: "sine", h: 2.76, mix: .35, lp0: 6000, lp1: 2400, dec: 2.2 });
+    return this.pluck(f, vol, pan, bend);
+  }
+  pluck(f, vol = .03, pan = 0, bend = 1, tone = null) {
     if (!this.ok()) return;
     const ac = this.ac, t = ac.currentTime;
     if (!this.wv) {
@@ -94,19 +100,20 @@ export class Sound {
       this.wv = { depth, dl };
     }
     const o1 = ac.createOscillator(), o2 = ac.createOscillator(), g2 = ac.createGain(), lp = ac.createBiquadFilter(), g = ac.createGain();
-    o1.type = "sine"; o2.type = "triangle"; o1.frequency.value = f; o2.frequency.value = f * 2.003; g2.gain.value = .22;
+    const T = tone || { t1: "sine", t2: "triangle", h: 2.003, mix: .22, lp0: 3200, lp1: 700, dec: 1.4 };
+    o1.type = T.t1; o2.type = T.t2; o1.frequency.value = f; o2.frequency.value = f * T.h; g2.gain.value = T.mix;
     const b0 = (Math.random() - .5) * 60 * bend;
     [o1, o2].forEach((o) => { this.wv.depth.connect(o.detune); o.detune.setValueAtTime(b0, t); o.detune.linearRampToValueAtTime(0, t + .18); });
-    lp.type = "lowpass"; lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(700, t + .6); lp.Q.value = .7;
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .006); g.gain.exponentialRampToValueAtTime(vol * .3, t + .12); g.gain.exponentialRampToValueAtTime(.0001, t + 1.4);
+    lp.type = "lowpass"; lp.frequency.setValueAtTime(T.lp0, t); lp.frequency.exponentialRampToValueAtTime(T.lp1, t + .6); lp.Q.value = .7;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .006); g.gain.exponentialRampToValueAtTime(vol * .3, t + .12); g.gain.exponentialRampToValueAtTime(.0001, t + T.dec);
     o1.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g);
     this.out(g, pan, .55); g.connect(this.wv.dl);
-    o1.start(t); o2.start(t); o1.stop(t + 1.5); o2.stop(t + 1.5);
+    o1.start(t); o2.start(t); o1.stop(t + T.dec + .1); o2.stop(t + T.dec + .1);
   }
   note(x, y) { const sc = [0, 3, 5, 7, 10], k = Math.max(0, Math.min(14, Math.floor(y * 15))); return 146.83 * Math.pow(2, (sc[k % 5] + 12 * Math.floor(k / 5)) / 12); }
   // your hand drifting over the field strums it: a note each time you cross into a new patch, higher up the screen is higher
   touch(x = .5, y = .5, speed = 0) {
-    if (!this.ok() || speed < .04) return;
+    if (!this.ok() || this.seqOn || speed < .04) return;
     const cell = Math.floor(x * 9) + "," + Math.floor(y * 15), now = performance.now();
     if (cell === this.lastCell || now - (this.lastPluck || 0) < 85) return;
     this.lastCell = cell; this.lastPluck = now;
@@ -151,6 +158,8 @@ export class Sound {
     this.ch = { out, lp, td, tl, wd, voices };
     return this.ch;
   }
+  // while a loop is playing, shaking bends the whole thing: deeper tape wobble, more echo
+  warp(e) { if (!this.ac || !this.wv) return; const t = this.ac.currentTime; this.wv.depth.gain.setTargetAtTime(14 + e * 160, t, .08); }
   pad(x, y, energy) {
     if (!this.ok()) return;
     const ac = this.ac, t = ac.currentTime, c = this.chord(), e = Math.min(1, energy);

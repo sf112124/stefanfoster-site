@@ -119,7 +119,7 @@ const field = new Field($("field"), ALL, {
   },
   onOpen: (it, b) => { sound.unlock(); openFromHome(it, b); },
   onMove: (() => { let lx = 0, ly = 0, lt = 0; return (x, y) => { const t = performance.now(), sp = Math.min(1, Math.hypot(x - lx, y - ly) / Math.max(16, t - lt) * 60); lx = x; ly = y; lt = t; sound.touch(x, 1 - y, sp); }; })(),
-  onPad: (x, y, e) => sound.pad(x, y, e),
+  onPad: (x, y, e) => { sound.pad(x, y, e); if (seq.on) seq.warp = Math.max(seq.warp, e); },
   onPadEnd: () => sound.padEnd(),
   onLeave: () => { sound.release(); if (wheel.over < 0) setFam(null); },
 });
@@ -130,6 +130,59 @@ $("heat").addEventListener("webglcontextrestored", () => {
   const old = thermal; if (!old.gl) return; old.active = false;
   thermal = new Thermal($("heat"), { reduce, lite: touch });
   thermal.bgc = old.bgc; thermal.night = old.night; applyWay(true);
+});
+// ---------- the sequencer: the grid is the score ----------
+// a line of light sweeps across on a loop; every piece of work it passes plays its note (higher up, higher note), each
+// project with its own voice. Click empty dots to add notes, drag a piece to move its note for good, grab and shake to
+// bend the whole loop.
+const STEPS = 16, LOOP = 6.4;
+const seq = { on: false, pos: 0, step: -1, warp: 0, flash: [], t: 0 };
+function seqTick(now) {
+  if (!seq.on) return;
+  const dt = Math.min(.1, (now - (seq.t || now)) / 1000); seq.t = now;
+  seq.warp *= Math.pow(.2, dt); sound.warp(seq.warp);
+  seq.pos = (seq.pos + dt / LOOP * (1 - seq.warp * .65)) % 1;
+  const st = Math.floor(seq.pos * STEPS);
+  if (st !== seq.step && !viewOpen && !document.hidden) {
+    seq.step = st;
+    const W = field.W, H = field.H, x0 = seq.x0, inStep = (x) => Math.floor(Math.max(0, Math.min(.9999, (x - x0) / (W - x0))) * STEPS) === st;
+    let n = 0;
+    field.nodes.forEach((nd) => {
+      if (!inStep(nd.bx) || n > 4) return; n++;
+      const y = 1 - nd.by / H, loud = fam == null || nd.it.pi === fam;
+      sound.voice(nd.it.pi % 3, sound.note(.5, .1 + y * .8), loud ? .026 : .009, (nd.bx / W - .5) * 1.4, 1 + seq.warp * 3);
+      if (loud) seq.flash.push({ x: nd.x, y: nd.y, t: now });
+    });
+    field.pts.forEach((p) => {
+      if (!p.on || !inStep(p.x)) return;
+      sound.voice(2, sound.note(.5, .1 + (1 - p.y / H) * .8), .022, (p.x / W - .5) * 1.4, 1 + seq.warp * 3);
+      p.hit = now; seq.flash.push({ x: p.wx ?? p.x, y: p.wy ?? p.y, t: now });
+    });
+  }
+  requestAnimationFrame(seqTick);
+}
+field.onDraw = (g) => {
+  if (!seq.on) return;
+  const x = seq.x0 + seq.pos * (field.W - seq.x0), ink = field.inkRGB || "13,13,14", w = 60 + seq.warp * 140;
+  const gr = g.createLinearGradient(x - w, 0, x + 8, 0);
+  gr.addColorStop(0, `rgba(${ink},0)`); gr.addColorStop(1, `rgba(${ink},.07)`);
+  g.fillStyle = gr; g.fillRect(x - w, 0, w + 8, field.H);
+  g.fillStyle = `rgba(${ink},.55)`; g.fillRect(x, 0, 1, field.H);
+};
+function setSeq(on) {
+  // the loop only spans the part of the grid that holds work, not the space behind the index
+  seq.x0 = Math.max(0, Math.min(...field.nodes.map((n) => n.bx)) - 24);
+  seq.on = on; field.seq = on; sound.seqOn = on; seq.t = 0; seq.step = -1;
+  $("seqb").setAttribute("aria-pressed", on); $("seqb").querySelector("span").textContent = on ? "STOP" : "PLAY";
+  document.documentElement.classList.toggle("seq", on);
+  if (on) { sound.unlock(); requestAnimationFrame(seqTick); } else { sound.warp(0); }
+}
+$("seqb").addEventListener("click", () => setSeq(!seq.on));
+if (/[?&]debug/.test(location.search)) window.sf = { field, seq };
+$("home").addEventListener("click", (e) => {
+  if (!seq.on || e.target.closest(".wi,.node,a,button")) return;
+  const r = field.el.getBoundingClientRect(), p = field.toggleAt(e.clientX - r.left, e.clientY - r.top);
+  if (p) sound.voice(2, sound.note(.5, .1 + (1 - p.y / field.H) * .8), p.on ? .03 : .012, 0, 1);
 });
 let palBase = 0;
 // colourways: each project has its own, for night (glowing out of black) and for day (blooming out of paper)
@@ -192,6 +245,8 @@ function goLite() {
   const hot = field.nodes[field.hot];
   if (hot) S.push({ x: r.left + hot.x, y: r.top + hot.y, r: Math.max(hot.w, hot.h) * .7, a: .75 });
   if (fam != null) field.famNodes(fam).slice(0, 10).forEach((n) => S.push({ x: r.left + n.x, y: r.top + n.y, r: 80, a: .3 }));
+  seq.flash = seq.flash.filter((f) => performance.now() - f.t < 700);
+  seq.flash.forEach((f) => { const k = 1 - (performance.now() - f.t) / 700; S.push({ x: r.left + f.x, y: r.top + f.y, r: 70 + (1 - k) * 90, a: .55 * k }); });
   thermal.set(S);
   const n = field.nodes[field.hot];
   if (n) { const [lw, lh] = label.sz || [330, 60]; label.style.transform = `translate(${Math.min(innerWidth - lw - 12, Math.max(12, n.x - n.w / 2 + r.left))}px,${Math.min(innerHeight - lh - 12, n.y + n.h / 2 + r.top + 12)}px)`; }

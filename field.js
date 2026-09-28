@@ -94,7 +94,7 @@ export class Field {
     if (this.drag) return;
     // over the index, the index has your hand; the grid leaves you alone
     if (this.inBand(this.mx, this.my) && !(this.hot >= 0 && Math.abs(this.mx - this.nodes[this.hot].x) < this.nodes[this.hot].w / 2 && Math.abs(this.my - this.nodes[this.hot].y) < this.nodes[this.hot].h / 2)) { this.setHot(-1); this.onLeave?.(); return; }
-    let best = -1, bd = this.sp * .5;
+    let best = -1, bd = this.sp * (this.seq ? .16 : .5);
     this.nodes.forEach((n, k) => { const d = Math.hypot(n.bx - this.mx, n.by - this.my); if (d < bd) { bd = d; best = k; } });
     if (best < 0 && this.hot >= 0) { const n = this.nodes[this.hot]; if (Math.abs(this.mx - n.x) < n.w / 2 && Math.abs(this.my - n.y) < n.h / 2) best = this.hot; }
     this.setHot(best);
@@ -134,8 +134,10 @@ export class Field {
     this.drag = null; d.n.b.classList.remove("held");
     // on a finger the first tap opens the piece where it sits, the second one goes in
     if (!d.moved) { if (this.touch && this.hot !== d.n.i) this.setHot(d.n.i); else this.onOpen?.(d.n.it, d.n.b); }
-    else this.onPadEnd?.();
+    else { this.onPadEnd?.(); if (this.seq) { const r = this.el.getBoundingClientRect(); d.n.bx = Math.max(10, Math.min(this.W - 10, d.n.x)); d.n.by = Math.max(10, Math.min(this.H - 10, d.n.y)); } }
   }
+  // sequencer: light up (or switch off) the empty point nearest a click
+  toggleAt(x, y) { let best = null, bd = this.sp * .8; this.pts.forEach((p) => { if (p.used || p.fog) return; const d = Math.hypot((p.wx ?? p.x) - x, (p.wy ?? p.y) - y); if (d < bd) { bd = d; best = p; } }); if (best) best.on = !best.on; return best; }
   setActive(on) { if (on === this.active) return; this.active = on; if (on) requestAnimationFrame(this.frame); else this.setHot(-1); }
   // the whole lattice breathes: slow crossing swells, and a ripple that spreads away from your hand
   wave(x, y, t) {
@@ -193,7 +195,8 @@ export class Field {
     const g = this.g;
     if (this.lite) g.clearRect(0, 0, this.W, this.H);
     else { g.globalCompositeOperation = "destination-out"; g.fillStyle = `rgba(0,0,0,${1 - this.trip * .78})`; g.fillRect(0, 0, this.W, this.H); g.globalCompositeOperation = "source-over"; }
-    this.pts.forEach((p) => { if (p.used) return; const [x, y] = this.wave(p.x, p.y, t); p.wx = x; p.wy = y; g.fillStyle = p.fog ? `rgba(${this.inkRGB || "13,13,14"},${this.night ? 1 : .14})` : `rgba(${this.inkRGB || "13,13,14"},${this.night ? 1 : .5})`; if (p.fog) { g.beginPath(); g.arc(x, y, 1.1, 0, 7); g.fill(); return; } const d = Math.hypot(x - this.mx, y - this.my), s = 1.5 + 2.4 * Math.exp(-(d * d) / (this.sp * this.sp * 2)) + .5 * Math.sin(t * 1.3 + p.x * .02 + p.y * .03); g.beginPath(); g.arc(x, y, Math.max(.8, s * .8), 0, 7); g.fill(); });
+    this.pts.forEach((p) => { if (p.used) return; if (p.on) { const [x, y] = this.wave(p.x, p.y, t); p.wx = x; p.wy = y; const fl = Math.max(0, 1 - (now - (p.hit || 0)) / 400); g.fillStyle = `rgba(${this.inkRGB || "13,13,14"},1)`; g.beginPath(); g.arc(x, y, 4.5 + fl * 5, 0, 7); g.fill(); g.strokeStyle = `rgba(${this.inkRGB || "13,13,14"},.35)`; g.lineWidth = 1; g.beginPath(); g.arc(x, y, 9 + fl * 10, 0, 7); g.stroke(); return; } const [x, y] = this.wave(p.x, p.y, t); p.wx = x; p.wy = y; g.fillStyle = p.fog ? `rgba(${this.inkRGB || "13,13,14"},${this.night ? 1 : .14})` : `rgba(${this.inkRGB || "13,13,14"},${this.night ? 1 : .5})`; if (p.fog) { g.beginPath(); g.arc(x, y, 1.1, 0, 7); g.fill(); return; } const d = Math.hypot(x - this.mx, y - this.my), s = 1.5 + 2.4 * Math.exp(-(d * d) / (this.sp * this.sp * 2)) + .5 * Math.sin(t * 1.3 + p.x * .02 + p.y * .03); g.beginPath(); g.arc(x, y, Math.max(.8, s * .8), 0, 7); g.fill(); });
+    this.onDraw?.(g, t);
     // the family is strung together with light: soft strings that curve and hum, plucked each time you land on something
     if (fam != null) {
       const fl = this.nodes.filter((n) => n.it.pi === fam), src = hot || fl[0];
