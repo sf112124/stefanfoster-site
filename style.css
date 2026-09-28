@@ -477,3 +477,8 @@ html.night{--mute:#fff;--line:rgba(255,255,255,.3)}
 .night .lead,.night .alead,.night .gsec p,.night .tile figcaption,.night .tile figcaption b,.night .tile figcaption em{color:#fff}
 .night .wi:not(.on) .wt{opacity:1}
 .night .node.far{opacity:1}
+
+/* night/day switch: a proper pill you can find */
+.nite{gap:9px;padding:7px 13px 7px 10px;margin:-7px 0;border-radius:99px;border:1px solid var(--line);color:var(--ink);font-size:11px;letter-spacing:.1em;transition:background .3s,border-color .3s}
+.nite:hover{background:rgba(127,127,127,.12)}
+.nite i{width:12px;height:12px;box-shadow:inset -4px -2px 0 0 var(--bg)}

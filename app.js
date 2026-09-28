@@ -126,11 +126,37 @@ const field = new Field($("field"), ALL, {
 field.setActive(innerWidth > 700);
 addEventListener("resize", () => { if (!viewOpen && !document.hidden) field.setActive(innerWidth > 700); });
 let palBase = 0;
+// colourways: each project has its own, for night (glowing out of black) and for day (blooming out of paper)
+const WAYS = {
+  night: [
+    ["#0a0a3a", "#4b12c8", "#0bb8f0", "#46ff8a", "#eafff0"], // aurora neon (the home)
+    ["#1a0630", "#c2187a", "#ff6fb8", "#6cd4ff", "#f2fbff"], // cotton candy
+    ["#051226", "#5a1ec8", "#08c8d0", "#6fffe8", "#f0fffd"], // galaxy teal
+    ["#0c0428", "#5b1fe0", "#a45cff", "#d8c2ff", "#fbf7ff"], // electric dream
+    ["#021405", "#0c6e14", "#39e61e", "#b8ff3a", "#f6ffe6"], // toxic glow
+    ["#1c0412", "#b0124a", "#ff3a6e", "#ff9a4a", "#fff3ea"], // sunset wave
+    ["#021818", "#0a6e6a", "#2fd9c4", "#a8fff0", "#f4fffc"], // ice mint
+    ["#1a0200", "#9a0a00", "#ff3a00", "#ffb000", "#fff6d8"], // firestorm
+    ["#01061e", "#0a2ea8", "#1a7cff", "#6cc8ff", "#eef8ff"], // ocean depth
+  ],
+  day: [
+    ["#ffb07a", "#ff7f96", "#6f86ff", "#b3d8ff", "#fff27a"], // the original heat
+    ["#ffb3d6", "#ff6fae", "#a07cff", "#5cc4ff", "#e6f7ff"], // cotton candy
+    ["#8fe8de", "#3fd0c4", "#4a8cff", "#7a52ff", "#efe8ff"], // galaxy teal
+    ["#c9b4ff", "#9a74ff", "#6a4dff", "#ff7cc8", "#fff0f8"], // electric dream
+    ["#c6f77a", "#86e84a", "#2fd680", "#26c0d0", "#effff4"], // toxic glow
+    ["#ffc394", "#ff8a5c", "#ff4f7c", "#b85cff", "#ffeaf4"], // sunset wave
+    ["#9ff5e2", "#56e0c8", "#4ab4ff", "#8a8cff", "#f0f2ff"], // ice mint
+    ["#ffd27a", "#ff9c3a", "#ff5a2a", "#ff2f64", "#fff1d6"], // firestorm
+    ["#a8d4ff", "#64a8ff", "#3e6cff", "#6a44ff", "#e4f3ff"], // ocean depth
+  ],
+};
+function applyWay(now) { if (!thermal.palette) return; const n = document.documentElement.classList.contains("night"); thermal.palette(WAYS[n ? "night" : "day"][fam == null ? 0 : (fam % 8) + 1], now); }
 function setFam(i) {
-  fam = i; palBase = i == null ? 0 : HUES[i % HUES.length];
+  fam = i; palBase = 0; applyWay();
   $("readout").innerHTML = i == null ? `INDEX` : `${pad(i + 1)} :: ${esc(PROJECTS[i].title.toUpperCase())}`;
 }
-setFam(null);
+setFam(null); applyWay(true);
 // the heat follows your hand, gathers on the piece you're over and glows under the rest of its project
 const hand = { x: -999, y: -999, on: false }, trail = [{ x: 0, y: 0 }, { x: 0, y: 0 }];
 addEventListener("pointermove", (e) => { hand.x = e.clientX; hand.y = e.clientY; hand.on = true; });
@@ -543,7 +569,7 @@ function open() {
   viewOpen = true; view.classList.add("open"); document.body.classList.add("viewing"); view.setAttribute("aria-hidden", "false");
   view.scrollTop = 0; view.focus({ preventScroll: true });
   requestAnimationFrame(justify);
-  sound.quiet(true); field.setActive(false); setTimeout(() => { if (viewOpen) thermal.setActive(false); }, 1300); thermal.palT = HUES[(page?.p ? PROJECTS.indexOf(page.p) : 0) % HUES.length] || 0;
+  sound.quiet(true); field.setActive(false); setTimeout(() => { if (viewOpen) thermal.setActive(false); }, 1300); if (page?.p && thermal.palette) thermal.palette(WAYS[document.documentElement.classList.contains("night") ? "night" : "day"][(PROJECTS.indexOf(page.p) % 8) + 1]);
 }
 function close() {
   if (!viewOpen) return;
@@ -584,7 +610,7 @@ $("snd").addEventListener("click", () => $("snd").setAttribute("aria-pressed", s
 function setNight(on) {
   document.documentElement.classList.toggle("night", on);
   $("nite").setAttribute("aria-pressed", on); $("nite").querySelector("span").textContent = on ? "DAY" : "NIGHT";
-  if (thermal.bgc) { thermal.bgc = on ? [0, 0, 0] : [.957, .952, .937]; thermal.night = on ? 1 : 0; }
+  if (thermal.bgc) { thermal.bgc = on ? [0, 0, 0] : [.957, .952, .937]; thermal.night = on ? 1 : 0; applyWay(); }
   melt.paper = on ? [0, 0, 0] : [.953, .945, .925];
   field.inkRGB = on ? "255,255,255" : "13,13,14"; field.night = on;
   try { localStorage.setItem("night", on ? "1" : "0"); } catch (e) {}
