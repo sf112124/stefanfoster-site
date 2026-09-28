@@ -164,17 +164,19 @@ export class Field {
       n.va = Math.atan2(vy, vx);
       const st = n.b.style;
       const isBig = n.o > .02 || n.sib, sm = isBig && !this.reduce ? n.vb : 0, str = 1 + Math.min(.35, sm * .03);
-      st.transform = `translate(${n.x - n.w / 2}px,${n.y - n.h / 2}px)` + (sm > 1.2 ? ` rotate(${n.va}rad) scale(${str},${1 / str}) rotate(${-n.va}rad)` : "");
-      st.width = `${n.w}px`; st.height = `${n.h}px`;
+      // only touch the page when something actually changed (sizes rounded, so a settled node costs nothing)
+      const S = n.s || (n.s = {}), put = (k, v) => { if (S[k] !== v) { S[k] = v; if (k[0] === "-") st.setProperty(k, v); else st[k] = v; } };
+      put("transform", `translate(${(n.x - n.w / 2).toFixed(1)}px,${(n.y - n.h / 2).toFixed(1)}px)` + (sm > 1.2 ? ` rotate(${n.va.toFixed(2)}rad) scale(${str.toFixed(3)},${(1 / str).toFixed(3)}) rotate(${(-n.va).toFixed(2)}rad)` : ""));
+      put("width", `${Math.round(n.w * 2) / 2}px`); put("height", `${Math.round(n.h * 2) / 2}px`);
       // an opened piece is a dream surfacing: its edges swirl and melt through the dream filter
       const open = n.o > .3;
       if (open !== n.open) { n.open = open; n.b.classList.toggle("open", open); }
       // the dream edge is costly to redraw at a new size, so it only switches on once the piece has finished growing
       const settled = Math.abs(n.w - w) < 6 && Math.abs(n.h - h) < 6;
-      st.filter = [open && settled && !this.reduce ? "url(#dream)" : "", sm > 1.2 ? `blur(${(sm * .6).toFixed(1)}px)` : ""].join(" ").trim();
+      put("filter", [open && settled && !this.reduce ? "url(#dream)" : "", sm > 1.2 ? `blur(${(sm * .6).toFixed(1)}px)` : ""].join(" ").trim());
       // opened pieces aren't boxes: soft, slowly shifting organic shapes
 
-      st.setProperty("--o", n.o.toFixed(3)); st.zIndex = n === hot ? 5 : n.it.pi === fam ? 3 : 1;
+      put("--o", n.o.toFixed(2)); put("zIndex", String(n === hot ? 5 : n.it.pi === fam ? 3 : 1));
       if (far !== n.far) { n.far = far; n.b.classList.toggle("far", far); }
       // the rest of the project opens into small live circles, so you see the whole family at once
       if (sib !== n.sib) {

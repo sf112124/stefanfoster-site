@@ -46,18 +46,6 @@ const ALL = (() => {
   return a;
 })();
 
-// the splash reel is white-backed; phones won't blend a playing video into the page, so it's printed onto the paper here instead
-{ const v = $("sf"), c = $("sfc"), x = c.getContext("2d");
-  const draw = () => {
-    if ($("splash").hidden) return;
-    if (v.videoWidth) {
-      if (c.width !== v.videoWidth) { c.width = v.videoWidth; c.height = v.videoHeight; }
-      x.globalCompositeOperation = "source-over"; x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, c.width, c.height);
-      x.globalCompositeOperation = "multiply"; x.drawImage(v, 0, 0);
-    }
-    requestAnimationFrame(draw);
-  };
-  requestAnimationFrame(draw); v.play?.().catch(() => {}); }
 const sound = new Sound();
 let entered = false;
 // ---------- splash ----------

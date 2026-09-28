@@ -27,7 +27,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* ---------- splash: the SF alone on white ---------- */
 .splash{position:fixed;inset:0;z-index:60;display:grid;place-items:center;align-content:center;gap:28px;background:var(--bg);cursor:pointer;
   transition:background-color 1.2s var(--ease) .5s,opacity .8s ease 1s}
-.splash .sf{width:min(72vw,980px);mix-blend-mode:multiply;filter:brightness(1.06) contrast(1.08);pointer-events:none;
+.splash .sf{width:min(72vw,980px);pointer-events:none;
   transition:transform 1.6s var(--snap),filter 1.4s var(--ease),opacity 1.2s var(--ease)}
 .enter{color:var(--mute);letter-spacing:.2em;text-transform:uppercase;animation:breath 2.6s ease-in-out infinite;transition:opacity .4s}
 @keyframes breath{50%{opacity:.35}}

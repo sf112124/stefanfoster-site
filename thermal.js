@@ -30,7 +30,7 @@ void main(){
 
 export class Thermal {
   constructor(canvas, { reduce = false, lite = false } = {}) {
-    this.c = canvas; this.reduce = reduce; this.sc = lite ? .26 : .3; this.src = []; this.pal = 0; this.palT = 0;
+    this.c = canvas; this.reduce = reduce; this.sc = this.sc0 = lite ? .26 : .3; this.src = []; this.pal = 0; this.palT = 0;
     const gl = (this.gl = canvas.getContext("webgl", { antialias: false }));
     if (!gl) return;
     const mk = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); return x; };
@@ -47,9 +47,13 @@ export class Thermal {
   }
   // heat sources in page pixels: {x, y, r (px), a}
   set(list) { this.src = list; }
-  setActive(on) { if (on === this.active) return; this.active = on; if (on) requestAnimationFrame(this.frame); }
+  setActive(on) { if (on === this.active) return; this.active = on; this.lastNow = 0; if (on) requestAnimationFrame(this.frame); }
   frame = (now) => {
     if (!this.active || !this.gl) return;
+    // keep an eye on how the machine is coping: if frames run long, draw the heat smaller (it's blur, nobody can tell)
+    if (this.lastNow) { const dt = now - this.lastNow; this.avg = (this.avg || 16) * .95 + Math.min(dt, 100) * .05; this.nf = (this.nf || 0) + 1;
+      if (this.nf > 90) { this.nf = 0; if (this.avg > 22 && this.sc > .16) this.sc *= .8; else if (this.avg < 15 && this.sc < this.sc0) this.sc = Math.min(this.sc0, this.sc * 1.1); } }
+    this.lastNow = now;
     const gl = this.gl, t = (now - this.t0) / 1000, W = innerWidth, H = innerHeight, sc = this.sc;
     const w = Math.max(2, Math.round(W * sc)), h = Math.max(2, Math.round(H * sc));
     if (this.c.width !== w || this.c.height !== h) { this.c.width = w; this.c.height = h; }

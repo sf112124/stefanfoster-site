@@ -73,6 +73,9 @@ export class Wheel {
     if (!this.H || !this.fs || this._h !== innerHeight + innerWidth) { this._h = innerHeight + innerWidth; this.maxW = 0; this.fs = parseFloat(getComputedStyle(this.items[0]).fontSize) || 40; this.H = this.el.clientHeight; }
     const H = this.H, fs = this.fs, n = this.items.length, R = (this.R = Math.max(H * .8, 420)), step = (this.compact ? Math.min(fs * 1.75, (H * .8) / n) : fs * 1.3) / R, x0 = this.compact ? 14 : 64, mid = (n - 1) / 2, t = now / 1000;
     const er = this.el.getBoundingClientRect(), ly = this.my - er.top, lx = this.mx - er.left;
+    // measure the letters under your hand first, before anything moves this frame (reading after writing makes the browser redo its layout)
+    const hov = this.over >= 0 ? this.over : this.td && this.armed >= 0 ? this.armed : -1;
+    if (hov >= 0 && !this.reduce) this.items[hov].chars.forEach((ch) => { const r = ch.c.getBoundingClientRect(); ch.cx = r.left + r.width / 2; ch.cy = r.top + r.height / 2; });
     this.items.forEach((a, i) => {
       // not fixed, not scrolling: the arc breathes slowly, and the names near your hand lean out towards it
       const th = (i - mid) * step * (1 + .035 * Math.sin(t * .35)), y = H / 2 + R * Math.sin(th);
@@ -82,20 +85,21 @@ export class Wheel {
       const on = this.over === i || (this.over < 0 && this.target === i && this.lit);
       this.k[i] += ((this.over === i ? 1 : this.target === i && this.over < 0 && this.lit ? .5 : 0) - this.k[i]) * .15;
       const k = this.k[i];
-      a.style.transform = `translate(${x}px,${y - fs * .6}px) rotate(${th * (1 - a.pull * .5)}rad)`;
-      a.style.setProperty("--k", k.toFixed(3));
-      a.classList.toggle("on", on);
+      const tf = `translate(${x.toFixed(1)}px,${(y - fs * .6).toFixed(1)}px) rotate(${(th * (1 - a.pull * .5)).toFixed(4)}rad)`;
+      if (a._tf !== tf) { a._tf = tf; a.style.transform = tf; }
+      const ks = k.toFixed(2); if (a._k !== ks) { a._k = ks; a.style.setProperty("--k", ks); }
+      if (a._on !== on) { a._on = on; a.classList.toggle("on", on); }
       // each letter swells by how close your cursor is to it: wide and heavy near your hand, calm further off
       a.chars.forEach((ch, j) => {
         let want = 0;
         if ((this.over === i || (this.td && this.armed === i && this.over < 0)) && !this.reduce) {
-          const r = ch.c.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-          const d = Math.hypot(this.mx - cx, (this.my - cy) * 1.6);
+          const d = Math.hypot(this.mx - (ch.cx ?? -1e4), (this.my - (ch.cy ?? -1e4)) * 1.6);
           want = Math.exp(-(d * d) / (fs * fs * 3.2));
         }
         ch.g += (want - ch.g) * .16;
         const g = ch.g;
-        ch.c.style.fontVariationSettings = `"wdth" ${(100 + g * (this.compact ? 32 : 50) - (this.over === i ? (1 - g) * 12 : 0)).toFixed(1)}, "wght" ${(420 + k * 120 + g * 330).toFixed(0)}`;
+        const fv = `"wdth" ${(100 + g * (this.compact ? 32 : 50) - (this.over === i ? (1 - g) * 12 : 0)).toFixed(0)}, "wght" ${(Math.round((420 + k * 120 + g * 330) / 10) * 10)}`;
+        if (ch.fv !== fv) { ch.fv = fv; ch.c.style.fontVariationSettings = fv; }
       });
     });
     requestAnimationFrame(this.frame);
