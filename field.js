@@ -68,7 +68,7 @@ export class Field {
     // not laid out yet (styles still arriving): wait for the resize observer to call again
     if (W < 40 || H < 40) { this.W = this.W || 1; this.H = this.H || 1; this.pts = this.pts || []; return; }
     this.W = W; this.H = H;
-    const dpr = Math.min(devicePixelRatio || 1, 2); this.cv.width = W * dpr; this.cv.height = H * dpr; this.g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const dpr = Math.min(devicePixelRatio || 1, 1.5); this.cv.width = W * dpr; this.cv.height = H * dpr; this.g.setTransform(dpr, 0, 0, dpr, 0, 0);
     // a regular lattice with roughly two points for every piece; the work sits on a scattered subset of it
     const sp = Math.sqrt((W * H) / (N * 3.4));
     let cols = Math.max(4, Math.floor(W / sp)), rows = Math.max(3, Math.floor(H / sp));

@@ -5,7 +5,7 @@ const FS = `precision highp float;
 uniform vec2 res;uniform float T,pal;uniform vec4 S[20];
 float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
-float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
+float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
 vec3 ramp(float f){
   vec3 bg=vec3(.957,.952,.937),c1=vec3(1.,.72,.5),c2=vec3(1.,.55,.6),c3=vec3(.45,.55,1.),c4=vec3(.72,.86,1.),c5=vec3(1.,.95,.5);
   vec3 c=mix(bg,c1,smoothstep(.06,.26,f));
@@ -22,7 +22,7 @@ void main(){
   p+=(vec2(fbm(p*1.6+T*.05),fbm(p*1.6+3.1-T*.04))-.5)*.14;
   float f=0.;
   for(int i=0;i<20;i++){vec2 d=p-S[i].xy;f+=S[i].w*exp(-dot(d,d)/max(S[i].z*S[i].z,1e-4));}
-  f+=(fbm(p*2.4+T*.03)-.5)*.08;
+  f+=(n(p*3.1+T*.03)-.5)*.07;
   vec3 c=hue(ramp(clamp(f,0.,1.2)),pal*smoothstep(.1,.4,f));
   c+=(h(gl_FragCoord.xy+fract(T)*37.)-.5)*.025;
   gl_FragColor=vec4(c,1.);
@@ -30,7 +30,7 @@ void main(){
 
 export class Thermal {
   constructor(canvas, { reduce = false, lite = false } = {}) {
-    this.c = canvas; this.reduce = reduce; this.sc = lite ? .3 : .5; this.src = []; this.pal = 0; this.palT = 0;
+    this.c = canvas; this.reduce = reduce; this.sc = lite ? .28 : .36; this.src = []; this.pal = 0; this.palT = 0;
     const gl = (this.gl = canvas.getContext("webgl", { antialias: false }));
     if (!gl) return;
     const mk = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); return x; };
@@ -50,6 +50,7 @@ export class Thermal {
   setActive(on) { if (on === this.active) return; this.active = on; if (on) requestAnimationFrame(this.frame); }
   frame = (now) => {
     if (!this.active || !this.gl) return;
+    if ((this.skip = !this.skip)) { requestAnimationFrame(this.frame); return; }
     const gl = this.gl, t = (now - this.t0) / 1000, W = innerWidth, H = innerHeight, sc = this.sc;
     const w = Math.max(2, Math.round(W * sc)), h = Math.max(2, Math.round(H * sc));
     if (this.c.width !== w || this.c.height !== h) { this.c.width = w; this.c.height = h; }
@@ -61,7 +62,7 @@ export class Thermal {
     // every source eases toward where it wants to be, so heat flows instead of jumping
     while (this.cur.length < want.length) this.cur.push({ ...want[this.cur.length], a: 0 });
     this.cur.forEach((c, i) => {
-      const w0 = want[i] || { ...c, a: 0 }, k = this.reduce ? 1 : .06;
+      const w0 = want[i] || { ...c, a: 0 }, k = this.reduce ? 1 : .11;
       c.x += (w0.x - c.x) * k; c.y += (w0.y - c.y) * k; c.r += (w0.r - c.r) * k; c.a += (w0.a - c.a) * k;
     });
     this.buf.fill(0);

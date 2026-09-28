@@ -91,7 +91,7 @@ export const PROJECTS = [
   {
     slug: "gumtree", title: "Gumtree", client: "Gumtree", kind: "Campaign",
     blurb: "Gumtree is full of good finds that don’t need flashy salespeople. Good finds sell themselves. We wrote a few simple spots to get this point across.",
-    youtube: [{ id: "_A4Pxa-0Kbs", title: "Good Finds. No Salespeople." }, { id: "QbT5nFPbDBE", title: "Good Finds. No Fanfare." }],
+    youtube: [{ id: "_A4Pxa-0Kbs", title: "Good Finds. No Salespeople.", thumb: "no-salespeople.jpg" }, { id: "QbT5nFPbDBE", title: "Good Finds. No Fanfare." }],
     items: [],
   },
 ];

@@ -27,7 +27,7 @@ PROJECTS.forEach((p, pi) => {
   const lib = MEDIA[p.slug] || {};
   let sec = null;
   p.pieces = [];
-  (p.youtube || []).forEach((y) => { const th = `https://i.ytimg.com/vi/${y.id}/maxresdefault.jpg`; p.pieces.push({ pi, slug: p.slug, yt: y, w: 16, h: 9, caption: y.title, stat: y.note, thumb: th, still: th }); });
+  (p.youtube || []).forEach((y) => { const th = y.thumb ? url(p.slug, y.thumb) : `https://i.ytimg.com/vi/${y.id}/maxresdefault.jpg`; p.pieces.push({ pi, slug: p.slug, yt: y, w: 16, h: 9, caption: y.title, stat: y.note, thumb: th, still: th }); });
   p.items.forEach((it) => {
     if (it.head) { sec = it; return; }
     const m = lib[it.file]; if (!m) return;
