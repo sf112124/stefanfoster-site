@@ -354,3 +354,6 @@ body.entered .splash{background:transparent}
 
 /* when a phone won't autoplay (low power mode, data saver), never show the system play button over our films: they sit as stills instead */
 video::-webkit-media-controls,video::-webkit-media-controls-start-playback-button,video::-webkit-media-controls-overlay-play-button,video::-webkit-media-controls-panel{display:none!important;-webkit-appearance:none;opacity:0}
+/* leaving the splash: the logo (on its white card) melts away first, and only then does the white give way to the site, so its edges never show */
+body.entered .splash .sf{transition:transform 1.2s var(--snap),filter .5s var(--ease),opacity .35s ease}
+body.entered .splash{transition:background-color .9s var(--ease) .35s,opacity .8s ease .9s}
