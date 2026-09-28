@@ -30,7 +30,7 @@ void main(){
 
 export class Thermal {
   constructor(canvas, { reduce = false, lite = false } = {}) {
-    this.c = canvas; this.reduce = reduce; this.sc = lite ? .28 : .36; this.src = []; this.pal = 0; this.palT = 0;
+    this.c = canvas; this.reduce = reduce; this.sc = lite ? .26 : .3; this.src = []; this.pal = 0; this.palT = 0;
     const gl = (this.gl = canvas.getContext("webgl", { antialias: false }));
     if (!gl) return;
     const mk = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); return x; };
@@ -50,7 +50,6 @@ export class Thermal {
   setActive(on) { if (on === this.active) return; this.active = on; if (on) requestAnimationFrame(this.frame); }
   frame = (now) => {
     if (!this.active || !this.gl) return;
-    if ((this.skip = !this.skip)) { requestAnimationFrame(this.frame); return; }
     const gl = this.gl, t = (now - this.t0) / 1000, W = innerWidth, H = innerHeight, sc = this.sc;
     const w = Math.max(2, Math.round(W * sc)), h = Math.max(2, Math.round(H * sc));
     if (this.c.width !== w || this.c.height !== h) { this.c.width = w; this.c.height = h; }
@@ -62,7 +61,7 @@ export class Thermal {
     // every source eases toward where it wants to be, so heat flows instead of jumping
     while (this.cur.length < want.length) this.cur.push({ ...want[this.cur.length], a: 0 });
     this.cur.forEach((c, i) => {
-      const w0 = want[i] || { ...c, a: 0 }, k = this.reduce ? 1 : .11;
+      const w0 = want[i] || { ...c, a: 0 }, k = this.reduce ? 1 : .13;
       c.x += (w0.x - c.x) * k; c.y += (w0.y - c.y) * k; c.r += (w0.r - c.r) * k; c.a += (w0.a - c.a) * k;
     });
     this.buf.fill(0);

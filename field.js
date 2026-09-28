@@ -169,7 +169,9 @@ export class Field {
       // an opened piece is a dream surfacing: its edges swirl and melt through the dream filter
       const open = n.o > .3;
       if (open !== n.open) { n.open = open; n.b.classList.toggle("open", open); }
-      st.filter = [open && !this.reduce ? "url(#dream)" : "", sm > 1.2 ? `blur(${(sm * .6).toFixed(1)}px)` : ""].join(" ").trim();
+      // the dream edge is costly to redraw at a new size, so it only switches on once the piece has finished growing
+      const settled = Math.abs(n.w - w) < 6 && Math.abs(n.h - h) < 6;
+      st.filter = [open && settled && !this.reduce ? "url(#dream)" : "", sm > 1.2 ? `blur(${(sm * .6).toFixed(1)}px)` : ""].join(" ").trim();
       // opened pieces aren't boxes: soft, slowly shifting organic shapes
 
       st.setProperty("--o", n.o.toFixed(3)); st.zIndex = n === hot ? 5 : n.it.pi === fam ? 3 : 1;
