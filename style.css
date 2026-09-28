@@ -401,3 +401,5 @@ body.viewing:not(.isabout) .app{filter:blur(10px) saturate(1.15);opacity:.9}
 /* popouts: soft organic edges from a still mask (no live filters, which were what made the home heavy) */
 .node.open .dm{-webkit-mask-image:var(--mk,radial-gradient(closest-side,#000 58%,transparent 100%));mask-image:var(--mk,radial-gradient(closest-side,#000 58%,transparent 100%));-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 .node.open .dm::after{animation:none}
+.ph h1 .lbr{flex-basis:100%;height:0}
+.ph h1.rise.in{overflow:visible}

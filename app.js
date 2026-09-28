@@ -87,7 +87,7 @@ const field = new Field($("field"), ALL, {
     const p = PROJECTS[it.pi];
     label.innerHTML = `<span class="mono">${pad(it.pi + 1)} / ${esc(p.title.toUpperCase())} :: ${esc(p.client.toUpperCase())}</span>${it.caption ? `<b>${esc(it.caption)}</b>` : ""}${it.stat ? `<em class="mono">${esc(it.stat.toUpperCase())}</em>` : ""}`;
     label.classList.add("in"); label.sz = [label.offsetWidth || 330, label.offsetHeight || 60];
-    sound.bloom(n.bx / field.W);
+    sound.bloom(n.bx / field.W, 1 - n.by / field.H);
     wheel.set(it.pi); setFam(it.pi);
   },
   onOpen: (it, b) => { sound.unlock(); openFromHome(it, b); },
@@ -376,9 +376,10 @@ function glassPage() {
 // the title always fits its half of the header with a clear gutter, so the description beside it never gets crowded
 function fitTitle() {
   const h = vin.querySelector(".ph h1"); if (!h) return;
+  h.querySelectorAll(".lbr").forEach((x) => x.remove());
   h.style.fontSize = ""; h.style.maxWidth = "";
   const ld = vin.querySelector(".ph .lead"); if (ld) ld.style.marginTop = "";
-  if (innerWidth <= 820) return;
+  if (innerWidth <= 820) { lockLines(h); return; }
   const lead = vin.querySelector(".ph .lead"); if (!lead) return;
   const room = lead.getBoundingClientRect().left - h.getBoundingClientRect().left - Math.max(40, innerWidth * .04);
   const words = [...h.querySelectorAll(".wd")], wide = Math.max(...words.map((w) => w.getBoundingClientRect().width), 1);
@@ -389,6 +390,14 @@ function fitTitle() {
   const k = h.getBoundingClientRect().width / h.offsetWidth || 1, nf = one >= fs * .72 ? Math.min(fs, one) : Math.min(fs, fs * room / wide);
   h.style.fontSize = nf + "px"; h.style.maxWidth = room / k + "px";
   lead.style.marginTop = nf * .13 - parseFloat(getComputedStyle(lead).fontSize) * .36 + "px";
+  lockLines(h);
+}
+// once the title has found its lines, pin them: the letters swelling under your cursor can't push a word onto the next line
+// (which moved it out from under you, un-swelled it, and flicked back, over and over)
+function lockLines(h) {
+  const words = [...h.querySelectorAll(".wd")]; let top = null;
+  words.forEach((w) => { const t = w.offsetTop; if (top !== null && t > top + 2) { const br = document.createElement("span"); br.className = "lbr"; w.before(br); } top = t; });
+  h.style.maxWidth = "none";
 }
 addEventListener("resize", fitTitle);
 function wireTiles() {
