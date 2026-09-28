@@ -13,7 +13,7 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
 // some laptops run the browser without graphics acceleration (it's a setting, or the GPU is blocklisted); there everything
 // is drawn by the processor and the live effects crawl. Spot that and switch to a light version that looks the same at rest.
-const lite = (() => { try { const c = document.createElement("canvas"); return !(c.getContext("webgl", { failIfMajorPerformanceCaveat: true }) || c.getContext("experimental-webgl", { failIfMajorPerformanceCaveat: true })); } catch (e) { return true; } })();
+let lite = (() => { try { const c = document.createElement("canvas"); return !(c.getContext("webgl", { failIfMajorPerformanceCaveat: true }) || c.getContext("experimental-webgl", { failIfMajorPerformanceCaveat: true })); } catch (e) { return true; } })();
 document.documentElement.classList.toggle("lite", lite);
 document.documentElement.classList.toggle("touch", touch);
 const url = (slug, f) => ASSETS[`${slug}/${f}`] || `media/${slug}/${f}`;
@@ -97,7 +97,7 @@ let viewOpen = false;
 
 // ---------- the home: a lattice of work on a thermal field, with the index on a curve ----------
 const label = $("label");
-const thermal = lite ? { set() {}, setActive() {}, gl: null } : new Thermal($("heat"), { reduce, lite: touch });
+let thermal = lite ? { set() {}, setActive() {}, gl: null } : new Thermal($("heat"), { reduce, lite: touch });
 const HUES = [0, .35, -.35, .6, -.6, .9, -.2, .45];
 let fam = null;
 const wheel = new Wheel($("wheel"), PROJECTS, {
@@ -139,7 +139,19 @@ let fr = null; addEventListener("resize", () => (fr = null));
 let trip = 0, tripT = performance.now();
 document.fonts?.ready?.then(() => { wheel.maxW = 0; field.layout(); });
 setTimeout(() => { wheel.maxW = 0; field.layout(); }, 1200);
+// watch how the machine is actually coping on the home. If frames keep running long, drop into the light version
+// on the spot (same look at rest, a fraction of the work), whatever the reason the laptop is struggling.
+let pf = { t: 0, n: 0, sum: 0, bad: 0 };
+function goLite() {
+  if (lite) return; lite = true;
+  document.documentElement.classList.add("lite");
+  thermal.setActive(false); thermal = { set() {}, setActive() {}, gl: null };
+  melt.gl = null; field.lite = true;
+}
 (function heat() {
+  { const now = performance.now();
+    if (entered && !viewOpen && !lite && !document.hidden && pf.t) { const dt = now - pf.t; if (dt < 250) { pf.sum += dt; pf.n++; } if (pf.n >= 90) { if (pf.sum / pf.n > 26) pf.bad++; else pf.bad = Math.max(0, pf.bad - 1); pf.n = pf.sum = 0; if (pf.bad >= 2) goLite(); } }
+    pf.t = now; }
   { const now = performance.now(), dt = Math.min(.1, (now - tripT) / 1000); tripT = now;
     trip = viewOpen || !document.getElementById("lb").hidden ? Math.max(0, trip - dt * .5) : Math.min(touch ? .4 : .6, trip + dt / 60);
     field.trip = reduce ? 0 : trip;

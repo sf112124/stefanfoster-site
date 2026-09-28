@@ -191,7 +191,8 @@ export class Field {
     if (false) this.turb.setAttribute("baseFrequency", `${(.009 + .004 * Math.sin(t * .31)).toFixed(4)} ${(.013 + .004 * Math.cos(t * .23)).toFixed(4)}`);
     // tracers: the longer you stay, the more everything leaves a trail behind it
     const g = this.g;
-    g.globalCompositeOperation = "destination-out"; g.fillStyle = `rgba(0,0,0,${1 - this.trip * .78})`; g.fillRect(0, 0, this.W, this.H); g.globalCompositeOperation = "source-over";
+    if (this.lite) g.clearRect(0, 0, this.W, this.H);
+    else { g.globalCompositeOperation = "destination-out"; g.fillStyle = `rgba(0,0,0,${1 - this.trip * .78})`; g.fillRect(0, 0, this.W, this.H); g.globalCompositeOperation = "source-over"; }
     this.pts.forEach((p) => { if (p.used) return; const [x, y] = this.wave(p.x, p.y, t); p.wx = x; p.wy = y; g.fillStyle = p.fog ? "rgba(13,13,14,.14)" : "rgba(13,13,14,.5)"; if (p.fog) { g.beginPath(); g.arc(x, y, 1.1, 0, 7); g.fill(); return; } const d = Math.hypot(x - this.mx, y - this.my), s = 1.5 + 2.4 * Math.exp(-(d * d) / (this.sp * this.sp * 2)) + .5 * Math.sin(t * 1.3 + p.x * .02 + p.y * .03); g.beginPath(); g.arc(x, y, Math.max(.8, s * .8), 0, 7); g.fill(); });
     // the family is strung together with light: soft strings that curve and hum, plucked each time you land on something
     if (fam != null) {
