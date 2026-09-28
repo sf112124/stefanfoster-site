@@ -360,9 +360,6 @@ function glassPage() {
     const r = proj.getBoundingClientRect(), hr = ph.getBoundingClientRect(), up = hr.bottom > 40 && !reduce;
     const rs = up ? ls.map((l) => l.c.getBoundingClientRect()) : null;
     sh.style.transform = `translate(${(mx - r.left - 380).toFixed(0)}px,${(my - r.top - 380).toFixed(0)}px)`;
-    const k = up ? 1 : 0; cx += (tx * k - cx) * .08; cy += (ty * k - cy) * .08;
-    const tf = `rotateX(${(-cy * 4).toFixed(2)}deg) rotateY(${(cx * 5.5).toFixed(2)}deg)`;
-    if (tf !== lastTf) { lastTf = tf; ph.style.transform = tf; }
     if (up) {
       fs = parseFloat(getComputedStyle(ls[0].c).fontSize) || fs;
       ls.forEach((l, i) => {

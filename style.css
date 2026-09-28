@@ -393,7 +393,6 @@ body.isabout .vbar .vt{opacity:0}
 .pshine{position:absolute;left:0;top:0;width:760px;height:760px;pointer-events:none;z-index:0;border-radius:50%;will-change:transform;
   background:radial-gradient(circle,rgba(255,255,255,.55),rgba(255,236,246,.18) 35%,rgba(255,255,255,0) 68%)}
 .proj>*:not(.pshine){position:relative;z-index:1}
-.ph{transform-origin:30% 60%;transform-style:preserve-3d;will-change:transform}
 .ph h1{font-family:"Anybody",var(--sans);font-weight:600;letter-spacing:-.025em}
 .ph h1 .ch{transition:none}
 body.viewing:not(.isabout) .app{filter:blur(10px) saturate(1.15);opacity:.9}
