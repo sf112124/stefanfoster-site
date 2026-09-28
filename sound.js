@@ -129,48 +129,52 @@ export class Sound {
   }
   release() { if (!this.air || !this.ac) return; const t = this.ac.currentTime; this.air.g.gain.setTargetAtTime(0, t, .25); }
   // grab and wiggle: a scratchy brushed-noise pad, x moves the colour, y the echo, speed feeds it back
+  // grab and shake: a warped chord that swells. Hold still and it's one soft note; the harder you shake, the more voices
+  // bloom in, the brighter and wider it gets, the faster it shimmers and the more it arpeggiates. Same tape-warp as the plucks.
+  chord() {
+    const ac = this.ac;
+    if (this.ch) return this.ch;
+    const out = ac.createGain(), lp = ac.createBiquadFilter(), trem = ac.createGain(), tl = ac.createOscillator(), td = ac.createGain();
+    out.gain.value = 0; lp.type = "lowpass"; lp.frequency.value = 500; lp.Q.value = .8;
+    tl.frequency.value = 4; td.gain.value = 0; tl.connect(td); td.connect(trem.gain); trem.gain.value = 1; tl.start();
+    const wob = ac.createOscillator(), wd = ac.createGain(); wob.frequency.value = .45; wd.gain.value = 8; wob.connect(wd); wob.start();
+    const ratios = [1, 1.5, 1.189, 2, 1.782, 3], voices = ratios.map((r, k) => {
+      const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain(), p = ac.createStereoPanner ? ac.createStereoPanner() : null;
+      o.type = "triangle"; o2.type = "sine"; o2.detune.value = 7 + k * 2; g.gain.value = 0;
+      wd.connect(o.detune); wd.connect(o2.detune);
+      o.connect(g); o2.connect(g);
+      if (p) { p.pan.value = (k % 2 ? 1 : -1) * (.15 + k * .1); g.connect(p); p.connect(lp); } else g.connect(lp);
+      o.start(); o2.start();
+      return { o, o2, g, r };
+    });
+    lp.connect(trem); trem.connect(out); this.out(out, 0, .7); if (this.wv) out.connect(this.wv.dl);
+    this.ch = { out, lp, td, tl, wd, voices };
+    return this.ch;
+  }
   pad(x, y, energy) {
     if (!this.ok()) return;
-    const ac = this.ac, t = ac.currentTime, fx = this.fx;
-    this.padVoice();
-    if (!this.wild) {
-      const shaper = ac.createWaveShaper(), n = 1024, curve = new Float32Array(n);
-      for (let i = 0; i < n; i++) { const v = i / (n - 1) * 2 - 1; curve[i] = Math.tanh(v * 6); }
-      shaper.curve = curve; shaper.oversample = "2x";
-      const s = this.src(), hp = ac.createBiquadFilter(), trem = ac.createGain(), wet = ac.createGain(), lfo = ac.createOscillator(), depth = ac.createGain();
-      hp.type = "bandpass"; hp.Q.value = 3; wet.gain.value = 0; trem.gain.value = .5;
-      lfo.frequency.value = 6; depth.gain.value = .5; lfo.connect(depth); depth.connect(trem.gain);
-      s.connect(hp); hp.connect(shaper); shaper.connect(trem); trem.connect(wet); this.out(wet, 0, .8);
-      const sub = ac.createOscillator(), sg = ac.createGain(); sub.type = "sine"; sub.frequency.value = 42; sg.gain.value = 0; sub.connect(sg); sg.connect(this.bus);
-      s.start(); lfo.start(); sub.start();
-      this.wild = { hp, wet, lfo, sub, sg };
-    }
-    const w = this.wild, e = Math.min(1, energy), e2 = e * e;
-    w.hp.frequency.setTargetAtTime(120 + Math.pow(x, 2) * 4800, t, .03);
-    w.wet.gain.setTargetAtTime(e2 * .09, t, .04);
-    w.lfo.frequency.setTargetAtTime(3 + e * 34 + y * 10, t, .05);
-    w.sub.frequency.setTargetAtTime(34 + y * 30 + e * 20, t, .05);
-    w.sg.gain.setTargetAtTime(e2 * .12, t, .06);
-    // the harder you shake, the more it stutters into little bursts
-    if (e > .45 && Math.random() < e * .35) { this.tick(Math.random(), .02 + e * .03, (Math.random() - .5) * 1.8); if (Math.random() < .3) this.glint(Math.random(), .01 + e * .012, (Math.random() - .5) * 1.8); }
-    if (this.air) {
-      this.air.bp.frequency.setTargetAtTime(180 + Math.pow(x, 1.5) * 6000, t, .05);
-      this.air.bp.Q.setTargetAtTime(.6 + y * 9, t, .08);
-      this.air.g.gain.setTargetAtTime(.01 + energy * .07, t, .06);
-    }
-    fx.dl.delayTime.setTargetAtTime(.05 + (1 - y) * .45, t, .12);
-    fx.fb.gain.setTargetAtTime(.15 + energy * .6, t, .08);
-    fx.echo.gain.setTargetAtTime(.2 + energy * .45, t, .08);
-    fx.tone.frequency.setTargetAtTime(600 + y * 3000, t, .1);
-    if (energy > .15 && t - (this._pd || 0) > .12 - energy * .08) { this._pd = t; this.tick(x, .015 + energy * .03, (x - .5) * 1.6); }
+    const ac = this.ac, t = ac.currentTime, c = this.chord(), e = Math.min(1, energy);
+    const root = this.note(.5, .15 + (1 - y) * .5);
+    c.voices.forEach((v, k) => {
+      v.o.frequency.setTargetAtTime(root * v.r, t, .12); v.o2.frequency.setTargetAtTime(root * v.r, t, .12);
+      // voices bloom in one by one as you shake harder
+      const on = Math.max(0, Math.min(1, (e * 6.5 - k) + (k === 0 ? 1 : 0)));
+      v.g.gain.setTargetAtTime(on * (.05 - k * .005), t, .12);
+    });
+    c.out.gain.setTargetAtTime(.35 + e * .5, t, .1);
+    c.lp.frequency.setTargetAtTime(420 + Math.pow(e, 1.3) * 5200 + x * 900, t, .08);
+    c.lp.Q.setTargetAtTime(.8 + e * 5, t, .1);
+    c.tl.frequency.setTargetAtTime(3 + e * 14, t, .1); c.td.gain.setTargetAtTime(e * .45, t, .1);
+    c.wd.gain.setTargetAtTime(8 + e * 45, t, .1);
+    // shaking hard sprinkles plucks from the same chord on top
+    if (e > .3 && t - (this._pd || 0) > .16 - e * .11) { this._pd = t; const v = c.voices[Math.floor(Math.random() * Math.min(6, 2 + e * 5))]; this.pluck(root * v.r * 2, .012 + e * .02, (Math.random() - .5) * 1.6, 1 + e); }
   }
   padEnd() {
-    if (!this.ac) return;
-    const t = this.ac.currentTime, fx = this.fx;
-    if (this.wild) { this.wild.wet.gain.setTargetAtTime(0, t, .5); this.wild.sg.gain.setTargetAtTime(0, t, .6); }
-    fx.fb.gain.setTargetAtTime(0, t, 1.2); fx.echo.gain.setTargetAtTime(0, t, 1.8);
-    if (this.air) this.air.bp.Q.setTargetAtTime(.6, t, .8);
-    this.release();
+    if (!this.ac || !this.ch) return;
+    const t = this.ac.currentTime, c = this.ch;
+    c.out.gain.setTargetAtTime(0, t, .5); c.lp.frequency.setTargetAtTime(400, t, .4); c.td.gain.setTargetAtTime(0, t, .3);
+    c.voices.forEach((v) => v.g.gain.setTargetAtTime(0, t + .2, .5));
+    this.pluck(c.voices[0].o.frequency.value * 2, .03, 0, 1.4);
   }
   splash(x = .5, y = .5) { this.bloom(x, y); }
   // older names, now all soft warped plucks
