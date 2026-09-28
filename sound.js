@@ -158,6 +158,25 @@ export class Sound {
     this.ch = { out, lp, td, tl, wd, voices };
     return this.ch;
   }
+  // the sequencer's bed: a soft sustained chord underneath the loop, all in D minor. It glides to a new chord
+  // (voice by voice) whenever you choose a different piece.
+  bed(on, chord) {
+    if (!this.ac) return;
+    const ac = this.ac, t = ac.currentTime;
+    if (on && !this.bd) {
+      this.pluck(40, .0001); // makes sure the shared wobble and echo exist
+      if (!this.wv) return;
+      const out = ac.createGain(), lp = ac.createBiquadFilter(); out.gain.value = 0; lp.type = "lowpass"; lp.frequency.value = 900; lp.Q.value = .5;
+      const vs = [0, 1, 2, 3].map((k) => { const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain(), p = ac.createStereoPanner ? ac.createStereoPanner() : null;
+        o.type = "triangle"; o2.type = "sine"; o2.detune.value = 6; g.gain.value = k ? .05 : .07; this.wv.depth.connect(o.detune); this.wv.depth.connect(o2.detune);
+        o.connect(g); o2.connect(g); if (p) { p.pan.value = [0, -.45, .45, .15][k]; g.connect(p); p.connect(lp); } else g.connect(lp); o.start(); o2.start(); return { o, o2 }; });
+      lp.connect(out); this.out(out, 0, .9); out.connect(this.wv.dl);
+      this.bd = { out, lp, vs };
+    }
+    if (!this.bd) return;
+    if (chord) chord.forEach((st, k) => { const f = 73.42 * Math.pow(2, st / 12); this.bd.vs[k].o.frequency.setTargetAtTime(f, t, .35 + k * .08); this.bd.vs[k].o2.frequency.setTargetAtTime(f, t, .35 + k * .08); });
+    this.bd.out.gain.setTargetAtTime(on && this.on ? .5 : 0, t, on ? .8 : .4);
+  }
   // while a loop is playing, shaking bends the whole thing: deeper tape wobble, more echo
   warp(e) { if (!this.ac || !this.wv) return; const t = this.ac.currentTime; this.wv.depth.gain.setTargetAtTime(14 + e * 160, t, .08); }
   pad(x, y, energy) {

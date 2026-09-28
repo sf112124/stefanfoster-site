@@ -110,6 +110,7 @@ const field = new Field($("field"), ALL, {
   reduce, touch, lite, band: (y) => wheel.band(y),
   onEmpty: () => { field.focus(null); wheel.set(null); setFam(null); },
   onHover: (it, n) => {
+    if (it && n) seqChord(n.i % CHORDS.length);
     if (!it) { label.classList.remove("in"); wheel.set(null); if (wheel.over < 0) setFam(null); return; }
     const p = PROJECTS[it.pi];
     label.innerHTML = `<span class="mono">${pad(it.pi + 1)} / ${esc(p.title.toUpperCase())} :: ${esc(p.client.toUpperCase())}</span>${it.caption ? `<b>${esc(it.caption)}</b>` : ""}${it.stat ? `<em class="mono">${esc(it.stat.toUpperCase())}</em>` : ""}`;
@@ -136,6 +137,13 @@ $("heat").addEventListener("webglcontextrestored", () => {
 // project with its own voice. Click empty dots to add notes, drag a piece to move its note for good, grab and shake to
 // bend the whole loop.
 const STEPS = 16, LOOP = 6.4;
+// the key is D minor; the pieces' own notes come from its pentatonic, and each piece carries one of these chords
+const CHORDS = [["Dm", [0, 12, 15, 19]], ["F", [3, 15, 19, 22]], ["Gm", [5, 17, 20, 24]], ["Am", [7, 19, 22, 26]], ["B♭", [8, 20, 24, 27]], ["C", [10, 22, 26, 29]]];
+function seqChord(k) {
+  if (!seq.on || seq.chord === k) return; seq.chord = k;
+  sound.bed(true, CHORDS[k][1]);
+  $("readout").innerHTML = `PLAYING :: ${CHORDS[k][0]}`;
+}
 const seq = { on: false, pos: 0, step: -1, warp: 0, flash: [], t: 0 };
 function seqTick(now) {
   if (!seq.on) return;
@@ -175,7 +183,7 @@ function setSeq(on) {
   seq.on = on; field.seq = on; sound.seqOn = on; seq.t = 0; seq.step = -1;
   $("seqb").setAttribute("aria-pressed", on); $("seqb").querySelector("span").textContent = on ? "STOP" : "PLAY";
   document.documentElement.classList.toggle("seq", on);
-  if (on) { sound.unlock(); requestAnimationFrame(seqTick); } else { sound.warp(0); }
+  if (on) { sound.unlock(); requestAnimationFrame(seqTick); seq.chord = -1; seqChord(0); } else { sound.warp(0); sound.bed(false); setFam(fam); }
 }
 $("seqb").addEventListener("click", () => setSeq(!seq.on));
 if (/[?&]debug/.test(location.search)) window.sf = { field, seq };
@@ -202,7 +210,7 @@ const WAYS = {
 function applyWay(now) { if (!thermal.palette) return; const n = document.documentElement.classList.contains("night"); thermal.palette(WAYS[n ? "night" : "day"][fam == null ? 0 : (fam % 2) + 1], now); }
 function setFam(i) {
   fam = i; palBase = 0; applyWay();
-  $("readout").innerHTML = i == null ? `INDEX` : `${pad(i + 1)} :: ${esc(PROJECTS[i].title.toUpperCase())}`;
+  if (!seq?.on) $("readout").innerHTML = i == null ? `INDEX` : `${pad(i + 1)} :: ${esc(PROJECTS[i].title.toUpperCase())}`;
 }
 setFam(null); applyWay(true);
 // the heat follows your hand, gathers on the piece you're over and glows under the rest of its project

@@ -94,8 +94,8 @@ export class Field {
     if (this.drag) return;
     // over the index, the index has your hand; the grid leaves you alone
     if (this.inBand(this.mx, this.my) && !(this.hot >= 0 && Math.abs(this.mx - this.nodes[this.hot].x) < this.nodes[this.hot].w / 2 && Math.abs(this.my - this.nodes[this.hot].y) < this.nodes[this.hot].h / 2)) { this.setHot(-1); this.onLeave?.(); return; }
-    let best = -1, bd = this.sp * (this.seq ? .16 : .5);
-    this.nodes.forEach((n, k) => { const d = Math.hypot(n.bx - this.mx, n.by - this.my); if (d < bd) { bd = d; best = k; } });
+    let best = -1, bd = this.sp * (this.seq ? .22 : .5);
+    this.nodes.forEach((n, k) => { const d = this.seq ? Math.hypot(n.x - this.mx, n.y - this.my) : Math.hypot(n.bx - this.mx, n.by - this.my); if (d < bd) { bd = d; best = k; } });
     if (best < 0 && this.hot >= 0) { const n = this.nodes[this.hot]; if (Math.abs(this.mx - n.x) < n.w / 2 && Math.abs(this.my - n.y) < n.h / 2) best = this.hot; }
     this.setHot(best);
   }
