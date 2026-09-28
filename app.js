@@ -235,22 +235,15 @@ async function lbOpen(list, k, fromEl, { home = false, blob = 0, from: from0, sr
 }
 // from the sky: the piece flows out of its star into its own place on the project page,
 // already picked and playing as if your hand were resting on it. Click again there to open it big.
+// from the sky, in one move: the piece you clicked swells and dissolves into the project, which opens at the top
 function openFromHome(it, b) {
   const { from, src } = grab(b);
   field.setHot(-1);
   location.hash = PROJECTS[it.pi].slug;
-  requestAnimationFrame(() => requestAnimationFrame(async () => {
-    if (!page) return;
-    const k = page.pieces.indexOf(it.src), tile = page.tiles[k]; if (!tile) return;
-    view.scrollTop = Math.max(0, tile.offsetTop - (innerHeight - tile.offsetHeight) / 2);
-    const tm = tile.querySelector(".tm");
-    vin.querySelector(".work")?.classList.add("picking");
-    if (!it.yt) { tile.classList.add("lifted"); await melt.run({ el: src, from, to: R(tm.getBoundingClientRect()), blobFrom: 1, blobTo: 0, dur: reduce ? 1 : 900 }); tile.classList.remove("lifted"); }
-    pick(tile);
-    // a moment on the piece you chose, then the page glides up to the top of the project
-    const here = page;
-    setTimeout(() => { if (page !== here || !viewOpen || lbk >= 0) return; view.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }); vin.querySelector(".work")?.classList.remove("picking"); tile.classList.remove("sel"); }, 1400);
-  }));
+  view.scrollTop = 0;
+  if (it.yt || reduce || !src) return;
+  const w = Math.min(innerWidth * .7, 900), h = w / (it.w / it.h || 1), to = { x: (innerWidth - w) / 2, y: Math.max(40, (innerHeight - h) / 2), w, h };
+  melt.run({ el: src, from, to, blobFrom: 1, blobTo: .6, dur: 750, fadeOut: true });
 }
 function pick(tile) {
   vin.querySelectorAll(".tile.sel").forEach((t) => t.classList.remove("sel"));
