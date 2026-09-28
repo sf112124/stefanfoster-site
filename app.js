@@ -125,33 +125,28 @@ const field = new Field($("field"), ALL, {
 });
 field.setActive(innerWidth > 700);
 addEventListener("resize", () => { if (!viewOpen && !document.hidden) field.setActive(innerWidth > 700); });
+$("heat").addEventListener("webglcontextlost", (e) => e.preventDefault());
+$("heat").addEventListener("webglcontextrestored", () => {
+  const old = thermal; if (!old.gl) return; old.active = false;
+  thermal = new Thermal($("heat"), { reduce, lite: touch });
+  thermal.bgc = old.bgc; thermal.night = old.night; applyWay(true);
+});
 let palBase = 0;
 // colourways: each project has its own, for night (glowing out of black) and for day (blooming out of paper)
 const WAYS = {
+  // three close cousins per mode: the home's own, and two soft shifts either side of it
   night: [
-    ["#0a0a3a", "#4b12c8", "#0bb8f0", "#46ff8a", "#eafff0"], // aurora neon (the home)
-    ["#1a0630", "#c2187a", "#ff6fb8", "#6cd4ff", "#f2fbff"], // cotton candy
-    ["#051226", "#5a1ec8", "#08c8d0", "#6fffe8", "#f0fffd"], // galaxy teal
-    ["#0c0428", "#5b1fe0", "#a45cff", "#d8c2ff", "#fbf7ff"], // electric dream
-    ["#021405", "#0c6e14", "#39e61e", "#b8ff3a", "#f6ffe6"], // toxic glow
-    ["#1c0412", "#b0124a", "#ff3a6e", "#ff9a4a", "#fff3ea"], // sunset wave
-    ["#021818", "#0a6e6a", "#2fd9c4", "#a8fff0", "#f4fffc"], // ice mint
-    ["#1a0200", "#9a0a00", "#ff3a00", "#ffb000", "#fff6d8"], // firestorm
-    ["#01061e", "#0a2ea8", "#1a7cff", "#6cc8ff", "#eef8ff"], // ocean depth
+    ["#0a0a3a", "#4b12c8", "#0bb8f0", "#46ff8a", "#eafff0"], // aurora
+    ["#07103a", "#2a2ad0", "#0c9cf0", "#3ff0c8", "#eafffb"], // cooler: towards teal
+    ["#140838", "#6a18c8", "#7a5cff", "#5cf0a8", "#f2fff4"], // warmer: towards lilac
   ],
   day: [
     ["#ffb07a", "#ff7f96", "#6f86ff", "#b3d8ff", "#fff27a"], // the original heat
-    ["#ffb3d6", "#ff6fae", "#a07cff", "#5cc4ff", "#e6f7ff"], // cotton candy
-    ["#8fe8de", "#3fd0c4", "#4a8cff", "#7a52ff", "#efe8ff"], // galaxy teal
-    ["#c9b4ff", "#9a74ff", "#6a4dff", "#ff7cc8", "#fff0f8"], // electric dream
-    ["#c6f77a", "#86e84a", "#2fd680", "#26c0d0", "#effff4"], // toxic glow
-    ["#ffc394", "#ff8a5c", "#ff4f7c", "#b85cff", "#ffeaf4"], // sunset wave
-    ["#9ff5e2", "#56e0c8", "#4ab4ff", "#8a8cff", "#f0f2ff"], // ice mint
-    ["#ffd27a", "#ff9c3a", "#ff5a2a", "#ff2f64", "#fff1d6"], // firestorm
-    ["#a8d4ff", "#64a8ff", "#3e6cff", "#6a44ff", "#e4f3ff"], // ocean depth
+    ["#ffbe8c", "#ff8aa6", "#a07cff", "#9ccaff", "#fff4b0"], // softer: rose and lilac
+    ["#ffc48a", "#ff9a7a", "#7aa0ff", "#a8e4ff", "#fffab0"], // sunnier: peach and sky
   ],
 };
-function applyWay(now) { if (!thermal.palette) return; const n = document.documentElement.classList.contains("night"); thermal.palette(WAYS[n ? "night" : "day"][fam == null ? 0 : (fam % 8) + 1], now); }
+function applyWay(now) { if (!thermal.palette) return; const n = document.documentElement.classList.contains("night"); thermal.palette(WAYS[n ? "night" : "day"][fam == null ? 0 : (fam % 2) + 1], now); }
 function setFam(i) {
   fam = i; palBase = 0; applyWay();
   $("readout").innerHTML = i == null ? `INDEX` : `${pad(i + 1)} :: ${esc(PROJECTS[i].title.toUpperCase())}`;
@@ -170,13 +165,13 @@ setTimeout(() => { wheel.maxW = 0; field.layout(); }, 1200);
 let pf = { t: 0, n: 0, sum: 0, bad: 0 };
 function goLite() {
   if (lite) return; lite = true;
-  document.documentElement.classList.add("lite");
-  thermal.setActive(false); thermal = { set() {}, setActive() {}, gl: null };
+  document.documentElement.classList.add("lite", "easy");
+  if (thermal.sc0) { thermal.sc0 = .18; thermal.sc = .18; }
   melt.gl = null; field.lite = true;
 }
 (function heat() {
   { const now = performance.now();
-    if (entered && !viewOpen && !lite && !document.hidden && pf.t) { const dt = now - pf.t; if (dt < 250) { pf.sum += dt; pf.n++; } if (pf.n >= 90) { if (pf.sum / pf.n > 26) pf.bad++; else pf.bad = Math.max(0, pf.bad - 1); pf.n = pf.sum = 0; if (pf.bad >= 2) goLite(); } }
+    if (entered && !viewOpen && !lite && !document.hidden && pf.t) { const dt = now - pf.t; if (dt < 250) { pf.sum += dt; pf.n++; } if (pf.n >= 90) { if (pf.sum / pf.n > 40) pf.bad++; else pf.bad = 0; pf.n = pf.sum = 0; if (pf.bad >= 4) goLite(); } }
     pf.t = now; }
   { const now = performance.now(), dt = Math.min(.1, (now - tripT) / 1000); tripT = now;
     trip = viewOpen || !document.getElementById("lb").hidden ? Math.max(0, trip - dt * .5) : Math.min(touch ? .4 : .6, trip + dt / 60);
@@ -569,7 +564,7 @@ function open() {
   viewOpen = true; view.classList.add("open"); document.body.classList.add("viewing"); view.setAttribute("aria-hidden", "false");
   view.scrollTop = 0; view.focus({ preventScroll: true });
   requestAnimationFrame(justify);
-  sound.quiet(true); field.setActive(false); setTimeout(() => { if (viewOpen) thermal.setActive(false); }, 1300); if (page?.p && thermal.palette) thermal.palette(WAYS[document.documentElement.classList.contains("night") ? "night" : "day"][(PROJECTS.indexOf(page.p) % 8) + 1]);
+  sound.quiet(true); field.setActive(false); setTimeout(() => { if (viewOpen) thermal.setActive(false); }, 1300); if (page?.p && thermal.palette) thermal.palette(WAYS[document.documentElement.classList.contains("night") ? "night" : "day"][(PROJECTS.indexOf(page.p) % 2) + 1]);
 }
 function close() {
   if (!viewOpen) return;
