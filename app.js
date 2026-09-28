@@ -60,7 +60,8 @@ function enter(fast) {
 }
 $("splash").addEventListener("click", () => enter());
 addEventListener("keydown", (e) => { if (!entered && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); enter(); } });
-addEventListener("pointerdown", () => { if (entered) sound.unlock(); }, { passive: true });
+addEventListener("pointerdown", () => sound.unlock(), { passive: true });
+addEventListener("keydown", () => sound.unlock());
 if (document.body.classList.contains("entered")) enter(true);
 
 
@@ -86,7 +87,7 @@ const field = new Field($("field"), ALL, {
     const p = PROJECTS[it.pi];
     label.innerHTML = `<span class="mono">${pad(it.pi + 1)} / ${esc(p.title.toUpperCase())} :: ${esc(p.client.toUpperCase())}</span>${it.caption ? `<b>${esc(it.caption)}</b>` : ""}${it.stat ? `<em class="mono">${esc(it.stat.toUpperCase())}</em>` : ""}`;
     label.classList.add("in"); label.sz = [label.offsetWidth || 330, label.offsetHeight || 60];
-    sound.rod(sound.note(n.bx / field.W, 1 - n.by / field.H), .014, 4);
+    sound.bloom(n.bx / field.W);
     wheel.set(it.pi); setFam(it.pi);
   },
   onOpen: (it, b) => { sound.unlock(); openFromHome(it, b); },
@@ -498,14 +499,14 @@ function open() {
   viewOpen = true; view.classList.add("open"); document.body.classList.add("viewing"); view.setAttribute("aria-hidden", "false");
   view.scrollTop = 0; view.focus({ preventScroll: true });
   requestAnimationFrame(justify);
-  sound.quiet(true); field.setActive(false); thermal.palT = HUES[(page?.p ? PROJECTS.indexOf(page.p) : 0) % HUES.length] || 0;
+  sound.quiet(true); field.setActive(false); setTimeout(() => { if (viewOpen) thermal.setActive(false); }, 1300); thermal.palT = HUES[(page?.p ? PROJECTS.indexOf(page.p) : 0) % HUES.length] || 0;
 }
 function close() {
   if (!viewOpen) return;
   viewOpen = false; view.classList.remove("open"); document.body.classList.remove("viewing"); setTimeout(() => { if (!viewOpen) document.body.classList.remove("isabout"); }, 600); view.setAttribute("aria-hidden", "true");
   if (lbk >= 0) lbClose(true);
   page?.io?.disconnect(); page = null;
-  sound.quiet(false); field.setActive(innerWidth > 700);
+  sound.quiet(false); field.setActive(innerWidth > 700); thermal.setActive(!document.hidden);
   setTimeout(() => { if (!viewOpen) vin.innerHTML = ""; }, 600);
 }
 document.addEventListener("click", (e) => {
@@ -515,7 +516,7 @@ document.addEventListener("click", (e) => {
 addEventListener("hashchange", route);
 document.addEventListener("visibilitychange", () => {
   const on = !document.hidden;
-  thermal.setActive(on); if (!viewOpen) field.setActive(on && innerWidth > 700);
+  thermal.setActive(on && !viewOpen); if (!viewOpen) field.setActive(on && innerWidth > 700);
   tripT = performance.now();
 });
 // remember when the page is moving, so a finger stopping a scroll doesn't open something

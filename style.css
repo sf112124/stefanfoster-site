@@ -397,3 +397,7 @@ body.isabout .vbar .vt{opacity:0}
 .ph h1 .ch{transition:none}
 body.viewing:not(.isabout) .app{filter:blur(10px) saturate(1.15);opacity:.9}
 .ph h1{text-transform:uppercase;letter-spacing:-.015em}
+
+/* popouts: soft organic edges from a still mask (no live filters, which were what made the home heavy) */
+.node.open .dm{-webkit-mask-image:var(--mk,radial-gradient(closest-side,#000 58%,transparent 100%));mask-image:var(--mk,radial-gradient(closest-side,#000 58%,transparent 100%));-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.node.open .dm::after{animation:none}

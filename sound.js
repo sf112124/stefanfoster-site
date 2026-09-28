@@ -3,8 +3,8 @@
 export class Sound {
   on = true; ac = null; live = false; hush = false;
   unlock() {
-    if (this.live || !this.on) return;
-    try { if (!this.ac) this.init(); this.ac.resume(); this.live = true; this.bed(true); } catch (e) {}
+    if (!this.on) return;
+    try { if (!this.ac) this.init(); if (this.ac.state !== "running") this.ac.resume(); this.live = true; } catch (e) {}
   }
   toggle() {
     this.on = !this.on;
@@ -39,7 +39,7 @@ export class Sound {
     if (p) { p.pan.value = Math.max(-1, Math.min(1, pan)); node.connect(p); node = p; }
     node.connect(this.bus); const w = this.ac.createGain(); w.gain.value = wet; node.connect(w); w.connect(this.send);
   }
-  ok() { return this.on && this.live && !this.hush && this.ac; }
+  ok() { return this.on && this.live && !this.hush && this.ac && this.ac.state === "running"; }
   // no background bed any more: silence until you touch something
   bed() {}
   // the pad's own voice, only alive while you're holding a piece
@@ -81,13 +81,66 @@ export class Sound {
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + dur * .45); g.gain.linearRampToValueAtTime(0, t + dur);
     s.connect(f); f.connect(g); this.out(g, 0, .6); s.start(t); s.stop(t + dur + .05);
   }
-  touch() {}
+  touch(x = .5, y = .5, speed = 0) {
+    if (!this.ok()) return;
+    const ac = this.ac, t = ac.currentTime;
+    if (!this.silk) {
+      const a = this.src(), b = this.src(), f1 = ac.createBiquadFilter(), f2 = ac.createBiquadFilter(), g1 = ac.createGain(), g2 = ac.createGain();
+      f1.type = "bandpass"; f1.Q.value = .9; f2.type = "highpass"; f2.frequency.value = 5200; g1.gain.value = 0; g2.gain.value = 0;
+      const p = ac.createStereoPanner ? ac.createStereoPanner() : null;
+      a.connect(f1); f1.connect(g1); b.connect(f2); f2.connect(g2);
+      if (p) { g1.connect(p); g2.connect(p); this.out(p, 0, .7); } else { this.out(g1, 0, .7); this.out(g2, 0, .7); }
+      a.start(); b.start(); this.silk = { f1, g1, g2, p };
+    }
+    const s = this.silk, sp = Math.min(1, speed);
+    s.f1.frequency.setTargetAtTime(260 + Math.pow(x, 1.3) * 2600, t, .08);
+    s.f1.Q.setTargetAtTime(.7 + y * 2.2, t, .1);
+    s.p && s.p.pan.setTargetAtTime((x - .5) * 1.4, t, .08);
+    s.g1.gain.cancelScheduledValues(t); s.g1.gain.setTargetAtTime(.012 + sp * .05, t, .05); s.g1.gain.setTargetAtTime(0, t + .09, .35);
+    s.g2.gain.cancelScheduledValues(t); s.g2.gain.setTargetAtTime(sp * .018, t, .04); s.g2.gain.setTargetAtTime(0, t + .06, .2);
+    // grains: little crackles when you move quickly, like paper or dry leaves
+    if (sp > .25 && Math.random() < sp * .5) this.tick(Math.random(), .006 + sp * .016, (x - .5) * 1.6);
+  }
+  // a piece surfacing: an airy bloom with a glassy shimmer on top
+  bloom(x = .5) {
+    if (!this.ok()) return;
+    this.whoosh(.55, true, .028);
+    [0, 70, 150].forEach((d, i) => setTimeout(() => this.glint(.35 + Math.random() * .6, .012 - i * .003, (x - .5) * 1.5 + (Math.random() - .5) * .6), d));
+  }
+  // a soft glass glint: a breath of noise through a narrow resonance
+  glint(bright = .5, vol = .01, pan = 0) {
+    if (!this.ok()) return;
+    const ac = this.ac, t = ac.currentTime, s = this.src(), f = ac.createBiquadFilter(), g = ac.createGain();
+    f.type = "bandpass"; f.frequency.value = 2200 + bright * 5200; f.Q.value = 14;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + .5);
+    s.connect(f); f.connect(g); this.out(g, pan, .9); s.start(t); s.stop(t + .55);
+  }
   release() { if (!this.air || !this.ac) return; const t = this.ac.currentTime; this.air.g.gain.setTargetAtTime(0, t, .25); }
   // grab and wiggle: a scratchy brushed-noise pad, x moves the colour, y the echo, speed feeds it back
   pad(x, y, energy) {
     if (!this.ok()) return;
     const ac = this.ac, t = ac.currentTime, fx = this.fx;
     this.padVoice();
+    if (!this.wild) {
+      const shaper = ac.createWaveShaper(), n = 1024, curve = new Float32Array(n);
+      for (let i = 0; i < n; i++) { const v = i / (n - 1) * 2 - 1; curve[i] = Math.tanh(v * 6); }
+      shaper.curve = curve; shaper.oversample = "2x";
+      const s = this.src(), hp = ac.createBiquadFilter(), trem = ac.createGain(), wet = ac.createGain(), lfo = ac.createOscillator(), depth = ac.createGain();
+      hp.type = "bandpass"; hp.Q.value = 3; wet.gain.value = 0; trem.gain.value = .5;
+      lfo.frequency.value = 6; depth.gain.value = .5; lfo.connect(depth); depth.connect(trem.gain);
+      s.connect(hp); hp.connect(shaper); shaper.connect(trem); trem.connect(wet); this.out(wet, 0, .8);
+      const sub = ac.createOscillator(), sg = ac.createGain(); sub.type = "sine"; sub.frequency.value = 42; sg.gain.value = 0; sub.connect(sg); sg.connect(this.bus);
+      s.start(); lfo.start(); sub.start();
+      this.wild = { hp, wet, lfo, sub, sg };
+    }
+    const w = this.wild, e = Math.min(1, energy), e2 = e * e;
+    w.hp.frequency.setTargetAtTime(120 + Math.pow(x, 2) * 4800, t, .03);
+    w.wet.gain.setTargetAtTime(e2 * .09, t, .04);
+    w.lfo.frequency.setTargetAtTime(3 + e * 34 + y * 10, t, .05);
+    w.sub.frequency.setTargetAtTime(34 + y * 30 + e * 20, t, .05);
+    w.sg.gain.setTargetAtTime(e2 * .12, t, .06);
+    // the harder you shake, the more it stutters into little bursts
+    if (e > .45 && Math.random() < e * .35) { this.tick(Math.random(), .02 + e * .03, (Math.random() - .5) * 1.8); if (Math.random() < .3) this.glint(Math.random(), .01 + e * .012, (Math.random() - .5) * 1.8); }
     if (this.air) {
       this.air.bp.frequency.setTargetAtTime(180 + Math.pow(x, 1.5) * 6000, t, .05);
       this.air.bp.Q.setTargetAtTime(.6 + y * 9, t, .08);
@@ -102,6 +155,8 @@ export class Sound {
   padEnd() {
     if (!this.ac) return;
     const t = this.ac.currentTime, fx = this.fx;
+    if (this.wild) { this.wild.wet.gain.setTargetAtTime(0, t, .5); this.wild.sg.gain.setTargetAtTime(0, t, .6); }
+    this.whoosh(.9, false, .03);
     fx.fb.gain.setTargetAtTime(0, t, 1.2); fx.echo.gain.setTargetAtTime(0, t, 1.8);
     if (this.air) this.air.bp.Q.setTargetAtTime(.6, t, .8);
     this.release();

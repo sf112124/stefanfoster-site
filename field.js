@@ -41,6 +41,7 @@ export class Field {
     b.innerHTML = `<span class="dm">` + (false ? "" : `<img src="${it.node || it.thumb}" alt="" draggable="false" decoding="async">${it.loop ? `<video muted loop playsinline preload="none"></video>` : ""}`) + `</span>`
       ;
     this.el.appendChild(b);
+    b.style.setProperty("--mk", `url(ui/m${i % 4}.png)`);
     // each node wears its own piece's colours: a tiny orb sampled from the work itself
     const img = b.querySelector("img");
     const n = { b, it, i, a: it.w / it.h, x: 0, y: 0, w: 0, h: 0, o: 0, bx: 0, by: 0, far: false };
@@ -173,7 +174,7 @@ export class Field {
       if (open !== n.open) { n.open = open; n.b.classList.toggle("open", open); }
       // the dream edge is costly to redraw at a new size, so it only switches on once the piece has finished growing
       const settled = Math.abs(n.w - w) < 6 && Math.abs(n.h - h) < 6;
-      put("filter", [open && settled && !this.reduce ? "url(#dream)" : "", sm > 1.2 ? `blur(${(sm * .6).toFixed(1)}px)` : ""].join(" ").trim());
+      put("filter", ["", sm > 1.2 ? `blur(${(sm * .6).toFixed(1)}px)` : ""].join(" ").trim());
       // opened pieces aren't boxes: soft, slowly shifting organic shapes
 
       put("--o", n.o.toFixed(2)); put("zIndex", String(n === hot ? 5 : n.it.pi === fam ? 3 : 1));
@@ -187,7 +188,7 @@ export class Field {
     });
     // the lattice, and spokes from whatever is lit
     if (!this.turb) this.turb = document.getElementById("dreamTurb");
-    if (this.turb && hot && (this.fc = (this.fc || 0) + 1) % 6 === 0) this.turb.setAttribute("baseFrequency", `${(.009 + .004 * Math.sin(t * .31)).toFixed(4)} ${(.013 + .004 * Math.cos(t * .23)).toFixed(4)}`);
+    if (false) this.turb.setAttribute("baseFrequency", `${(.009 + .004 * Math.sin(t * .31)).toFixed(4)} ${(.013 + .004 * Math.cos(t * .23)).toFixed(4)}`);
     // tracers: the longer you stay, the more everything leaves a trail behind it
     const g = this.g;
     g.globalCompositeOperation = "destination-out"; g.fillStyle = `rgba(0,0,0,${1 - this.trip * .78})`; g.fillRect(0, 0, this.W, this.H); g.globalCompositeOperation = "source-over";
