@@ -38,7 +38,7 @@ export class Field {
     const b = document.createElement("button");
     b.type = "button"; b.className = "node";
     b.setAttribute("aria-label", `${it.title}${it.caption ? ", " + it.caption : ""}`);
-    b.innerHTML = `<span class="dm">` + (false ? "" : `<img src="${it.thumb}" alt="" draggable="false" decoding="async">${it.loop ? `<video muted loop playsinline preload="none"></video>` : ""}`) + `</span>`
+    b.innerHTML = `<span class="dm">` + (false ? "" : `<img src="${it.node || it.thumb}" alt="" draggable="false" decoding="async">${it.loop ? `<video muted loop playsinline preload="none"></video>` : ""}`) + `</span>`
       ;
     this.el.appendChild(b);
     // each node wears its own piece's colours: a tiny orb sampled from the work itself
@@ -200,22 +200,16 @@ export class Field {
       fl.forEach((n, k) => {
         if (n === src) return;
         const dx = n.x - src.x, dy = n.y - src.y, L = Math.hypot(dx, dy) || 1, px = -dy / L, py = dx / L;
-        const ph = k * 1.7, A1 = (L * .025 + 2) + pluck * Math.min(26, L * .09), A2 = A1 * .35, bow = L * .06 * Math.sin(ph);
+        const ph = k * 1.7, A1 = (L * .02 + 1.5) + pluck * Math.min(20, L * .07), A2 = A1 * .3, bow = L * .06 * Math.sin(ph);
         const pts = [];
         for (let i = 0; i <= SEG; i++) {
           const u = i / SEG, env = Math.sin(Math.PI * u);
           const o = bow * env + A1 * env * Math.sin(t * 2.1 + ph + u * 2.2) * (.35 + pluck) + A2 * Math.sin(2 * Math.PI * u) * Math.sin(t * 3.3 + ph * 1.3);
           pts.push([src.x + dx * u + px * o, src.y + dy * u + py * o]);
         }
-        const path = () => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); };
         g.lineCap = "round"; g.lineJoin = "round";
-        path(); g.strokeStyle = "rgba(196,178,255,.14)"; g.lineWidth = 9; g.stroke();
-        path(); g.strokeStyle = "rgba(255,255,255,.34)"; g.lineWidth = 4; g.stroke();
-        path(); g.strokeStyle = `rgba(255,255,255,${.85 + pluck * .15})`; g.lineWidth = 1.1; g.stroke();
-        // a bead of light travelling out along each string
-        if (!this.reduce) { const q = (t * .32 + k * .29) % 1, p = pts[Math.round(q * SEG)], fade = Math.sin(Math.PI * q);
-          g.fillStyle = `rgba(255,255,255,${.22 * fade})`; g.beginPath(); g.arc(p[0], p[1], 7, 0, 7); g.fill();
-          g.fillStyle = `rgba(255,255,255,${.9 * fade})`; g.beginPath(); g.arc(p[0], p[1], 2, 0, 7); g.fill(); }
+        g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+        g.strokeStyle = `rgba(255,255,255,${.75 + pluck * .2})`; g.lineWidth = .7; g.stroke();
       });
     }
     requestAnimationFrame(this.frame);

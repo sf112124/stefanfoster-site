@@ -33,6 +33,7 @@ PROJECTS.forEach((p, pi) => {
     const m = lib[it.file]; if (!m) return;
     const x = { ...m, ...it, pi, slug: p.slug, sec };
     x.thumb = url(p.slug, m.type === "video" ? m.poster : m.sm);
+    x.node = m.node ? url(p.slug, m.node) : x.thumb;
     x.still = url(p.slug, m.type === "video" ? m.poster : m.src);
     if (m.type === "video") { x.loop = url(p.slug, m.loop); x.film = url(p.slug, m.full || m.loop); }
     p.pieces.push(x);
