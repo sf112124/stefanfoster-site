@@ -1,6 +1,6 @@
 // The thing in the hole. Let it out and it stalks your cursor on eight legs, lines you up and fires. It always misses you,
 // and the page takes the hit: letters are blown loose and fall, pieces are knocked across the grid, pictures get bites
-// taken out of them, cracks spread. Stop moving and it pounces: it grabs your cursor and runs off with it, smashing it
+// taken out of them. All the damage is done to the page itself. Stop moving and it pounces: it grabs your cursor and runs off with it, smashing it
 // into things, until you shake it loose. It gets angrier the longer it's out. Call it back and everything is put right.
 const SEL = ".node,.wi .wt i,.ph h1 .ch,.aname i,.tile,.chip,.links>a,.links>.snd,.links>.nite,.bot>span:not(.bar),.lead,.alead,.gsec h2,.gsec p,.cli,.agrid dd,.agrid dt,.tile figcaption,.nx,.wi .wn,.akick";
 const LETTER = ".wi .wt i,.ph h1 .ch,.aname i";
@@ -46,9 +46,9 @@ export class Crawler {
     addEventListener("pointerdown", (e) => {
       if (!this.on) return;
       if (this.state === "carry") { e.stopPropagation(); e.preventDefault(); return; }
-      if (["out", "pounce", "stun", "pet", "tame"].includes(this.state) && Math.hypot(e.clientX - this.p.x, e.clientY - this.p.y) < 34 && !e.target.closest?.(".hole")) {
+      if (["out", "pounce", "stun"].includes(this.state) && Math.hypot(e.clientX - this.p.x, e.clientY - this.p.y) < 34 && !e.target.closest?.(".hole")) {
         e.stopPropagation(); e.preventDefault(); this.swallow = true;
-        this.was = this.tameUntil > performance.now() ? "tame" : "out"; this.state = "held"; this.meter = 0; this.aim = 0; this.heldAt = performance.now();
+        this.state = "held"; this.meter = 0; this.aim = 0; this.heldAt = performance.now();
         document.documentElement.classList.add("holding"); this.sfx("squeak");
       }
     }, true);
@@ -61,11 +61,11 @@ export class Crawler {
     if (this.on) return;
     if (!this.cv) { this.cv = document.createElement("canvas"); this.cv.className = "crawl"; this.cv.setAttribute("aria-hidden", "true"); document.body.appendChild(this.cv); this.g = this.cv.getContext("2d"); }
     const h = this.holePos();
-    this.on = true; this.state = "out"; this.grow = 0; this.rage = 0; this.meter = 0; this.tameUntil = 0; this.petT = 0;
+    this.on = true; this.state = "out"; this.grow = 0; this.rage = 0; this.meter = 0;
     this.p = { x: h.x, y: h.y }; this.v = { x: -200, y: 260 }; this.head = Math.PI / 2; this.orbit = Math.random() * 6;
     this.legs = LEGS.map(chain); this.feel = FEEL.map(chain); this.tail = Array.from({ length: 6 }, () => [h.x, h.y]);
     [...this.legs, ...this.feel].forEach((l) => { l.fx = l.sx = l.tx = h.x; l.fy = l.sy = l.ty = h.y; l.j.forEach((q) => { q[0] = h.x; q[1] = h.y; }); });
-    this.bolts = []; this.sparks = []; this.rings = []; this.cracks = []; this.fall = []; this.puffs = []; this.aim = 0; this.cool = 1.2; this.pcool = 2.5; this.pts = []; this.ptsAt = 0; this.t = performance.now(); this.m.moved = this.t;
+    this.bolts = []; this.sparks = []; this.fall = []; this.aim = 0; this.cool = 1.2; this.pcool = 2.5; this.pts = []; this.ptsAt = 0; this.t = performance.now(); this.m.moved = this.t;
     this.label("CALL IT BACK"); document.documentElement.classList.add("crawling");
     this.sfx("out");
     requestAnimationFrame(this.frame);
@@ -83,7 +83,6 @@ export class Crawler {
     const h = this.holePos(), now = performance.now();
     if (Math.hypot(this.p.x - h.x, this.p.y - h.y) < 48) { this.state = "back"; this.backAt = now; this.sfx("back"); return; }
     this.v.x = clamp(this.m.vx, -1700, 1700); this.v.y = clamp(this.m.vy, -1700, 1700);
-    this.noPet = Math.hypot(this.m.vx, this.m.vy) > 500 || this.meter > 2600 ? now + 1200 : 0;
     const dizzy = this.meter > 2600;
     this.state = "stun"; this.stunAt = now - (dizzy ? 0 : 1000); this.pcool = 3; this.cool = 1.2;
     this.sfx(dizzy ? "free" : "thud", this.p.x / innerWidth);
@@ -159,12 +158,8 @@ export class Crawler {
   impact(x, y, ux, uy, hit, c, power = 1) {
     const now = performance.now(), W = innerWidth;
     const col = hit ? this.mutate(hit, ux, uy, power) || c : c;
-    if (hit) { const r = hit.getBoundingClientRect(); this.rings.push({ x: r.left, y: r.top, w: r.width, h: r.height, t: now, c: col }); }
     this.blast(x, y, 110 + this.rage * 30, hit);
     for (let k = 0; k < 12; k++) { const a = Math.atan2(uy, ux) + rnd(-1.4, 1.4), s = rnd(140, 560); this.sparks.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: now, c: col }); }
-    // a crack in the page where it landed
-    const arms = Array.from({ length: Math.floor(rnd(4, 8)) }, () => { let a = rnd(0, 6.28), px = 0, py = 0; const seg = [[0, 0]]; for (let i = 0, n = Math.floor(rnd(3, 6)); i < n; i++) { a += rnd(-.7, .7); const l = rnd(8, 30); px += Math.cos(a) * l; py += Math.sin(a) * l; seg.push([px, py]); } return seg; });
-    this.cracks.push({ x, y, arms, t: now }); if (this.cracks.length > 26) this.cracks.shift();
     if (!this.reduce) document.body.animate([{ transform: `translate(${(-ux * 7).toFixed(1)}px,${(-uy * 7).toFixed(1)}px)` }, { transform: `translate(${(ux * 4).toFixed(1)}px,${(uy * 4).toFixed(1)}px)` }, { transform: "none" }], { duration: 190, easing: "ease-out" });
     this.rage = Math.min(3, this.rage + .06);
     this.sfx("hit", x / W, 1 - y / innerHeight);
@@ -200,13 +195,9 @@ export class Crawler {
     if (this.cv.width !== Math.round(W * dpr) || this.cv.height !== Math.round(H * dpr)) { this.cv.width = Math.round(W * dpr); this.cv.height = Math.round(H * dpr); }
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
     const p = this.p, v = this.v, m = this.m;
-    if (this.state === "out" && this.tameUntil > now) this.state = "tame";
-    if (this.state === "tame" && this.tameUntil <= now) { this.state = "out"; this.cool = 1.5; this.pcool = 3; this.sfx("chitter", p.x / W); }
-    const st = this.state, back = st === "back", carry = st === "carry", stun = st === "stun", pounce = st === "pounce", held = st === "held", pet = st === "pet", tame = st === "tame";
+    const st = this.state, back = st === "back", carry = st === "carry", stun = st === "stun", pounce = st === "pounce", held = st === "held";
     const cs = getComputedStyle(document.documentElement), ink = cs.getPropertyValue("--ink").trim() || "#0d0d0e", bg = cs.getPropertyValue("--bg").trim() || "#f4f3ef", cols = this.colors();
     this.grow = Math.min(1, this.grow + dt * (back ? 0 : 1.6));
-    // cracks it has left in the page
-    this.cracks = this.cracks.filter((c) => { const k = (now - c.t) / 9000; if (k >= 1) return false; g.globalAlpha = Math.min(1, (1 - k) * 2) * .8; g.strokeStyle = ink; g.lineWidth = 1; c.arms.forEach((a) => { g.beginPath(); a.forEach((q, n) => (n ? g.lineTo(c.x + q[0], c.y + q[1]) : g.moveTo(c.x, c.y))); g.stroke(); }); g.fillStyle = ink; g.beginPath(); g.arc(c.x, c.y, 2.5, 0, 7); g.fill(); g.globalAlpha = 1; return true; });
     // letters it has blown loose
     this.fall.forEach((f) => {
       if (f.rest || !f.el.isConnected) return;
@@ -223,10 +214,9 @@ export class Crawler {
     else if (carry) {
       if (!this.way || Math.hypot(this.way.x - p.x, this.way.y - p.y) < 60 || now - this.wayAt > 1500) { this.way = { x: rnd(80, W - 80), y: rnd(80, H - 80) }; this.wayAt = now; }
       tx = this.way.x; ty = this.way.y; stand = 0; top = 720; grip = 5;
-    } else if (tame) { stand = 74; top = 700; grip = 6; }
-    else if (stun || pet) { top = 0; grip = stun ? 2.2 : 12; }
+    } else if (stun) { top = 0; grip = 2.2; }
     const dxm = tx - p.x, dym = ty - p.y, dm = Math.hypot(dxm, dym) || 1;
-    this.orbit += dt * (tame ? .9 : .55 + this.rage * .2);
+    this.orbit += dt * (.55 + this.rage * .2);
     if (held) { v.x = (m.x - p.x) / Math.max(dt, .008) * .5; v.y = (m.y + 14 - p.y) / Math.max(dt, .008) * .5; p.x += (m.x - p.x) * .5; p.y += (m.y + 14 - p.y) * .5; }
     else {
       const gx = tx - (dxm / dm) * stand * .75 + Math.cos(this.orbit) * stand * .5, gy = ty - (dym / dm) * stand * .75 + Math.sin(this.orbit) * stand * .5;
@@ -238,15 +228,14 @@ export class Crawler {
     const speed = Math.hypot(v.x, v.y);
     let face = carry && speed > 40 ? Math.atan2(v.y, v.x) : Math.atan2(m.y - p.y, m.x - p.x); if (back) face = Math.atan2(dym, dxm);
     let da = face - this.head; da = Math.atan2(Math.sin(da), Math.cos(da));
-    if (stun) this.head += dt * 10 * Math.max(0, 1 - (now - this.stunAt) / 1100); else if (held) this.head += Math.sin(now / 90) * dt * 3 + clamp(m.vx * .0006, -.2, .2) * dt * 8; else if (!pet) this.head += da * Math.min(1, dt * 7);
+    if (stun) this.head += dt * 10 * Math.max(0, 1 - (now - this.stunAt) / 1100); else if (held) this.head += Math.sin(now / 90) * dt * 3 + clamp(m.vx * .0006, -.2, .2) * dt * 8; else this.head += da * Math.min(1, dt * 7);
     const inHole = back && (dm < 34 || now - this.backAt > 2200);
     if (inHole) { this.grow -= Math.max(dt, .016) * 4; if (this.grow <= 0) { this.finish(); return; } }
-    const crouch = pounce && now - this.pAt < 240 ? .8 : pet ? .9 : 1;
+    const crouch = pounce && now - this.pAt < 240 ? .8 : 1;
     const sc = Math.max(.05, this.grow) * (inHole ? Math.max(.05, this.grow) : 1) * 1.25 * crouch * (1 + this.rage * .08), ch = Math.cos(this.head), sh = Math.sin(this.head);
-    const dMouse = Math.hypot(m.x - p.x, m.y - p.y), stroking = now - m.moved < 220;
+    const dMouse = Math.hypot(m.x - p.x, m.y - p.y);
     // state changes
-    if ((st === "out" || tame || stun) && this.grow >= 1 && dMouse < 30 && !held && now > (this.noPet || 0)) { this.state = "pet"; this.petT = 0; this.aim = 0; }
-    else if (st === "out" && this.grow >= 1) {
+    if (st === "out" && this.grow >= 1) {
       this.pcool -= dt;
       if (this.pcool <= 0 && now - m.moved > 850 && dMouse < 380) { this.state = "pounce"; this.pAt = now; this.aim = 0; this.sfx("pounce"); }
     } else if (pounce) {
@@ -256,11 +245,7 @@ export class Crawler {
       this.meter = Math.max(0, this.meter - 700 * dt);
       if (this.meter > 1500 || now - this.carryAt > 9000) this.free();
     } else if (stun && now - this.stunAt > 1700) this.state = "out";
-    else if (pet) {
-      // stroke it and it settles: the anger drains out, and after a good while it's yours for a bit
-      if (stroking) { this.petT += dt; this.rage = Math.max(0, this.rage - dt * 1.2); if (now - (this.purrAt || 0) > 260) { this.purrAt = now; this.sfx("purr", p.x / W, Math.min(1, this.petT / 1.6)); this.puffs.push({ x: p.x + rnd(-14, 14), y: p.y - 14, t: now }); } }
-      if (dMouse > 48) { if (this.petT > 1.6) { this.tameUntil = now + 16000; this.state = "tame"; this.rage = 0; this.sfx("chirp", p.x / W); } else { this.state = "out"; this.cool = 1; this.pcool = 2.5; } }
-    } else if (held) { this.meter = Math.max(0, this.meter - 500 * dt); if (Math.random() < dt * 4) this.sfx("chitter", p.x / W, .5); }
+    else if (held) { this.meter = Math.max(0, this.meter - 500 * dt); if (Math.random() < dt * 4) this.sfx("chitter", p.x / W, .5); }
     if (now - this.ptsAt > 450) { this.ptsAt = now; try { this.pts = this.anchors?.() || []; } catch (e) { this.pts = []; } }
     const moving = this.legs.filter((l) => l.st < 1).length, R = 10 * sc;
     g.lineCap = "round"; g.lineJoin = "round";
@@ -308,17 +293,13 @@ export class Crawler {
       g.fillStyle = bg; g.beginPath(); g.arc(j[n][0], j[n][1], 2.6, 0, 7); g.fill(); g.stroke();
     });
     // body: a ring with one lens floating in it, and a smaller ring budding off its side
-    const bob = Math.sin(now / 90) * Math.min(1.6, speed * .006), shake = this.rage > 1 ? rnd(-1, 1) * (this.rage - 1) : pet && stroking ? rnd(-.6, .6) : 0;
+    const bob = Math.sin(now / 90) * Math.min(1.6, speed * .006), shake = this.rage > 1 ? rnd(-1, 1) * (this.rage - 1) : 0;
     const bx0 = p.x + shake, by0 = p.y + bob + shake, hot = this.aim > 0 || pounce || carry || this.rage > 1.2;
     g.strokeStyle = ink; g.lineWidth = 1.8; g.fillStyle = bg; g.beginPath(); g.arc(bx0, by0, R, 0, 7); g.fill(); g.stroke();
     const ba = this.head + 2.2 + Math.sin(now / 500) * .3; g.lineWidth = 1.3; g.beginPath(); g.arc(bx0 + Math.cos(ba) * (R + 4 * sc), by0 + Math.sin(ba) * (R + 4 * sc), Math.max(.4, 3.6 * sc + Math.sin(now / 300) * .6 * sc), 0, 7); g.fill(); g.stroke();
     const look = held ? 0 : 3.4 * sc, ex = bx0 + ch * look, ey = by0 + sh * look;
     if (stun) { g.lineWidth = 1.3; g.beginPath(); g.moveTo(bx0 - 3, by0 - 3); g.lineTo(bx0 + 3, by0 + 3); g.moveTo(bx0 + 3, by0 - 3); g.lineTo(bx0 - 3, by0 + 3); g.stroke(); }
-    else if (pet || tame) { g.lineWidth = 1.6; g.beginPath(); g.arc(bx0, by0 + 2, 4.2 * sc, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); }
     else { g.fillStyle = hot ? "#ff2d4a" : ink; g.beginPath(); g.arc(ex, ey, (held ? 5 : 3.3) * sc + (this.aim > 0 ? this.aim * 1.4 : 0), 0, 7); g.fill(); if (held) { g.fillStyle = bg; g.beginPath(); g.arc(ex + 1.5, ey - 1.5, 1.4, 0, 7); g.fill(); } }
-    // little rings float up off it while you stroke it
-    this.puffs = this.puffs.filter((q) => { const k = (now - q.t) / 900; if (k >= 1) return false; g.globalAlpha = 1 - k; g.strokeStyle = cols[1]; g.lineWidth = 1.2; g.beginPath(); g.arc(q.x + Math.sin(k * 6) * 5, q.y - k * 34, 2 + k * 3, 0, 7); g.stroke(); g.globalAlpha = 1; return true; });
-    if (pet && this.petT < 1.6 && this.petT > .1) { g.strokeStyle = ink; g.lineWidth = 1; g.strokeRect(p.x - 24, p.y + 30, 48, 4); g.fillStyle = cols[1]; g.fillRect(p.x - 24, p.y + 30, 48 * (this.petT / 1.6), 4); }
     // your cursor, in its grip
     if (carry) {
       const wob = Math.sin(now / 45) * .25;
@@ -329,9 +310,15 @@ export class Crawler {
         const el = document.elementFromPoint(mouthX, mouthY), t = el && !el.closest(".hole") ? el.closest(SEL) : null;
         if (t && now - (t._shot || 0) > 700) { t._shot = now; this.impact(mouthX, mouthY, ch, sh, t, pick(cols), 1.3); }
       }
-      const k = clamp(this.meter / 1500, 0, 1), ty3 = clamp(p.y - 62, 30, H - 30), tx3 = clamp(p.x, 150, W - 150);
-      g.font = '500 10px "Geist Mono",ui-monospace,monospace'; g.textAlign = "center"; g.fillStyle = ink; g.fillText("IT HAS YOUR CURSOR  ::  SHAKE TO BREAK FREE", tx3, ty3);
-      g.strokeStyle = ink; g.lineWidth = 1; g.strokeRect(tx3 - 60, ty3 + 7, 120, 5); g.fillStyle = "#ff2d4a"; g.fillRect(tx3 - 60, ty3 + 7, 120 * k, 5);
+      // the way out, written where you can read it: a still plate at the foot of the screen, not riding on the animal
+      const k = clamp(this.meter / 1500, 0, 1), cx = W / 2, cy = H - 118, pw = 400, ph = 84;
+      g.globalAlpha = .94; g.fillStyle = bg; g.beginPath(); g.roundRect ? g.roundRect(cx - pw / 2, cy - ph / 2, pw, ph, ph / 2) : g.rect(cx - pw / 2, cy - ph / 2, pw, ph); g.fill(); g.globalAlpha = 1;
+      g.strokeStyle = "#ff2d4a"; g.lineWidth = 1.5; g.stroke();
+      g.textAlign = "center"; g.textBaseline = "middle"; try { g.letterSpacing = "1.5px"; } catch (e) {}
+      g.fillStyle = "#ff2d4a"; g.font = '600 11px "Geist Mono",ui-monospace,monospace'; g.fillText("IT HAS YOUR CURSOR", cx, cy - 22);
+      g.fillStyle = ink; g.font = '600 16px "Geist Mono",ui-monospace,monospace'; g.fillText("SHAKE YOUR MOUSE TO BREAK FREE", cx, cy);
+      try { g.letterSpacing = "0px"; } catch (e) {} g.textBaseline = "alphabetic";
+      g.strokeStyle = ink; g.lineWidth = 1; g.strokeRect(cx - 130, cy + 17, 260, 7); g.fillStyle = "#ff2d4a"; g.fillRect(cx - 130, cy + 17, 260 * k, 7);
       if (Math.random() < dt * 3) this.sfx("chitter", p.x / W);
     }
     if (stun && Math.random() < dt * 5) this.sfx("chitter", p.x / W, .4);
@@ -366,7 +353,6 @@ export class Crawler {
       if (hit || edge) { this.impact(clamp(b.x, 4, W - 4), clamp(b.y, 4, H - 4), b.ux, b.uy, hit, b.c); return false; }
       return true;
     });
-    this.rings = this.rings.filter((r) => { const k = (now - r.t) / 420; if (k >= 1) return false; const e = 4 + k * 22; g.globalAlpha = 1 - k; g.strokeStyle = r.c; g.lineWidth = 1.5; g.strokeRect(r.x - e, r.y - e, r.w + e * 2, r.h + e * 2); g.globalAlpha = 1; return true; });
     this.sparks = this.sparks.filter((q) => { const k = (now - q.t) / 420; if (k >= 1) return false; q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= .92; q.vy = q.vy * .92 + 14; g.globalAlpha = 1 - k; g.strokeStyle = q.c; g.lineWidth = 1.5; g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x - q.vx * .035, q.y - q.vy * .035); g.stroke(); g.globalAlpha = 1; return true; });
     requestAnimationFrame(this.frame);
   };

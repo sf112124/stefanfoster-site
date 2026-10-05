@@ -263,14 +263,6 @@ export class Sound {
       case "thud": // put down
         this.vox(130, 48, .14, .12, pan, { type: "sine" }); this.nz(900, 1, .05, .03, pan, { ft: "lowpass" });
         break;
-      case "purr": // being stroked: a low rattle that gets warmer and fuller the longer you keep going
-        this.vox(58 + b * 14, 54 + b * 14, .34, .07 + b * .05, pan, { type: "sawtooth", am: 23 + b * 5, bp: 300 + b * 260, q: .8, ft: "lowpass", a: .06, wet: .15 });
-        if (b > .5 && Math.random() < .4) this.vox(1400, 1750, .06, .012, pan, { at: .1, type: "triangle", wet: .4 });
-        break;
-      case "chirp": // won over: two bright notes going up
-        this.vox(1150, 1750, .12, .04, pan, { type: "triangle", wet: .4 });
-        this.vox(1550, 2500, .16, .04, pan, { at: .14, type: "triangle", wet: .4 });
-        break;
     }
   }
   splash(x = .5, y = .5) { this.bloom(x, y); }
