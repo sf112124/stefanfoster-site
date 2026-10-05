@@ -2,12 +2,12 @@
 // and the page takes the hit: letters are blown loose and fall, pieces are knocked across the grid, pictures are shot
 // full of holes until they hang off and drop. All the damage is done to the page itself. Stop moving and it pounces: it
 // grabs your cursor and runs off with it, smashing it into things, until you shake it loose.
-// And the ship. Launch it and you fly it yourself, drifting, turning and firing. Now it hunts the ship instead of your
+// And the ship. Launch it and you fly it yourself: WASD to move, it drifts, and its nose follows your cursor. Now it hunts the ship instead of your
 // cursor, and its shots can land. Wear it down and its legs give out one by one; beat it and it drags itself home.
 // When both are back where they belong, everything is put right.
 const SEL = ".node,.wi .wt i,.ph h1 .ch,.aname i,.tile,.chip,.links>a,.links>.snd,.links>.nite,.bot>span:not(.bar),.lead,.alead,.gsec h2,.gsec p,.cli,.agrid dd,.agrid dt,.tile figcaption,.nx,.wi .wn,.akick";
 const LETTER = ".wi .wt i,.ph h1 .ch,.aname i";
-const SAFE = ".hole,.pad";
+const SAFE = ".hole,.pad", MENU = ".hole,.pad,.snd,.nite";
 const HP = 22, HULL = 3, RED = "#ff2d4a";
 const WOUND = [8, 3, 7, 2];            // the legs that give out first as it's hurt
 const KEYS = { ArrowLeft: "l", a: "l", A: "l", ArrowRight: "r", d: "r", D: "r", ArrowUp: "u", w: "u", W: "u", ArrowDown: "d", s: "d", S: "d", " ": "f" };
@@ -54,7 +54,7 @@ export class Crawler {
     Object.assign(this, { holes, holeEl, pads, padEl, sfx: sfx || (() => {}), nodeHit, nodeReset, anchors, reduce });
     this.on = false; this.state = "home"; this.saved = new Map(); this.dmg = new Map();
     this.bolts = []; this.sparks = []; this.fall = []; this.rage = 0; this.hp = HP; this.sc = 1;
-    this.ship = { on: false, alive: false, x: 0, y: 0, vx: 0, vy: 0, a: 0, spin: 0, hull: HULL, safe: 0 };
+    this.ship = { on: false, alive: false, x: 0, y: 0, vx: 0, vy: 0, a: 0, spin: 0, hull: HULL, safe: 0, trail: [] };
     this.keys = {};
     this.m = { x: innerWidth / 2, y: innerHeight / 2, vx: 0, vy: 0, t: 0, moved: performance.now() };
     addEventListener("pointermove", (e) => {
@@ -66,7 +66,7 @@ export class Crawler {
     holes.forEach((h) => h.addEventListener("click", () => { h.blur(); this.on ? this.recall() : this.release(); }));
     pads.forEach((b) => b.addEventListener("click", () => { b.blur(); this.ship.on ? this.dock() : this.launch(); }));
     addEventListener("keydown", (e) => { if (e.key === "Escape") { if (this.on) this.recall(); if (this.ship.on) this.dock(); } });
-    // flying: the arrows (or WASD) and the space bar are yours while the ship is out
+    // flying: WASD (or the arrows) and the space bar are yours while the ship is out
     const key = (down) => (e) => {
       const k = KEYS[e.key]; if (!k || !this.ship.on || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.target.closest?.("input,textarea,[contenteditable]") || document.getElementById("lb")?.hidden === false) return;
@@ -74,9 +74,11 @@ export class Crawler {
       if (down) { if (k === "f") this.ship.fired = true; else this.ship.drove = true; }
     };
     addEventListener("keydown", key(true), true); addEventListener("keyup", key(false), true);
-    addEventListener("blur", () => (this.keys = {}));
+    addEventListener("blur", () => { this.keys = {}; this.firing = false; });
     // while it has your cursor nothing you click lands; and a press right on it picks it up
+    // flying: holding the mouse down fires, and nothing on the page takes the click (the menu buttons still do)
     addEventListener("pointerdown", (e) => {
+      if (this.ship.on && e.button === 0 && !e.target.closest?.(MENU)) { e.stopPropagation(); e.preventDefault(); this.firing = !this.ship.docking; return; }
       if (!this.on) return;
       if (this.state === "carry") { e.stopPropagation(); e.preventDefault(); return; }
       if (["out", "pounce", "stun"].includes(this.state) && Math.hypot(e.clientX - this.p.x, e.clientY - this.p.y) < 34 && !e.target.closest?.(SAFE)) {
@@ -85,8 +87,8 @@ export class Crawler {
         document.documentElement.classList.add("holding"); this.sfx("squeak");
       }
     }, true);
-    addEventListener("pointerup", () => { if (this.state === "held") this.letGo(); if (this.swallow) setTimeout(() => (this.swallow = false), 60); }, true);
-    ["mousedown", "click"].forEach((t) => addEventListener(t, (e) => { if (this.state === "carry" || this.state === "held" || (t === "click" && this.swallow)) { e.stopPropagation(); e.preventDefault(); if (t === "click") this.swallow = false; } }, true));
+    addEventListener("pointerup", () => { this.firing = false; if (this.state === "held") this.letGo(); if (this.swallow) setTimeout(() => (this.swallow = false), 60); }, true);
+    ["mousedown", "click"].forEach((t) => addEventListener(t, (e) => { if (this.state === "carry" || this.state === "held" || (t === "click" && this.swallow) || (this.ship.on && !e.target.closest?.(MENU))) { e.stopPropagation(); e.preventDefault(); if (t === "click") this.swallow = false; } }, true));
   }
   spot(el, q) { const r = (q ? el.querySelector(q) : el).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
   holePos() { return this.spot(this.holeEl?.() || this.holes[0], "i"); }
@@ -140,7 +142,7 @@ export class Crawler {
     if (this.ship.on) return;
     this.ensure();
     const h = this.padPos(), now = performance.now();
-    Object.assign(this.ship, { on: true, alive: true, docking: false, x: h.x, y: h.y, vx: rnd(-50, 50), vy: 240, a: Math.PI / 2, spin: 0, hull: HULL, safe: now + 1500, born: now, fireAt: 0, drove: false, fired: false, size: 0 });
+    Object.assign(this.ship, { on: true, alive: true, docking: false, x: h.x, y: h.y, vx: rnd(-50, 50), vy: 240, a: Math.PI / 2, spin: 0, hull: HULL, safe: now + 1500, born: now, fireAt: 0, drove: false, fired: false, size: 0, trail: [] });
     this.keys = {};
     this.padLabel("DOCK"); document.documentElement.classList.add("flying");
     this.sfx("launch");
@@ -455,47 +457,70 @@ export class Crawler {
   }
   // ---- flying ----
   fly({ now, dt, g, W, H, ink, bg }) {
-    const S = this.ship, K = this.keys, col = this.shipCol(), pad = this.padPos();
-    let thrust = false;
+    const S = this.ship, K = this.keys, m = this.m, col = this.shipCol(), pad = this.padPos();
+    let ix = 0, iy = 0;
     if (S.docking) {
       // called in: it swings round and slides back into its bay
-      const dx = pad.x - S.x, dy = pad.y - S.y, d = Math.hypot(dx, dy), k = Math.min(1, dt * 5);
+      const dx = pad.x - S.x, dy = pad.y - S.y, d = Math.hypot(dx, dy) || 1, k = Math.min(1, dt * 5);
       S.x += dx * k; S.y += dy * k; S.vx = S.vy = 0; let da = Math.atan2(dy, dx) - S.a; S.a += Math.atan2(Math.sin(da), Math.cos(da)) * Math.min(1, dt * 9);
-      if (d < 26) { S.size -= dt * 5; if (S.size <= 0) { this.parked(); return; } }
-      thrust = d > 30;
+      if (d < 26) { S.size -= dt * 5; if (S.size <= 0) { this.parked(); return; } } else { ix = dx / d; iy = dy / d; }
     } else if (!S.alive) {
-      if (now > S.respawn) Object.assign(S, { alive: true, x: pad.x, y: pad.y, vx: rnd(-50, 50), vy: 240, a: Math.PI / 2, spin: 0, hull: HULL, safe: now + 1800, size: 0 });
+      if (now > S.respawn) Object.assign(S, { alive: true, x: pad.x, y: pad.y, vx: rnd(-50, 50), vy: 240, a: Math.PI / 2, spin: 0, hull: HULL, safe: now + 1800, size: 0, trail: [] });
       else return;
     } else {
       S.size = Math.min(1, S.size + dt * 3);
-      S.a += ((K.r ? 1 : 0) - (K.l ? 1 : 0)) * 4.6 * dt + S.spin * dt; S.spin *= Math.max(0, 1 - dt * 3.5);
-      const c = Math.cos(S.a), s = Math.sin(S.a);
-      if (K.u) { S.vx += c * 660 * dt; S.vy += s * 660 * dt; thrust = true; this.sfx("thrust", S.x / W); }
-      if (K.d) { S.vx *= Math.max(0, 1 - dt * 2.6); S.vy *= Math.max(0, 1 - dt * 2.6); }
-      // it drifts: barely any drag, so you have to turn and burn to change your mind
-      const drag = Math.max(0, 1 - dt * .3); S.vx *= drag; S.vy *= drag;
-      const sp = Math.hypot(S.vx, S.vy); if (sp > 640) { S.vx *= 640 / sp; S.vy *= 640 / sp; }
+      // its nose always follows your cursor (a hit knocks it spinning for a moment first)
+      let da = Math.atan2(m.y - S.y, m.x - S.x) - S.a; da = Math.atan2(Math.sin(da), Math.cos(da));
+      S.a += da * Math.min(1, dt * 22) * (1 - Math.min(1, Math.abs(S.spin) / 5)) + S.spin * dt; S.spin *= Math.max(0, 1 - dt * 4);
+      // W A S D push it up, left, down, right. It keeps sliding when you let go.
+      ix = (K.r ? 1 : 0) - (K.l ? 1 : 0); iy = (K.d ? 1 : 0) - (K.u ? 1 : 0);
+      const il = Math.hypot(ix, iy);
+      if (il) { ix /= il; iy /= il; S.vx += ix * 1500 * dt; S.vy += iy * 1500 * dt; this.sfx("thrust", S.x / W); }
+      const drag = Math.max(0, 1 - dt * (il ? 1.1 : 1.7)); S.vx *= drag; S.vy *= drag;
+      const sp = Math.hypot(S.vx, S.vy); if (sp > 540) { S.vx *= 540 / sp; S.vy *= 540 / sp; }
       S.x += S.vx * dt; S.y += S.vy * dt;
-      if (S.x < -16) S.x = W + 16; else if (S.x > W + 16) S.x = -16;
-      if (S.y < -16) S.y = H + 16; else if (S.y > H + 16) S.y = -16;
-      if (K.f && now - S.fireAt > 165) {
-        S.fireAt = now; this.bolts.push({ x: S.x + c * 15, y: S.y + s * 15, ux: c, uy: s, d: 0, c: col, by: "ship" });
-        S.vx -= c * 14; S.vy -= s * 14; this.sfx("pew", S.x / W);
+      if (S.x < 16 || S.x > W - 16) { S.vx *= -.45; S.x = clamp(S.x, 16, W - 16); } if (S.y < 16 || S.y > H - 16) { S.vy *= -.45; S.y = clamp(S.y, 16, H - 16); }
+      const c = Math.cos(S.a), s = Math.sin(S.a);
+      if ((K.f || this.firing) && now - S.fireAt > 150) {
+        S.fireAt = now; this.bolts.push({ x: S.x + c * 34, y: S.y + s * 34, ux: c, uy: s, d: 0, c: col, by: "ship" });
+        S.vx -= c * 16; S.vy -= s * 16; S.fired = true; this.sfx("pew", S.x / W);
       }
       // fly into it and it's you that comes off worse
-      if (this.on && now > S.safe && this.grow >= 1 && !["back", "dying", "held"].includes(this.state)) { const dx = S.x - this.p.x, dy = S.y - this.p.y, d = Math.hypot(dx, dy) || 1; if (d < 24 * this.sc) this.shipHit(dx / d, dy / d); }
+      if (this.on && now > S.safe && this.grow >= 1 && !["back", "dying", "held"].includes(this.state)) { const dx = S.x - this.p.x, dy = S.y - this.p.y, d = Math.hypot(dx, dy) || 1; if (d < 26 * this.sc) this.shipHit(dx / d, dy / d); }
       if (!S.alive) return;
     }
-    // the ship: a little dart with a ring for a cockpit and two struts ending in the same open rings as its legs
-    const z = Math.max(.05, S.size) * 1.15;
-    if (!S.docking && now < S.safe && Math.floor(now / 90) % 2) g.globalAlpha = .35;
-    g.save(); g.translate(S.x, S.y); g.rotate(S.a); g.scale(z, z);
-    if (thrust) { g.strokeStyle = col; g.lineWidth = 1.6; for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(-6, k * 2.6); g.lineTo(-6 - rnd(7, 19) * (k ? .6 : 1), k * rnd(2, 5)); g.stroke(); } }
-    g.strokeStyle = ink; g.fillStyle = bg; g.lineWidth = 1.2;
-    [-1, 1].forEach((k) => { g.beginPath(); g.moveTo(-4, k * 4); g.lineTo(-11, k * 11); g.stroke(); g.beginPath(); g.arc(-11, k * 11, 2.2, 0, 7); g.fill(); g.stroke(); });
-    g.lineWidth = 1.7; g.beginPath(); g.moveTo(14, 0); g.lineTo(-8, -8); g.lineTo(-4, 0); g.lineTo(-8, 8); g.closePath(); g.fill(); g.stroke();
-    g.fillStyle = col; g.lineWidth = 1.1; g.beginPath(); g.arc(2.5, 0, 2.6, 0, 7); g.fill(); g.stroke();
-    g.restore(); g.globalAlpha = 1;
+    const z = Math.max(.05, S.size) * 1.2, c = Math.cos(S.a), s = Math.sin(S.a), blink = !S.docking && now < S.safe && Math.floor(now / 90) % 2;
+    // the line it has just flown, fading out behind it
+    S.trail.push([S.x, S.y]); if (S.trail.length > 14) S.trail.shift();
+    g.strokeStyle = col; g.lineWidth = 1.2;
+    for (let k = 1; k < S.trail.length; k++) { g.globalAlpha = (k / S.trail.length) * .45; g.beginPath(); g.moveTo(S.trail[k - 1][0], S.trail[k - 1][1]); g.lineTo(S.trail[k][0], S.trail[k][1]); g.stroke(); }
+    g.globalAlpha = blink ? .35 : 1;
+    // it burns from whichever side pushes it the way you're steering
+    if (ix || iy) { g.strokeStyle = col; g.lineWidth = 1.7; for (let k = -1; k <= 1; k++) { const bx = S.x - ix * 9 * z - iy * k * 4 * z, by = S.y - iy * 9 * z + ix * k * 4 * z, L = rnd(8, 22) * (k ? .6 : 1) * z; g.beginPath(); g.moveTo(bx, by); g.lineTo(bx - ix * L + rnd(-2, 2), by - iy * L + rnd(-2, 2)); g.stroke(); } }
+    // the ship. A slim hull with a long needle of a gun, a lit ring for a cockpit, and two wire wings on jointed struts
+    // that sweep back as it picks up speed and tuck in as it slides sideways.
+    const fl = (S.vx * c + S.vy * s) / 540, sd = (-S.vx * s + S.vy * c) / 540, hot = now - S.fireAt < 70;
+    g.save(); g.translate(S.x, S.y); g.rotate(S.a); g.scale(z, z * (1 - Math.abs(sd) * .3));
+    g.strokeStyle = ink; g.fillStyle = bg;
+    [-1, 1].forEach((k) => {
+      const ex = -8 - fl * 2, ey = k * 12, tx = -17 - fl * 5, ty = k * (17 - Math.abs(fl) * 3.5);
+      g.lineWidth = 1.2; g.beginPath(); g.moveTo(-1, k * 5.5); g.lineTo(ex, ey); g.lineTo(tx, ty); g.lineTo(-10.5, k * 4.5); g.stroke();
+      g.beginPath(); g.moveTo(ex, ey); g.lineTo(-9, k * 5); g.stroke();
+      g.beginPath(); g.arc(ex, ey, 1.9, 0, 7); g.fill(); g.stroke();
+      g.beginPath(); g.arc(tx, ty, 2.5, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = ink; g.beginPath(); g.arc(-11.5, k * 4.2, 2, 0, 7); g.fill(); g.fillStyle = bg;
+    });
+    g.lineWidth = 1.7; g.beginPath(); g.moveTo(19, 0); g.quadraticCurveTo(7, -3.6, -3, -6.6); g.lineTo(-11, -4.4); g.lineTo(-7.5, 0); g.lineTo(-11, 4.4); g.lineTo(-3, 6.6); g.quadraticCurveTo(7, 3.6, 19, 0); g.closePath(); g.fill(); g.stroke();
+    g.lineWidth = 1; g.beginPath(); g.moveTo(-7.5, 0); g.lineTo(0, 0); g.stroke();
+    g.lineWidth = 1.2; g.fillStyle = col; g.beginPath(); g.arc(4.5, 0, 3.1, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = bg; g.beginPath(); g.arc(5.4, -1, .9, 0, 7); g.fill();
+    g.lineWidth = 1.4; g.beginPath(); g.moveTo(19, 0); g.lineTo(26, 0); g.stroke();
+    g.lineWidth = 1.1; g.fillStyle = hot ? col : bg; g.beginPath(); g.arc(27.8, 0, hot ? 2.6 : 1.8, 0, 7); g.fill(); g.stroke();
+    if (hot) { g.strokeStyle = col; g.lineWidth = 1.4; [-.7, 0, .7].forEach((o) => { g.beginPath(); g.moveTo(30 + Math.cos(o) * 2, Math.sin(o) * 2); g.lineTo(30 + Math.cos(o) * 9, Math.sin(o) * 9); g.stroke(); }); }
+    g.restore();
+    // what it has left circles it: three small lights, one gone for every hit it takes
+    if (!S.docking) for (let k = 0; k < S.hull; k++) { const o = now / 430 + k * 2.094, ox = S.x + Math.cos(o) * 25 * z, oy = S.y + Math.sin(o) * 25 * z; g.fillStyle = col; g.strokeStyle = ink; g.lineWidth = 1.1; g.beginPath(); g.arc(ox, oy, 2.4, 0, 7); g.fill(); g.stroke(); }
+    g.globalAlpha = 1;
   }
   // ---- everything in the air ----
   shots({ now, dt, g, W, H }) {
@@ -507,7 +532,7 @@ export class Crawler {
         const stp = Math.min(12, left); b.x += b.ux * stp; b.y += b.uy * stp; b.d += stp; left -= stp;
         if (b.x < 2 || b.y < 2 || b.x > W - 2 || b.y > H - 2 || b.d > (mine ? 900 : 2400)) { if (mine) spent = true; else edge = true; break; }
         if (mine && open && Math.hypot(b.x - p.x, b.y - p.y) < 25 * this.sc) { this.hurt(b); spent = true; break; }
-        if (!mine && S.on && S.alive && !S.docking && now > S.safe && Math.hypot(b.x - S.x, b.y - S.y) < 14) { this.shipHit(b.ux, b.uy); spent = true; break; }
+        if (!mine && S.on && S.alive && !S.docking && now > S.safe && Math.hypot(b.x - S.x, b.y - S.y) < 17) { this.shipHit(b.ux, b.uy); spent = true; break; }
         if (b.d < (mine ? 24 : 40)) continue;
         const el = document.elementFromPoint(b.x, b.y), t = el && !el.closest(SAFE) ? el.closest(SEL) : null;
         if (t && now - (t._shot || 0) > (mine ? 250 : 400)) { t._shot = now; hit = t; }
@@ -533,8 +558,8 @@ export class Crawler {
     const cx = W / 2, cy = H - 64, col = this.shipCol();
     // first, how to fly it. It stays until you've turned, burned and fired.
     if (now - S.born < 9000 && !(S.drove && S.fired && now - S.born > 3500)) {
-      plate(g, cx, cy, 520, 44, bg, col);
-      type(g, "← →  TURN      ↑  THRUST      ↓  BRAKE      SPACE  FIRE", cx, cy + 1, 12, ink);
+      plate(g, cx, cy, 560, 44, bg, col);
+      type(g, "W A S D  MOVE      MOUSE  AIM      CLICK OR SPACE  FIRE", cx, cy + 1, 12, ink);
       return;
     }
     if (!this.on) return;

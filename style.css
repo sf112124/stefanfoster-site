@@ -521,4 +521,8 @@ html.night{--mute:#fff;--line:rgba(255,255,255,.3)}
 /* it has your cursor, or you have it */
 html.caught,html.caught *{cursor:none!important}
 html.holding,html.holding *{cursor:grabbing!important}
+/* flying: your cursor is the gunsight */
+html.flying,html.flying *{cursor:crosshair!important}
+html.flying .hole,html.flying .hole *,html.flying .pad,html.flying .pad *,html.flying .snd,html.flying .snd *,html.flying .nite,html.flying .nite *{cursor:pointer!important}
+html.flying{-webkit-user-select:none;user-select:none}
 @media (max-width:700px){.hole,.pad,.vtools{display:none}}
