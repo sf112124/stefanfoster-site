@@ -8,7 +8,7 @@
 const SEL = ".node,.wi .wt i,.ph h1 .ch,.aname i,.tile,.chip,.links>a,.links>.snd,.links>.nite,.bot>span:not(.bar),.lead,.alead,.gsec h2,.gsec p,.cli,.agrid dd,.agrid dt,.tile figcaption,.nx,.wi .wn,.akick";
 const LETTER = ".wi .wt i,.ph h1 .ch,.aname i";
 const SAFE = ".hole,.pad", MENU = ".hole,.pad,.snd,.nite";
-const HP = 22, HULL = 3, RED = "#ff2d4a";
+const HP = 60, HULL = 6, RED = "#ff2d4a";
 const WOUND = [8, 3, 7, 2];            // the legs that give out first as it's hurt
 const KEYS = { ArrowLeft: "l", a: "l", A: "l", ArrowRight: "r", d: "r", D: "r", ArrowUp: "u", w: "u", W: "u", ArrowDown: "d", s: "d", S: "d", " ": "f" };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -152,22 +152,21 @@ export class Crawler {
   burst(x, y, n, c, lo = 140, hi = 520) { const now = performance.now(); for (let k = 0; k < n; k++) { const a = rnd(0, 6.28), s = rnd(lo, hi); this.sparks.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: now, c: Array.isArray(c) ? pick(c) : c }); } }
   shipHit(ux, uy) {
     const S = this.ship, now = performance.now();
-    S.hull--; S.safe = now + 1300; S.vx += ux * 280; S.vy += uy * 280; S.spin = rnd(7, 12) * (Math.random() < .5 ? -1 : 1);
+    S.hull--; S.safe = now + 1800; S.vx += ux * 280; S.vy += uy * 280; S.spin = rnd(7, 12) * (Math.random() < .5 ? -1 : 1);
     this.burst(S.x, S.y, 10, [RED, this.shipCol()]);
     if (S.hull > 0) { this.sfx("shiphit", S.x / innerWidth); return; }
-    // gone: it comes back out of its bay in a moment, and the thing gets its breath back
+    // gone: it comes back out of its bay in a moment
     S.alive = false; S.respawn = now + 1700; this.keys = {};
     this.burst(S.x, S.y, 26, [RED, this.shipCol(), "#ff8a1e"], 120, 700);
-    if (this.on && this.state !== "dying") this.hp = Math.min(HP, this.hp + 2);
     this.sfx("boom", S.x / innerWidth);
   }
   shipCol() { return document.documentElement.classList.contains("night") ? "#46ff8a" : "#3d5bff"; }
   // one of your shots lands on it
   hurt(b) {
     const now = performance.now();
-    this.hp--; this.hurtAt = now; this.aim = 0; this.rage = Math.min(3, this.rage + .08);
-    this.v.x += b.ux * 190; this.v.y += b.uy * 190;
-    this.burst(b.x, b.y, 8, [RED, b.c], 120, 420);
+    this.hp--; this.hurtAt = now; if (Math.random() < .3) this.aim = 0;
+    this.v.x += b.ux * 70; this.v.y += b.uy * 70;
+    this.burst(b.x, b.y, 5, [RED, b.c], 120, 420);
     if (this.hp > 0) { this.sfx("hurt", this.p.x / innerWidth); return; }
     if (this.state === "carry") this.free(true);
     document.documentElement.classList.remove("holding", "caught");
@@ -259,7 +258,7 @@ export class Crawler {
     this.blast(x, y, light ? 70 : 110 + this.rage * 30, hit);
     for (let k = 0, n = light ? 7 : 12; k < n; k++) { const a = Math.atan2(uy, ux) + rnd(-1.4, 1.4), s = rnd(140, 560) * (light ? .7 : 1); this.sparks.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: now, c: col }); }
     if (!this.reduce) document.body.animate([{ transform: `translate(${(-ux * 7 * j).toFixed(1)}px,${(-uy * 7 * j).toFixed(1)}px)` }, { transform: `translate(${(ux * 4 * j).toFixed(1)}px,${(uy * 4 * j).toFixed(1)}px)` }, { transform: "none" }], { duration: 190, easing: "ease-out" });
-    if (!light) this.rage = Math.min(3, this.rage + .06);
+    if (!light) this.rage = Math.min(3, this.rage + (this.ship.on ? .015 : .06));
     this.sfx(light ? "tink" : "hit", x / W, 1 - y / innerHeight);
   }
   restore() {
@@ -322,7 +321,7 @@ export class Crawler {
     if (!going) this.grow = Math.min(1, this.grow + dt * 1.6);
     // where it wants to be
     const hole = this.holePos();
-    let tx = T.x, ty = T.y, top = (560 + this.rage * 90) * (.62 + .38 * hpk), grip = 4.5, stand = (vs ? 200 : 150) + Math.sin(now / 1700) * 30 - this.rage * 20;
+    let tx = T.x, ty = T.y, top = (560 + this.rage * 90) * (.62 + .38 * hpk) * (vs ? .5 : 1), grip = 4.5, stand = (vs ? 270 : 150) + Math.sin(now / 1700) * 30 - this.rage * 20;
     if (back) { tx = hole.x; ty = hole.y; stand = 0; top = 1100; grip = 12; }
     else if (dying) {
       // beaten: it hauls itself home in heaves, on the two legs that still work
@@ -441,15 +440,15 @@ export class Crawler {
       this.cool -= dt;
       if (this.aim <= 0 && this.cool <= 0 && dT < (vs ? 780 : 620)) { this.aim = .001; this.sfx("aim", p.x / W, this.rage); }
       if (this.aim > 0) {
-        this.aim += dt / Math.max(.14, (vs ? .36 : .3) - this.rage * .05);
+        this.aim += dt / (vs ? .65 : Math.max(.14, .3 - this.rage * .05));
         const s = 26 - Math.min(1, this.aim) * 14;
         g.strokeStyle = RED; g.lineWidth = 1; g.setLineDash([2, 6]); g.beginPath(); g.moveTo(ex, ey); g.lineTo(T.x, T.y); g.stroke(); g.setLineDash([]);
         g.strokeRect(T.x - s, T.y - s, s * 2, s * 2);
         if (this.aim >= 1) {
-          this.aim = 0; this.cool = (vs ? rnd(.5, 1.3) : rnd(.3, 1)) / (1 + this.rage * .6);
-          const lead = vs ? clamp(dT / 2100, 0, .45) * rnd(.6, 1.1) : .06;
-          const ax = T.x + T.vx * lead - ex, ay = T.y + T.vy * lead - ey, ld = Math.hypot(ax, ay) || 1, n = Math.random() < .25 + this.rage * .2 ? 3 : 1;
-          for (let k = 0; k < n; k++) { const sp = n === 1 ? rnd(-.05, .05) * (vs ? 1.6 : 1) : (k - 1) * .16 + rnd(-.03, .03), c0 = Math.cos(sp), s0 = Math.sin(sp); this.bolts.push({ x: ex, y: ey, ux: (ax / ld) * c0 - (ay / ld) * s0, uy: (ax / ld) * s0 + (ay / ld) * c0, d: 0, c: pick(cols), by: "it" }); }
+          this.aim = 0; this.cool = vs ? rnd(1.2, 2.3) : rnd(.3, 1) / (1 + this.rage * .6);
+          const lead = vs ? clamp(dT / 850, 0, .6) * rnd(.1, .8) : .06;
+          const ax = T.x + T.vx * lead - ex, ay = T.y + T.vy * lead - ey, ld = Math.hypot(ax, ay) || 1, n = !vs && Math.random() < .25 + this.rage * .2 ? 3 : 1;
+          for (let k = 0; k < n; k++) { const sp = n === 1 ? rnd(-.05, .05) * (vs ? 2.6 : 1) : (k - 1) * .16 + rnd(-.03, .03), c0 = Math.cos(sp), s0 = Math.sin(sp); this.bolts.push({ x: ex, y: ey, ux: (ax / ld) * c0 - (ay / ld) * s0, uy: (ax / ld) * s0 + (ay / ld) * c0, d: 0, c: pick(cols), by: "it", slow: vs }); }
           v.x -= (ax / ld) * 220; v.y -= (ay / ld) * 220; this.sfx("shoot", ex / W, n);
         }
       }
@@ -475,18 +474,19 @@ export class Crawler {
       // W A S D push it up, left, down, right. It keeps sliding when you let go.
       ix = (K.r ? 1 : 0) - (K.l ? 1 : 0); iy = (K.d ? 1 : 0) - (K.u ? 1 : 0);
       const il = Math.hypot(ix, iy);
-      if (il) { ix /= il; iy /= il; S.vx += ix * 1500 * dt; S.vy += iy * 1500 * dt; this.sfx("thrust", S.x / W); }
+      if (il) { ix /= il; iy /= il; S.vx += ix * 2000 * dt; S.vy += iy * 2000 * dt; this.sfx("thrust", S.x / W); }
       const drag = Math.max(0, 1 - dt * (il ? 1.1 : 1.7)); S.vx *= drag; S.vy *= drag;
-      const sp = Math.hypot(S.vx, S.vy); if (sp > 540) { S.vx *= 540 / sp; S.vy *= 540 / sp; }
+      const sp = Math.hypot(S.vx, S.vy); if (sp > 640) { S.vx *= 640 / sp; S.vy *= 640 / sp; }
       S.x += S.vx * dt; S.y += S.vy * dt;
       if (S.x < 16 || S.x > W - 16) { S.vx *= -.45; S.x = clamp(S.x, 16, W - 16); } if (S.y < 16 || S.y > H - 16) { S.vy *= -.45; S.y = clamp(S.y, 16, H - 16); }
       const c = Math.cos(S.a), s = Math.sin(S.a);
       if ((K.f || this.firing) && now - S.fireAt > 150) {
-        S.fireAt = now; this.bolts.push({ x: S.x + c * 34, y: S.y + s * 34, ux: c, uy: s, d: 0, c: col, by: "ship" });
+        // three at a time: one straight down the nose and one fanned out either side
+        S.fireAt = now; [-.12, 0, .12].forEach((o) => this.bolts.push({ x: S.x + c * 34, y: S.y + s * 34, ux: Math.cos(S.a + o), uy: Math.sin(S.a + o), d: 0, c: col, by: "ship" }));
         S.vx -= c * 16; S.vy -= s * 16; S.fired = true; this.sfx("pew", S.x / W);
       }
-      // fly into it and it's you that comes off worse
-      if (this.on && now > S.safe && this.grow >= 1 && !["back", "dying", "held"].includes(this.state)) { const dx = S.x - this.p.x, dy = S.y - this.p.y, d = Math.hypot(dx, dy) || 1; if (d < 26 * this.sc) this.shipHit(dx / d, dy / d); }
+      // brush against it and you're just shoved clear
+      if (this.on && this.grow >= 1 && !["back", "dying", "held"].includes(this.state)) { const dx = S.x - this.p.x, dy = S.y - this.p.y, d = Math.hypot(dx, dy) || 1; if (d < 32 * this.sc) { S.vx += (dx / d) * 3000 * dt; S.vy += (dy / d) * 3000 * dt; } }
       if (!S.alive) return;
     }
     const z = Math.max(.05, S.size) * 1.2, c = Math.cos(S.a), s = Math.sin(S.a), blink = !S.docking && now < S.safe && Math.floor(now / 90) % 2;
@@ -519,7 +519,7 @@ export class Crawler {
     if (hot) { g.strokeStyle = col; g.lineWidth = 1.4; [-.7, 0, .7].forEach((o) => { g.beginPath(); g.moveTo(30 + Math.cos(o) * 2, Math.sin(o) * 2); g.lineTo(30 + Math.cos(o) * 9, Math.sin(o) * 9); g.stroke(); }); }
     g.restore();
     // what it has left circles it: three small lights, one gone for every hit it takes
-    if (!S.docking) for (let k = 0; k < S.hull; k++) { const o = now / 430 + k * 2.094, ox = S.x + Math.cos(o) * 25 * z, oy = S.y + Math.sin(o) * 25 * z; g.fillStyle = col; g.strokeStyle = ink; g.lineWidth = 1.1; g.beginPath(); g.arc(ox, oy, 2.4, 0, 7); g.fill(); g.stroke(); }
+    if (!S.docking) for (let k = 0; k < S.hull; k++) { const o = now / 430 + k * (6.2832 / HULL), ox = S.x + Math.cos(o) * 25 * z, oy = S.y + Math.sin(o) * 25 * z; g.fillStyle = col; g.strokeStyle = ink; g.lineWidth = 1.1; g.beginPath(); g.arc(ox, oy, 2.4, 0, 7); g.fill(); g.stroke(); }
     g.globalAlpha = 1;
   }
   // ---- everything in the air ----
@@ -527,7 +527,7 @@ export class Crawler {
     const S = this.ship, p = this.p, open = this.on && this.grow >= 1 && this.state !== "back" && this.state !== "dying";
     this.bolts = this.bolts.filter((b) => {
       const mine = b.by === "ship";
-      let left = (mine ? 980 : 2100) * dt, hit = null, edge = false, spent = false;
+      let left = (mine ? 1050 : b.slow ? 850 : 2100) * dt, hit = null, edge = false, spent = false;
       while (left > 0 && !hit && !edge && !spent) {
         const stp = Math.min(12, left); b.x += b.ux * stp; b.y += b.uy * stp; b.d += stp; left -= stp;
         if (b.x < 2 || b.y < 2 || b.x > W - 2 || b.y > H - 2 || b.d > (mine ? 900 : 2400)) { if (mine) spent = true; else edge = true; break; }
@@ -564,10 +564,10 @@ export class Crawler {
     }
     if (!this.on) return;
     // then the score: what's left of you, what's left of it
-    plate(g, cx, cy, 380, 44, bg, ink);
-    type(g, "YOU", cx - 166, cy + 1, 11, ink, "left");
-    for (let k = 0; k < HULL; k++) { g.beginPath(); g.arc(cx - 118 + k * 15, cy, 4.2, 0, 7); g.strokeStyle = ink; g.lineWidth = 1.3; g.fillStyle = col; if (k < S.hull && S.alive) g.fill(); g.stroke(); }
-    type(g, "IT", cx - 48, cy + 1, 11, RED, "left");
-    g.strokeStyle = ink; g.lineWidth = 1; g.strokeRect(cx - 20, cy - 4, 180, 8); g.fillStyle = RED; g.fillRect(cx - 20, cy - 4, 180 * clamp(this.hp / HP, 0, 1), 8);
+    plate(g, cx, cy, 440, 44, bg, ink);
+    type(g, "YOU", cx - 196, cy + 1, 11, ink, "left");
+    for (let k = 0; k < HULL; k++) { g.beginPath(); g.arc(cx - 150 + k * 14, cy, 4, 0, 7); g.strokeStyle = ink; g.lineWidth = 1.3; g.fillStyle = col; if (k < S.hull && S.alive) g.fill(); g.stroke(); }
+    type(g, "IT", cx - 46, cy + 1, 11, RED, "left");
+    g.strokeStyle = ink; g.lineWidth = 1; g.strokeRect(cx - 16, cy - 4, 210, 8); g.fillStyle = RED; g.fillRect(cx - 16, cy - 4, 210 * clamp(this.hp / HP, 0, 1), 8);
   }
 }
