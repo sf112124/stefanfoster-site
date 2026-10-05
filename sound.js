@@ -176,6 +176,103 @@ export class Sound {
     c.voices.forEach((v) => v.g.gain.setTargetAtTime(0, t + .2, .5));
     this.pluck(c.voices[0].o.frequency.value * 2, .03, 0, 1.4);
   }
+  // ---------- the thing in the hole has a voice of its own ----------
+  // Nothing like the plucks: buzzy, clicky, insect and a bit electrical. It's heard on every page, the project pages too.
+  cok() { return this.on && this.live && this.ac && this.ac.state === "running"; }
+  // its voice box: one buzzing reed sliding between two pitches, with an optional rattle (fm) or flutter (am) on it
+  vox(f0, f1, dur, vol, pan = 0, o = {}) {
+    const ac = this.ac, t = ac.currentTime + (o.at || 0), osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = o.type || "square";
+    osc.frequency.setValueAtTime(f0, t);
+    if (o.mid) { osc.frequency.exponentialRampToValueAtTime(o.mid, t + dur * .45); osc.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur); }
+    else osc.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+    let last = osc;
+    if (o.fm) { const m = ac.createOscillator(), d = ac.createGain(); m.type = o.fmt || "sine"; m.frequency.value = o.rate || 30; d.gain.value = o.fm; m.connect(d); d.connect(osc.frequency); m.start(t); m.stop(t + dur + .06); }
+    if (o.bp) { const f = ac.createBiquadFilter(); f.type = o.ft || "bandpass"; f.frequency.value = o.bp; f.Q.value = o.q || 2; last.connect(f); last = f; }
+    if (o.am) { const a = ac.createGain(), m = ac.createOscillator(), d = ac.createGain(); a.gain.value = .5; m.type = "square"; m.frequency.value = o.am; d.gain.value = .5; m.connect(d); d.connect(a.gain); last.connect(a); last = a; m.start(t); m.stop(t + dur + .06); }
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + (o.a || .005)); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    last.connect(g); this.out(g, pan, o.wet ?? .2); osc.start(t); osc.stop(t + dur + .06);
+  }
+  // a burst of filtered noise: clicks, crunches, the snap of a shot
+  nz(freq, q, dur, vol, pan = 0, o = {}) {
+    const ac = this.ac, t = ac.currentTime + (o.at || 0), s = this.src(), f = ac.createBiquadFilter(), g = ac.createGain();
+    f.type = o.ft || "bandpass"; f.frequency.setValueAtTime(freq, t); if (o.to) f.frequency.exponentialRampToValueAtTime(o.to, t + dur); f.Q.value = q;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    s.connect(f); f.connect(g); this.out(g, pan, o.wet ?? .2); s.start(t); s.stop(t + dur + .03);
+  }
+  critter(kind, a = .5, b = 0) {
+    if (kind === "out") this.unlock();
+    if (!this.cok()) return;
+    const now = performance.now(), pan = (a - .5) * 1.5, r = (lo, hi) => lo + Math.random() * (hi - lo);
+    // don't let the fast ones pile up
+    const gate = (k, ms) => { this._cg = this._cg || {}; if (now - (this._cg[k] || 0) < ms) return false; this._cg[k] = now; return true; };
+    switch (kind) {
+      case "out": // it climbs out: a low gulp, then a ladder of clicks rising
+        this.vox(70, 180, .32, .1, 0, { type: "sine", wet: .4 });
+        for (let k = 0; k < 7; k++) this.vox(500 + k * 230, 700 + k * 260, .045, .028, (k % 2 ? .3 : -.3), { at: .12 + k * .055, bp: 1800 + k * 300, q: 3 });
+        this.vox(900, 2600, .2, .03, 0, { at: .52, type: "sawtooth", fm: 240, rate: 46, bp: 2200, q: 2 });
+        break;
+      case "back": // sucked back down the hole
+        for (let k = 0; k < 6; k++) this.vox(2200 - k * 300, 1700 - k * 260, .045, .026, (k % 2 ? .3 : -.3), { at: k * .06, bp: 2600 - k * 300, q: 3 });
+        this.vox(520, 55, .34, .1, 0, { at: .3, type: "sine", wet: .5 });
+        this.nz(2400, 1.2, .3, .04, 0, { at: .3, to: 180, wet: .5 });
+        break;
+      case "step": // each foot coming down: a tiny dry tap, pitched by which leg and how fast
+        if (gate("step", 38)) this.nz(r(2600, 6200), 9, .016, .006 + b * .012, pan, { wet: .08 });
+        break;
+      case "aim": // charging up: a whine that climbs and flutters faster
+        this.vox(380, 2100 + b * 400, Math.max(.14, .3 - b * .05), .022, pan, { type: "sawtooth", am: 38 + b * 14, bp: 1900, q: 1.4, a: .08 });
+        break;
+      case "shoot": { // the shot: a hard snap and a zap falling away
+        const n = b || 1;
+        for (let k = 0; k < n; k++) { this.vox(r(2600, 3400), 150, .13, .05, pan, { at: k * .035, type: "sawtooth", bp: 1500, q: .8 }); this.nz(5200, 1.5, .05, .06, pan, { at: k * .035, to: 900 }); }
+        break;
+      }
+      case "hit": // something on the page takes it: a thump, a crunch, and bits tinkling off
+        if (!gate("hit", 45)) break;
+        this.vox(170, 42, .2, .16, pan, { type: "sine", wet: .35 });
+        this.nz(1900, .9, .11, .09, pan, { ft: "lowpass", to: 300, wet: .4 });
+        for (let k = 0; k < 3; k++) this.nz(r(3500, 8000) * (.7 + b * .6), 14, .03, .018, pan + r(-.3, .3), { at: .05 + k * r(.03, .07), wet: .5 });
+        break;
+      case "clack": // a loose letter bouncing on the floor
+        if (gate("clack", 55)) this.nz(r(700, 1500), 11, .035, .03, r(-.6, .6), { wet: .15 });
+        break;
+      case "pounce": // the leap: a screech
+        this.vox(520, 2300, .24, .05, pan, { type: "sawtooth", fm: 380, rate: 64, bp: 2000, q: 1.2, a: .02 });
+        this.nz(900, 1, .2, .03, pan, { to: 5000 });
+        break;
+      case "catch": // got you: a snap shut and a pleased, rattling growl
+        this.nz(3200, 4, .03, .08, 0); this.nz(2400, 4, .03, .07, 0, { at: .07 });
+        this.vox(110, 78, .6, .07, 0, { at: .05, type: "sawtooth", fm: 26, rate: 29, bp: 520, q: 1.1, ft: "lowpass", a: .04 });
+        this.vox(1500, 1900, .09, .03, 0, { at: .16, am: 60 }); this.vox(1700, 2300, .09, .03, 0, { at: .28, am: 60 });
+        break;
+      case "free": // shaken off: a squeal that wobbles away
+        this.vox(2100, 380, .42, .05, pan, { fm: 260, rate: 17, bp: 1700, q: 1.3 });
+        this.nz(1200, 1, .12, .06, pan, { ft: "lowpass", to: 200 });
+        break;
+      case "chitter": { // talking to itself: a run of quick clicks
+        if (!gate("chit", 220)) break;
+        const n = 3 + Math.floor(Math.random() * 5), f = r(1100, 2300), v = .022 * (b || 1);
+        for (let k = 0; k < n; k++) this.vox(f * r(.85, 1.2), f * r(.7, 1.3), .022, v, pan, { at: k * r(.028, .05), bp: f * 1.4, q: 4, wet: .12 });
+        break;
+      }
+      case "squeak": // picked up: a surprised little squeak
+        this.vox(820, 1250, .16, .045, pan, { type: "triangle", mid: 1900, wet: .3 });
+        this.vox(1300, 1650, .07, .03, pan, { at: .19, type: "triangle", wet: .3 });
+        break;
+      case "thud": // put down
+        this.vox(130, 48, .14, .12, pan, { type: "sine" }); this.nz(900, 1, .05, .03, pan, { ft: "lowpass" });
+        break;
+      case "purr": // being stroked: a low rattle that gets warmer and fuller the longer you keep going
+        this.vox(58 + b * 14, 54 + b * 14, .34, .07 + b * .05, pan, { type: "sawtooth", am: 23 + b * 5, bp: 300 + b * 260, q: .8, ft: "lowpass", a: .06, wet: .15 });
+        if (b > .5 && Math.random() < .4) this.vox(1400, 1750, .06, .012, pan, { at: .1, type: "triangle", wet: .4 });
+        break;
+      case "chirp": // won over: two bright notes going up
+        this.vox(1150, 1750, .12, .04, pan, { type: "triangle", wet: .4 });
+        this.vox(1550, 2500, .16, .04, pan, { at: .14, type: "triangle", wet: .4 });
+        break;
+    }
+  }
   splash(x = .5, y = .5) { this.bloom(x, y); }
   // older names, now all soft warped plucks
   rod(v, vol = .014) { this.pluck(this.note(.5, typeof v === "number" ? v : .5), Math.min(.03, vol * 1.6), 0, .8); }

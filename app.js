@@ -613,15 +613,8 @@ function setNight(on) {
 }
 // ---------- the thing in the hole ----------
 new Crawler({
-  hole: $("hole"), reduce,
-  sfx: {
-    out: () => { sound.unlock(); [0, 1, 2, 3].forEach((k) => setTimeout(() => sound.pluck(sound.note(.5, .15 + k * .12), .03, 0, 2.4), k * 70)); },
-    back: () => [0, 1, 2].forEach((k) => setTimeout(() => sound.pluck(sound.note(.5, .6 - k * .18), .028, 0, 2), k * 110)),
-    step: (x) => sound.tick(.2 + Math.random() * .5, .008, (x - .5) * 1.4),
-    aim: () => sound.tick(.95, .012),
-    shoot: (x) => { sound.tick(.1, .05, (x - .5) * 1.4); sound.pluck(sound.note(.5, .95), .02, (x - .5) * 1.4, 3); },
-    hit: (x, y) => sound.pluck(sound.note(.5, .1 + y * .8), .04, (x - .5) * 1.5, 4),
-  },
+  holes: [$("hole"), $("hole2")], holeEl: () => (viewOpen ? $("hole2") : $("hole")), reduce,
+  sfx: (kind, a, b) => sound.critter(kind, a, b),
   // feet like to stand on things: the work, the grid, the ends of words
   anchors: () => {
     const out = [];
@@ -634,11 +627,12 @@ new Crawler({
     return out;
   },
   // a piece that takes a hit is knocked across the grid and comes up a different colour
-  nodeHit: (el, dx, dy, c) => {
+  nodeHit: (el, dx, dy, c, power = 1) => {
     const n = field.nodes.find((q) => q.b === el); if (!n) return;
     if (n.bx0 == null) { n.bx0 = n.bx; n.by0 = n.by; }
-    n.bx = Math.max(12, Math.min(field.W - 12, n.bx + dx * (40 + Math.random() * 70))); n.by = Math.max(12, Math.min(field.H - 12, n.by + dy * (40 + Math.random() * 70)));
-    el.style.setProperty("--sc", c); el.style.setProperty("--hr", `${Math.round(40 + Math.random() * 280)}deg`); el.classList.add("shot");
+    const k = (50 + Math.random() * 90) * power;
+    n.bx = Math.max(12, Math.min(field.W - 12, n.bx + dx * k)); n.by = Math.max(12, Math.min(field.H - 12, n.by + dy * k));
+    if (c) { el.style.setProperty("--sc", c); el.style.setProperty("--hr", `${Math.round(40 + Math.random() * 280)}deg`); el.classList.add("shot"); }
   },
   nodeReset: () => field.nodes.forEach((n) => { if (n.bx0 != null) { n.bx = n.bx0; n.by = n.by0; n.bx0 = null; } n.b.classList.remove("shot"); }),
 });

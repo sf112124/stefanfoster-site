@@ -1,89 +1,196 @@
 // The thing in the hole. Let it out and it stalks your cursor on eight legs, lines you up and fires. It always misses you,
-// and whatever is behind you takes the hit: letters swell and spin, pieces get knocked across the grid and change colour,
-// captions get highlighted. Call it back and it crawls home and everything it broke is put right.
-const SEL = ".node,.wi .wt i,.ph h1 .ch,.aname i,.tile,.chip,.links>*,.bot>span,.lead,.alead,.gsec h2,.gsec p,.cli,.agrid dd,.agrid dt,.tile figcaption,.vbar a,.nx";
+// and the page takes the hit: letters are blown loose and fall, pieces are knocked across the grid, pictures get bites
+// taken out of them, cracks spread. Stop moving and it pounces: it grabs your cursor and runs off with it, smashing it
+// into things, until you shake it loose. It gets angrier the longer it's out. Call it back and everything is put right.
+const SEL = ".node,.wi .wt i,.ph h1 .ch,.aname i,.tile,.chip,.links>a,.links>.snd,.links>.nite,.bot>span:not(.bar),.lead,.alead,.gsec h2,.gsec p,.cli,.agrid dd,.agrid dt,.tile figcaption,.nx,.wi .wn,.akick";
 const LETTER = ".wi .wt i,.ph h1 .ch,.aname i";
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const ARROW = [[0, 0], [0, 17], [4.4, 13], [7.3, 19.6], [10, 18.4], [7, 12], [12.6, 12]];
+
+// its legs: nine of them, all different, three to five bones each, set unevenly round a ring. Two more thin feelers at the front.
+const LEGS = [
+  { a: .6, s: [24, 28, 22] }, { a: 1.2, s: [20, 24, 24, 16], fork: 1 }, { a: 1.85, s: [28, 32, 20] }, { a: 2.5, s: [18, 22, 20, 18] },
+  { a: -.6, s: [26, 26, 24] }, { a: -1.25, s: [22, 20, 26, 14] }, { a: -1.9, s: [30, 28, 22], fork: 1 }, { a: -2.55, s: [18, 24, 18, 20] },
+  { a: 3.1, s: [16, 20, 18, 16, 14] },
+];
+const FEEL = [{ a: .2, s: [13, 13, 12, 11] }, { a: -.2, s: [12, 14, 11, 12] }];
+const chain = (spec) => ({ ...spec, tot: spec.s.reduce((x, y) => x + y, 0), j: spec.s.map(() => [0, 0]).concat([[0, 0]]), fx: 0, fy: 0, sx: 0, sy: 0, tx: 0, ty: 0, st: 1 });
+// pull a chain of bones from its root to a target (FABRIK), with a nudge that keeps every knee bending the same way
+function solve(l, hx, hy, fx, fy, sc, bend, lift) {
+  const j = l.j, n = l.s.length, dx = fx - hx, dy = fy - hy, d = Math.hypot(dx, dy) || 1, nx = -dy / d * bend, ny = dx / d * bend;
+  for (let i = 1; i < n; i++) { const k = Math.sin((i / n) * Math.PI); j[i][0] += nx * 5 * k; j[i][1] += ny * 5 * k - lift * k; }
+  for (let it = 0; it < 3; it++) {
+    j[n][0] = fx; j[n][1] = fy;
+    for (let i = n - 1; i >= 0; i--) { const ax = j[i][0] - j[i + 1][0], ay = j[i][1] - j[i + 1][1], q = Math.hypot(ax, ay) || 1, L = l.s[i] * sc; j[i][0] = j[i + 1][0] + ax / q * L; j[i][1] = j[i + 1][1] + ay / q * L; }
+    j[0][0] = hx; j[0][1] = hy;
+    for (let i = 1; i <= n; i++) { const ax = j[i][0] - j[i - 1][0], ay = j[i][1] - j[i - 1][1], q = Math.hypot(ax, ay) || 1, L = l.s[i - 1] * sc; j[i][0] = j[i - 1][0] + ax / q * L; j[i][1] = j[i - 1][1] + ay / q * L; }
+  }
+}
 
 export class Crawler {
-  constructor({ hole, sfx = {}, nodeHit, nodeReset, anchors, reduce = false }) {
-    Object.assign(this, { hole, sfx, nodeHit, nodeReset, anchors, reduce });
+  constructor({ holes, holeEl, sfx, nodeHit, nodeReset, anchors, reduce = false }) {
+    Object.assign(this, { holes, holeEl, sfx: sfx || (() => {}), nodeHit, nodeReset, anchors, reduce });
     this.on = false; this.state = "home"; this.saved = new Map();
-    this.m = { x: innerWidth / 2, y: innerHeight / 2, vx: 0, vy: 0, t: 0 };
-    addEventListener("pointermove", (e) => { const now = performance.now(), dt = Math.max(8, now - this.m.t); this.m.vx = (e.clientX - this.m.x) / dt * 1000; this.m.vy = (e.clientY - this.m.y) / dt * 1000; this.m.x = e.clientX; this.m.y = e.clientY; this.m.t = now; });
-    hole.addEventListener("click", () => (this.on ? this.recall() : this.release()));
-    addEventListener("keydown", (e) => { if (e.key === "Escape" && this.on && this.state === "out") this.recall(); });
+    this.m = { x: innerWidth / 2, y: innerHeight / 2, vx: 0, vy: 0, t: 0, moved: performance.now() };
+    addEventListener("pointermove", (e) => {
+      const now = performance.now(), dt = Math.max(8, now - this.m.t), dx = e.clientX - this.m.x, dy = e.clientY - this.m.y, d = Math.hypot(dx, dy);
+      this.m.vx += (dx / dt * 1000 - this.m.vx) * .5; this.m.vy += (dy / dt * 1000 - this.m.vy) * .5; this.m.x = e.clientX; this.m.y = e.clientY; this.m.t = now;
+      if (d > 2.5) this.m.moved = now;
+      if (this.state === "carry" || this.state === "held") this.meter += d;
+    });
+    holes.forEach((h) => h.addEventListener("click", () => (this.on ? this.recall() : this.release())));
+    addEventListener("keydown", (e) => { if (e.key === "Escape" && this.on) this.recall(); });
+    // while it has your cursor nothing you click lands; and a press right on it picks it up
+    addEventListener("pointerdown", (e) => {
+      if (!this.on) return;
+      if (this.state === "carry") { e.stopPropagation(); e.preventDefault(); return; }
+      if (["out", "pounce", "stun", "pet", "tame"].includes(this.state) && Math.hypot(e.clientX - this.p.x, e.clientY - this.p.y) < 34 && !e.target.closest?.(".hole")) {
+        e.stopPropagation(); e.preventDefault(); this.swallow = true;
+        this.was = this.tameUntil > performance.now() ? "tame" : "out"; this.state = "held"; this.meter = 0; this.aim = 0; this.heldAt = performance.now();
+        document.documentElement.classList.add("holding"); this.sfx("squeak");
+      }
+    }, true);
+    addEventListener("pointerup", () => { if (this.state === "held") this.letGo(); if (this.swallow) setTimeout(() => (this.swallow = false), 60); }, true);
+    ["mousedown", "click"].forEach((t) => addEventListener(t, (e) => { if (this.state === "carry" || this.state === "held" || (t === "click" && this.swallow)) { e.stopPropagation(); e.preventDefault(); if (t === "click") this.swallow = false; } }, true));
   }
-  holePos() { const r = this.hole.querySelector("i").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+  holePos() { const el = (this.holeEl?.() || this.holes[0]).querySelector("i"), r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+  label(t) { this.holes.forEach((h) => { h.classList.toggle("open", this.on); h.querySelector("span").textContent = t; }); }
   release() {
     if (this.on) return;
     if (!this.cv) { this.cv = document.createElement("canvas"); this.cv.className = "crawl"; this.cv.setAttribute("aria-hidden", "true"); document.body.appendChild(this.cv); this.g = this.cv.getContext("2d"); }
     const h = this.holePos();
-    this.on = true; this.state = "out"; this.born = performance.now(); this.grow = 0;
-    this.p = { x: h.x, y: h.y }; this.v = { x: -260, y: -120 }; this.head = Math.PI; this.orbit = Math.random() * 6;
-    this.legs = Array.from({ length: 8 }, (_, i) => { const side = i < 4 ? -1 : 1, k = i % 4; return { side, k, a: side * (.5 + k * .52), reach: 58 + (k === 1 || k === 2 ? 12 : 0) + (k === 3 ? 6 : 0), fx: h.x, fy: h.y, sx: h.x, sy: h.y, tx: h.x, ty: h.y, st: 1, last: 0 }; });
-    this.bolts = []; this.sparks = []; this.rings = []; this.aim = 0; this.cool = 1.4; this.pts = []; this.ptsAt = 0; this.t = performance.now();
-    this.hole.classList.add("open"); this.hole.querySelector("span").textContent = "CALL IT BACK";
-    document.documentElement.classList.add("crawling");
-    this.sfx.out?.();
+    this.on = true; this.state = "out"; this.grow = 0; this.rage = 0; this.meter = 0; this.tameUntil = 0; this.petT = 0;
+    this.p = { x: h.x, y: h.y }; this.v = { x: -200, y: 260 }; this.head = Math.PI / 2; this.orbit = Math.random() * 6;
+    this.legs = LEGS.map(chain); this.feel = FEEL.map(chain); this.tail = Array.from({ length: 6 }, () => [h.x, h.y]);
+    [...this.legs, ...this.feel].forEach((l) => { l.fx = l.sx = l.tx = h.x; l.fy = l.sy = l.ty = h.y; l.j.forEach((q) => { q[0] = h.x; q[1] = h.y; }); });
+    this.bolts = []; this.sparks = []; this.rings = []; this.cracks = []; this.fall = []; this.puffs = []; this.aim = 0; this.cool = 1.2; this.pcool = 2.5; this.pts = []; this.ptsAt = 0; this.t = performance.now(); this.m.moved = this.t;
+    this.label("CALL IT BACK"); document.documentElement.classList.add("crawling");
+    this.sfx("out");
     requestAnimationFrame(this.frame);
   }
-  recall() { if (!this.on || this.state !== "out") return; this.state = "back"; this.backAt = performance.now(); this.aim = 0; this.bolts = []; this.sfx.back?.(); }
+  recall() { if (!this.on || this.state === "back") return; if (this.state === "carry") this.free(true); document.documentElement.classList.remove("holding"); this.state = "back"; this.backAt = performance.now(); this.aim = 0; this.bolts = []; this.sfx("back"); }
   finish() {
     this.on = false; this.state = "home";
-    this.hole.classList.remove("open"); this.hole.querySelector("span").textContent = "DO NOT OPEN";
-    document.documentElement.classList.remove("crawling");
+    this.label("DO NOT OPEN"); document.documentElement.classList.remove("crawling", "caught", "holding");
     this.restore();
     this.g.clearRect(0, 0, this.cv.width, this.cv.height);
   }
-  // ---- what a hit does ----
+  // you put it down: thrown if you were moving, straight home if you dropped it in its hole
+  letGo() {
+    document.documentElement.classList.remove("holding");
+    const h = this.holePos(), now = performance.now();
+    if (Math.hypot(this.p.x - h.x, this.p.y - h.y) < 48) { this.state = "back"; this.backAt = now; this.sfx("back"); return; }
+    this.v.x = clamp(this.m.vx, -1700, 1700); this.v.y = clamp(this.m.vy, -1700, 1700);
+    this.noPet = Math.hypot(this.m.vx, this.m.vy) > 500 || this.meter > 2600 ? now + 1200 : 0;
+    const dizzy = this.meter > 2600;
+    this.state = "stun"; this.stunAt = now - (dizzy ? 0 : 1000); this.pcool = 3; this.cool = 1.2;
+    this.sfx(dizzy ? "free" : "thud", this.p.x / innerWidth);
+  }
+  // ---- damage ----
   set(el, prop, val) {
     let s = this.saved.get(el); if (!s) this.saved.set(el, (s = {}));
     if (!(prop in s)) s[prop] = el.style[prop];
     el.style[prop] = val;
   }
   colors() { return document.documentElement.classList.contains("night") ? ["#46ff8a", "#0bb8f0", "#b46cff", "#ff5ca8"] : ["#3d5bff", "#ff3d9a", "#ff8a1e", "#00b894"]; }
-  mutate(el, dx, dy) {
-    const c = pick(this.colors()), bounce = "transform .32s cubic-bezier(.2,1.7,.4,1),background-color .2s,color .2s,filter .3s,outline-color .2s";
-    if (el.matches(".node")) { this.nodeHit?.(el, dx, dy, c); return c; }
+  drop(el, ux, uy) {
+    // blown clean off: it flies, tumbles and lands at the bottom of the screen
+    if (this.fall.some((f) => f.el === el) || this.fall.length > 70) return;
+    const r = el.getBoundingClientRect(), box = el.closest(".wheel")?.getBoundingClientRect() || { left: 0, right: innerWidth, bottom: innerHeight };
+    this.set(el, "transition", "none"); this.set(el, "position", "relative"); this.set(el, "zIndex", "5"); this.set(el, "transform", "none");
+    this.fall.push({ el, x: 0, y: 0, vx: ux * rnd(160, 420) + rnd(-60, 60), vy: uy * rnd(120, 300) - rnd(120, 320), r: 0, vr: rnd(-500, 500), floor: box.bottom - r.bottom - rnd(10, 34), left: box.left - r.left + 10, right: box.right - r.right - 10, s: rnd(1, 1.7), rest: false });
+  }
+  mutate(el, dx, dy, power = 1) {
+    const c = pick(this.colors()), bounce = "transform .3s cubic-bezier(.2,1.8,.4,1),background-color .2s,color .2s,filter .3s,outline-color .2s,letter-spacing .3s";
+    if (el.matches(".node")) { this.nodeHit?.(el, dx, dy, c, power); return c; }
     if (el.matches(LETTER)) {
-      this.set(el, "transition", bounce); this.set(el, "position", "relative"); this.set(el, "zIndex", "4");
-      const kind = Math.floor(Math.random() * 4), sc = rnd(1.35, 2.5), rot = rnd(-28, 28);
-      this.set(el, "transform", `translate(${(dx * rnd(2, 14)).toFixed(1)}px,${(dy * rnd(2, 14)).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${sc.toFixed(2)})`);
+      if (this.fall.some((f) => f.el === el)) return c;
+      const kind = Math.floor(Math.random() * 4);
       if (kind === 0) { this.set(el, "backgroundColor", c); this.set(el, "color", "#fff"); }
       else if (kind === 1) this.set(el, "color", c);
       else if (kind === 2) { this.set(el, "fontFamily", "var(--mono)"); this.set(el, "color", c); }
       else { this.set(el, "outline", `1.5px solid ${c}`); this.set(el, "outlineOffset", "2px"); }
-      // sometimes the whole word goes with it
+      if (Math.random() < .45 * power) { this.drop(el, dx, dy); return c; }
+      this.set(el, "transition", bounce); this.set(el, "position", "relative"); this.set(el, "zIndex", "4");
+      this.set(el, "transform", `translate(${(dx * rnd(6, 30) * power).toFixed(1)}px,${(dy * rnd(6, 30) * power).toFixed(1)}px) rotate(${rnd(-50, 50).toFixed(1)}deg) scale(${rnd(1.4, 3.2).toFixed(2)})`);
       const word = el.closest(".wt,.wd,.aw");
-      if (word && Math.random() < .3) { this.set(word, "transition", bounce); this.set(word, "display", "inline-flex"); this.set(word, "transform", `rotate(${rnd(-7, 7).toFixed(1)}deg) scale(${rnd(1.05, 1.22).toFixed(2)})`); this.set(word, "backgroundColor", c + "33"); }
+      if (word && Math.random() < .4) { this.set(word, "transition", bounce); this.set(word, "display", "inline-flex"); this.set(word, "transform", `rotate(${rnd(-12, 12).toFixed(1)}deg) scale(${rnd(1.05, 1.3).toFixed(2)}) skewX(${rnd(-14, 14).toFixed(0)}deg)`); this.set(word, "backgroundColor", c + "44"); }
       return c;
     }
     if (el.matches(".tile")) {
       const tm = el.querySelector(".tm") || el;
       this.set(el, "transition", bounce); this.set(el, "position", "relative"); this.set(el, "zIndex", "3");
-      this.set(el, "transform", `translate(${(dx * rnd(8, 26)).toFixed(0)}px,${(dy * rnd(8, 26)).toFixed(0)}px) rotate(${rnd(-6, 6).toFixed(1)}deg) scale(${rnd(.9, 1.07).toFixed(2)})`);
-      this.set(tm, "transition", "filter .3s,outline-color .2s"); this.set(tm, "filter", `hue-rotate(${Math.round(rnd(40, 320))}deg) saturate(1.5)`);
+      this.set(el, "transform", `translate(${(dx * rnd(14, 46)).toFixed(0)}px,${(dy * rnd(14, 46)).toFixed(0)}px) rotate(${rnd(-11, 11).toFixed(1)}deg) scale(${rnd(.82, 1.08).toFixed(2)})`);
+      this.set(tm, "transition", "filter .3s,outline-color .2s,clip-path .25s"); this.set(tm, "filter", `hue-rotate(${Math.round(rnd(40, 320))}deg) saturate(1.7) contrast(1.15)`);
       this.set(tm, "outline", `2px solid ${c}`); this.set(tm, "outlineOffset", "4px");
+      // a jagged bite out of one edge
+      const a = rnd(12, 60), w = rnd(14, 30), d = rnd(22, 55), j = () => rnd(-6, 6).toFixed(0);
+      const bite = [`${a}%`, `${(a + w * .3 + +j()).toFixed(0)}%`, `${(a + w * .5).toFixed(0)}%`, `${(a + w * .75 + +j()).toFixed(0)}%`, `${(a + w).toFixed(0)}%`];
+      const edge = Math.floor(Math.random() * 4), P = (u, v) => (edge === 0 ? `${u} ${v}%` : edge === 1 ? `${100 - v}% ${u}` : edge === 2 ? `${u} ${100 - v}%` : `${v}% ${u}`);
+      const pts = [P(bite[0], 0), P(bite[1], d * .6), P(bite[2], d), P(bite[3], d * .5), P(bite[4], 0)];
+      const corners = ["0 0", "100% 0", "100% 100%", "0 100%"], poly = [];
+      for (let k = 0; k < 4; k++) { poly.push(corners[k]); if (k === edge) poly.push(...(edge === 0 || edge === 1 ? pts : pts.slice().reverse())); }
+      this.set(tm, "clipPath", `polygon(${poly.join(",")})`);
       return c;
     }
-    // any other bit of type: a highlighter block, a knock and a swell
     this.set(el, "transition", bounce);
     if (getComputedStyle(el).display === "inline") this.set(el, "display", "inline-block");
-    this.set(el, "transform", `translate(${(dx * rnd(3, 12)).toFixed(0)}px,${(dy * rnd(3, 12)).toFixed(0)}px) rotate(${rnd(-5, 5).toFixed(1)}deg) scale(${rnd(1.05, 1.5).toFixed(2)})`);
+    this.set(el, "transform", `translate(${(dx * rnd(6, 24)).toFixed(0)}px,${(dy * rnd(6, 24)).toFixed(0)}px) rotate(${rnd(-12, 12).toFixed(1)}deg) scale(${rnd(1.1, 1.9).toFixed(2)}) skewX(${rnd(-16, 16).toFixed(0)}deg)`);
+    if (Math.random() < .5) this.set(el, "letterSpacing", `${rnd(.15, .6).toFixed(2)}em`);
     if (Math.random() < .6) { this.set(el, "backgroundColor", c); this.set(el, "color", "#fff"); } else { this.set(el, "color", c); this.set(el, "outline", `1.5px solid ${c}`); this.set(el, "outlineOffset", "3px"); }
     return c;
+  }
+  // every hit is a small explosion: whatever is nearby is thrown outwards too
+  blast(x, y, R, main) {
+    document.querySelectorAll(LETTER + ",.node,.tile figcaption,.wi .wn").forEach((el) => {
+      if (el === main || this.fall.some((f) => f.el === el)) return;
+      const r = el.getBoundingClientRect(); if (!r.width || r.bottom < 0 || r.top > innerHeight) return;
+      const dx = r.left + r.width / 2 - x, dy = r.top + r.height / 2 - y, d = Math.hypot(dx, dy); if (d > R || d < 1) return;
+      const k = 1 - d / R, ux = dx / d, uy = dy / d;
+      if (el.matches(".node")) { this.nodeHit?.(el, ux, uy, null, k * .8); return; }
+      if (k > .55 && Math.random() < .5 && el.matches(LETTER)) { this.drop(el, ux, uy); return; }
+      this.set(el, "transition", "transform .35s cubic-bezier(.2,1.8,.4,1)"); this.set(el, "position", "relative");
+      if (getComputedStyle(el).display === "inline") this.set(el, "display", "inline-block");
+      this.set(el, "transform", `translate(${(ux * k * 34).toFixed(1)}px,${(uy * k * 34).toFixed(1)}px) rotate(${(rnd(-40, 40) * k).toFixed(1)}deg) scale(${(1 + k * .5).toFixed(2)})`);
+    });
+  }
+  impact(x, y, ux, uy, hit, c, power = 1) {
+    const now = performance.now(), W = innerWidth;
+    const col = hit ? this.mutate(hit, ux, uy, power) || c : c;
+    if (hit) { const r = hit.getBoundingClientRect(); this.rings.push({ x: r.left, y: r.top, w: r.width, h: r.height, t: now, c: col }); }
+    this.blast(x, y, 110 + this.rage * 30, hit);
+    for (let k = 0; k < 12; k++) { const a = Math.atan2(uy, ux) + rnd(-1.4, 1.4), s = rnd(140, 560); this.sparks.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: now, c: col }); }
+    // a crack in the page where it landed
+    const arms = Array.from({ length: Math.floor(rnd(4, 8)) }, () => { let a = rnd(0, 6.28), px = 0, py = 0; const seg = [[0, 0]]; for (let i = 0, n = Math.floor(rnd(3, 6)); i < n; i++) { a += rnd(-.7, .7); const l = rnd(8, 30); px += Math.cos(a) * l; py += Math.sin(a) * l; seg.push([px, py]); } return seg; });
+    this.cracks.push({ x, y, arms, t: now }); if (this.cracks.length > 26) this.cracks.shift();
+    if (!this.reduce) document.body.animate([{ transform: `translate(${(-ux * 7).toFixed(1)}px,${(-uy * 7).toFixed(1)}px)` }, { transform: `translate(${(ux * 4).toFixed(1)}px,${(uy * 4).toFixed(1)}px)` }, { transform: "none" }], { duration: 190, easing: "ease-out" });
+    this.rage = Math.min(3, this.rage + .06);
+    this.sfx("hit", x / W, 1 - y / innerHeight);
   }
   restore() {
     this.saved.forEach((s, el) => {
       if (!el.isConnected) return;
-      el.style.transition = "transform .6s cubic-bezier(.2,.8,.2,1),background-color .5s,color .5s,filter .5s,outline-color .4s";
+      el.style.transition = "transform .7s cubic-bezier(.2,.8,.2,1),background-color .5s,color .5s,filter .5s,outline-color .4s,clip-path .5s,letter-spacing .5s";
       Object.keys(s).forEach((k) => { if (k !== "transition") el.style[k] = s[k]; });
-      setTimeout(() => { el.style.transition = s.transition ?? ""; }, 650);
+      setTimeout(() => { el.style.transition = s.transition ?? ""; }, 750);
     });
-    this.saved.clear(); this.nodeReset?.();
+    this.saved.clear(); this.fall = []; this.nodeReset?.();
+  }
+  // ---- catching you ----
+  grab() {
+    this.state = "carry"; this.meter = 0; this.carryAt = performance.now(); this.way = null; this.aim = 0;
+    document.documentElement.classList.add("caught"); this.sfx("catch");
+  }
+  free(quiet) {
+    if (this.state !== "carry") return;
+    document.documentElement.classList.remove("caught");
+    this.state = "stun"; this.stunAt = performance.now(); this.rage = Math.min(3, this.rage + .5); this.pcool = 3;
+    const cx = this.p.x + Math.cos(this.head) * 34, cy = this.p.y + Math.sin(this.head) * 34;
+    for (let k = 0; k < 16; k++) { const a = rnd(0, 6.28), s = rnd(160, 520); this.sparks.push({ x: cx, y: cy, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: performance.now(), c: pick(this.colors()) }); }
+    this.v.x += rnd(-500, 500); this.v.y += rnd(-500, 500);
+    if (!quiet) this.sfx("free");
   }
   // ---- the animal ----
   frame = (now) => {
@@ -92,104 +199,175 @@ export class Crawler {
     const g = this.g, W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
     if (this.cv.width !== Math.round(W * dpr) || this.cv.height !== Math.round(H * dpr)) { this.cv.width = Math.round(W * dpr); this.cv.height = Math.round(H * dpr); }
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-    const p = this.p, v = this.v, m = this.m, hole = this.holePos(), back = this.state === "back";
+    const p = this.p, v = this.v, m = this.m;
+    if (this.state === "out" && this.tameUntil > now) this.state = "tame";
+    if (this.state === "tame" && this.tameUntil <= now) { this.state = "out"; this.cool = 1.5; this.pcool = 3; this.sfx("chitter", p.x / W); }
+    const st = this.state, back = st === "back", carry = st === "carry", stun = st === "stun", pounce = st === "pounce", held = st === "held", pet = st === "pet", tame = st === "tame";
+    const cs = getComputedStyle(document.documentElement), ink = cs.getPropertyValue("--ink").trim() || "#0d0d0e", bg = cs.getPropertyValue("--bg").trim() || "#f4f3ef", cols = this.colors();
     this.grow = Math.min(1, this.grow + dt * (back ? 0 : 1.6));
-    // where it wants to be: circling you at arm's length, or heading home
-    const tx = back ? hole.x : m.x, ty = back ? hole.y : m.y, dxm = tx - p.x, dym = ty - p.y, dm = Math.hypot(dxm, dym) || 1;
-    this.orbit += dt * .55;
-    const stand = back ? 0 : 150 + Math.sin(now / 1700) * 30, ox = Math.cos(this.orbit), oy = Math.sin(this.orbit);
-    const gx = tx - (dxm / dm) * stand * .75 + ox * stand * .5, gy = ty - (dym / dm) * stand * .75 + oy * stand * .5;
-    const ax = gx - p.x, ay = gy - p.y, ad = Math.hypot(ax, ay) || 1, want = back ? Math.min(1100, 200 + ad * 5) : Math.min(560, ad * 3.2);
-    v.x += ((ax / ad) * want - v.x) * Math.min(1, dt * 4.5); v.y += ((ay / ad) * want - v.y) * Math.min(1, dt * 4.5);
-    p.x += v.x * dt; p.y += v.y * dt;
-    if (!back) { p.x = clamp(p.x, 30, W - 30); p.y = clamp(p.y, 30, H - 30); }
-    // it always faces what it's hunting
-    let da = Math.atan2(dym, dxm) - this.head; da = Math.atan2(Math.sin(da), Math.cos(da)); this.head += da * Math.min(1, dt * 7);
-    // home: it shrinks down into the hole (and if anything holds it up, it's pulled in anyway)
-    const inHole = back && (dm < 34 || now - this.backAt > 3200);
+    // cracks it has left in the page
+    this.cracks = this.cracks.filter((c) => { const k = (now - c.t) / 9000; if (k >= 1) return false; g.globalAlpha = Math.min(1, (1 - k) * 2) * .8; g.strokeStyle = ink; g.lineWidth = 1; c.arms.forEach((a) => { g.beginPath(); a.forEach((q, n) => (n ? g.lineTo(c.x + q[0], c.y + q[1]) : g.moveTo(c.x, c.y))); g.stroke(); }); g.fillStyle = ink; g.beginPath(); g.arc(c.x, c.y, 2.5, 0, 7); g.fill(); g.globalAlpha = 1; return true; });
+    // letters it has blown loose
+    this.fall.forEach((f) => {
+      if (f.rest || !f.el.isConnected) return;
+      f.vy += 1900 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.r += f.vr * dt;
+      if (f.x < f.left) { f.x = f.left; f.vx *= -.5; } if (f.x > f.right) { f.x = f.right; f.vx *= -.5; }
+      if (f.y > f.floor) { f.y = f.floor; if (Math.abs(f.vy) < 140) { f.rest = true; f.r = Math.round(f.r / 90) * 90 + rnd(-14, 14); } else { f.vy *= -.38; f.vx *= .6; f.vr *= .5; this.sfx("clack", .5); } }
+      f.el.style.transform = `translate(${f.x.toFixed(1)}px,${f.y.toFixed(1)}px) rotate(${f.r.toFixed(0)}deg) scale(${f.s.toFixed(2)})`;
+    });
+    // where it wants to be
+    const hole = this.holePos();
+    let tx = m.x, ty = m.y, top = 560 + this.rage * 90, grip = 4.5, stand = 150 + Math.sin(now / 1700) * 30 - this.rage * 20;
+    if (back) { tx = hole.x; ty = hole.y; stand = 0; top = 1100; grip = 12; }
+    else if (pounce) { stand = 0; top = now - this.pAt < 240 ? 0 : 1700; grip = 14; }
+    else if (carry) {
+      if (!this.way || Math.hypot(this.way.x - p.x, this.way.y - p.y) < 60 || now - this.wayAt > 1500) { this.way = { x: rnd(80, W - 80), y: rnd(80, H - 80) }; this.wayAt = now; }
+      tx = this.way.x; ty = this.way.y; stand = 0; top = 720; grip = 5;
+    } else if (tame) { stand = 74; top = 700; grip = 6; }
+    else if (stun || pet) { top = 0; grip = stun ? 2.2 : 12; }
+    const dxm = tx - p.x, dym = ty - p.y, dm = Math.hypot(dxm, dym) || 1;
+    this.orbit += dt * (tame ? .9 : .55 + this.rage * .2);
+    if (held) { v.x = (m.x - p.x) / Math.max(dt, .008) * .5; v.y = (m.y + 14 - p.y) / Math.max(dt, .008) * .5; p.x += (m.x - p.x) * .5; p.y += (m.y + 14 - p.y) * .5; }
+    else {
+      const gx = tx - (dxm / dm) * stand * .75 + Math.cos(this.orbit) * stand * .5, gy = ty - (dym / dm) * stand * .75 + Math.sin(this.orbit) * stand * .5;
+      const ax = gx - p.x, ay = gy - p.y, ad = Math.hypot(ax, ay) || 1, want = back ? Math.min(top, 200 + ad * 5) : Math.min(top, ad * (pounce ? 12 : 3.2));
+      v.x += ((ax / ad) * want - v.x) * Math.min(1, dt * grip); v.y += ((ay / ad) * want - v.y) * Math.min(1, dt * grip);
+      p.x += v.x * dt; p.y += v.y * dt;
+      if (!back) { if (p.x < 24 || p.x > W - 24) v.x *= -.4; if (p.y < 24 || p.y > H - 24) v.y *= -.4; p.x = clamp(p.x, 24, W - 24); p.y = clamp(p.y, 24, H - 24); }
+    }
+    const speed = Math.hypot(v.x, v.y);
+    let face = carry && speed > 40 ? Math.atan2(v.y, v.x) : Math.atan2(m.y - p.y, m.x - p.x); if (back) face = Math.atan2(dym, dxm);
+    let da = face - this.head; da = Math.atan2(Math.sin(da), Math.cos(da));
+    if (stun) this.head += dt * 10 * Math.max(0, 1 - (now - this.stunAt) / 1100); else if (held) this.head += Math.sin(now / 90) * dt * 3 + clamp(m.vx * .0006, -.2, .2) * dt * 8; else if (!pet) this.head += da * Math.min(1, dt * 7);
+    const inHole = back && (dm < 34 || now - this.backAt > 2200);
     if (inHole) { this.grow -= Math.max(dt, .016) * 4; if (this.grow <= 0) { this.finish(); return; } }
-    const sc = Math.max(.05, this.grow) * (inHole ? Math.max(.05, this.grow) : 1) * 1.3, ch = Math.cos(this.head), sh = Math.sin(this.head);
-    // things a foot can hold on to
+    const crouch = pounce && now - this.pAt < 240 ? .8 : pet ? .9 : 1;
+    const sc = Math.max(.05, this.grow) * (inHole ? Math.max(.05, this.grow) : 1) * 1.25 * crouch * (1 + this.rage * .08), ch = Math.cos(this.head), sh = Math.sin(this.head);
+    const dMouse = Math.hypot(m.x - p.x, m.y - p.y), stroking = now - m.moved < 220;
+    // state changes
+    if ((st === "out" || tame || stun) && this.grow >= 1 && dMouse < 30 && !held && now > (this.noPet || 0)) { this.state = "pet"; this.petT = 0; this.aim = 0; }
+    else if (st === "out" && this.grow >= 1) {
+      this.pcool -= dt;
+      if (this.pcool <= 0 && now - m.moved > 850 && dMouse < 380) { this.state = "pounce"; this.pAt = now; this.aim = 0; this.sfx("pounce"); }
+    } else if (pounce) {
+      if (dMouse < 34) this.grab();
+      else if (now - this.pAt > 900) { this.state = "out"; this.pcool = rnd(2.2, 4) / (1 + this.rage * .4); this.cool = .5; }
+    } else if (carry) {
+      this.meter = Math.max(0, this.meter - 700 * dt);
+      if (this.meter > 1500 || now - this.carryAt > 9000) this.free();
+    } else if (stun && now - this.stunAt > 1700) this.state = "out";
+    else if (pet) {
+      // stroke it and it settles: the anger drains out, and after a good while it's yours for a bit
+      if (stroking) { this.petT += dt; this.rage = Math.max(0, this.rage - dt * 1.2); if (now - (this.purrAt || 0) > 260) { this.purrAt = now; this.sfx("purr", p.x / W, Math.min(1, this.petT / 1.6)); this.puffs.push({ x: p.x + rnd(-14, 14), y: p.y - 14, t: now }); } }
+      if (dMouse > 48) { if (this.petT > 1.6) { this.tameUntil = now + 16000; this.state = "tame"; this.rage = 0; this.sfx("chirp", p.x / W); } else { this.state = "out"; this.cool = 1; this.pcool = 2.5; } }
+    } else if (held) { this.meter = Math.max(0, this.meter - 500 * dt); if (Math.random() < dt * 4) this.sfx("chitter", p.x / W, .5); }
     if (now - this.ptsAt > 450) { this.ptsAt = now; try { this.pts = this.anchors?.() || []; } catch (e) { this.pts = []; } }
-    const speed = Math.hypot(v.x, v.y), moving = this.legs.filter((l) => l.st < 1).length;
-    const ink = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#0d0d0e", bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#f4f3ef";
+    const moving = this.legs.filter((l) => l.st < 1).length, R = 10 * sc;
     g.lineCap = "round"; g.lineJoin = "round";
+    const mouthX = p.x + ch * 30 * sc, mouthY = p.y + sh * 30 * sc;
+    // a tail of beads that trails along behind it
+    let lx = p.x - ch * R, ly = p.y - sh * R;
+    this.tail.forEach((q, i) => { const gap = (9 - i) * sc, dx = q[0] - lx, dy = q[1] - ly + (held ? 3 : 0), d = Math.hypot(dx, dy) || 1; q[0] = lx + dx / d * gap; q[1] = ly + dy / d * gap; g.strokeStyle = ink; g.lineWidth = 1.2; g.beginPath(); g.moveTo(lx, ly); g.lineTo(q[0], q[1]); g.stroke(); g.fillStyle = i % 2 ? bg : ink; g.beginPath(); g.arc(q[0], q[1], Math.max(1.2, (4.2 - i * .55) * sc), 0, 7); g.fill(); g.stroke(); lx = q[0]; ly = q[1]; });
+    // legs
     this.legs.forEach((l, i) => {
-      const a = this.head + l.a, hx = p.x + (ch * (10 - l.k * 7) - sh * l.side * 7) * sc, hy = p.y + (sh * (10 - l.k * 7) + ch * l.side * 7) * sc;
-      const rx = hx + Math.cos(a) * l.reach * sc + v.x * .1, ry = hy + Math.sin(a) * l.reach * sc + v.y * .1;
-      if (l.st >= 1) {
+      const a = this.head + l.a, hx = p.x + Math.cos(a) * R, hy = p.y + Math.sin(a) * R, reach = l.tot * .7 * sc, side = Math.sign(l.a) || 1;
+      const rx = hx + Math.cos(a) * reach + v.x * .1, ry = hy + Math.sin(a) * reach + v.y * .1;
+      const holding = carry && i % 4 === 0;
+      if (holding) { l.fx = mouthX - sh * side * 5; l.fy = mouthY + ch * side * 5; l.st = 1; }
+      else if (held) { const w = now / 110 + i * 1.7; l.fx += (hx + Math.cos(a) * 10 - clamp(m.vx, -900, 900) * .05 + Math.sin(w) * 9 - l.fx) * .25; l.fy += (hy + l.tot * .8 * sc + Math.cos(w * 1.3) * 7 - Math.abs(clamp(m.vx, -900, 900)) * .02 - l.fy) * .25; l.st = 1; }
+      else if (stun) { const w = now / 70 + i; l.fx += (hx + Math.cos(a) * l.tot * .32 * sc + Math.cos(w) * 8 - l.fx) * .3; l.fy += (hy + Math.sin(a) * l.tot * .32 * sc + Math.sin(w * 1.3) * 8 - l.fy) * .3; l.st = 1; }
+      else if (l.st >= 1) {
         const off = Math.hypot(l.fx - rx, l.fy - ry), far = Math.hypot(l.fx - hx, l.fy - hy);
-        // legs take turns: a leg only lifts if its neighbours are down
-        const nb = this.legs.some((o) => o !== l && o.side === l.side && Math.abs(o.k - l.k) === 1 && o.st < 1);
-        if ((off > 30 * sc + 6 && !nb && moving < 4) || far > 96 * sc) {
+        const nb = this.legs[(i + 1) % 9].st < 1 || this.legs[(i + 8) % 9].st < 1;
+        if ((off > 26 * sc + 6 && !nb && moving < 4) || far > l.tot * .96 * sc) {
           let bx = rx, by = ry, bd = 30;
           for (const q of this.pts) { const d = Math.hypot(q[0] - rx, q[1] - ry); if (d < bd) { bd = d; bx = q[0]; by = q[1]; } }
           l.sx = l.fx; l.sy = l.fy; l.tx = bx; l.ty = by; l.st = 0; l.grip = bd < 30;
         }
       } else {
-        l.st = Math.min(1, l.st + dt * (7 + speed * .012));
+        l.st = Math.min(1, l.st + dt * (7 + speed * .014));
         const e = l.st * l.st * (3 - 2 * l.st); l.fx = l.sx + (l.tx - l.sx) * e; l.fy = l.sy + (l.ty - l.sy) * e;
-        if (l.st >= 1 && speed > 60 && Math.random() < .3) this.sfx.step?.(l.fx / W);
+        if (l.st >= 1 && speed > 60 && Math.random() < .5) this.sfx("step", l.fx / W, Math.min(1, speed / 700));
       }
-      // two bones and a knee that bends up and out
-      const L1 = 36 * sc, L2 = 46 * sc, ddx = l.fx - hx, ddy = l.fy - hy, d = clamp(Math.hypot(ddx, ddy), 4, L1 + L2 - .5);
-      const base = Math.atan2(ddy, ddx), kA = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1)), ka = base - l.side * kA * (.9 + (l.st < 1 ? Math.sin(l.st * Math.PI) * .35 : 0));
-      const kx = hx + Math.cos(ka) * L1, ky = hy + Math.sin(ka) * L1, lift = l.st < 1 ? Math.sin(l.st * Math.PI) * 7 : 0;
-      g.strokeStyle = ink; g.lineWidth = 1.25; g.beginPath(); g.moveTo(hx, hy); g.lineTo(kx, ky - lift * .5); g.lineTo(l.fx, l.fy - lift); g.stroke();
-      g.fillStyle = ink; g.beginPath(); g.arc(kx, ky - lift * .5, 1.6, 0, 7); g.fill();
-      // a planted foot draws a little bracket round whatever it's standing on
-      if (l.st >= 1) { g.lineWidth = 1; g.strokeStyle = l.grip ? this.colors()[i % 3] : ink; g.strokeRect(l.fx - 3.5, l.fy - 3.5, 7, 7); }
+      solve(l, hx, hy, l.fx, l.fy, sc, held ? 0 : side, l.st < 1 ? Math.sin(l.st * Math.PI) * 6 : held ? -3 : 1.5);
+      const j = l.j, n = j.length - 1;
+      g.strokeStyle = ink; g.lineWidth = 1.3; g.beginPath(); j.forEach((q, k) => (k ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]))); g.stroke();
+      // every joint is a little open ring; the foot a bigger one, forked on two of the legs
+      for (let k = 1; k < n; k++) { g.fillStyle = bg; g.beginPath(); g.arc(j[k][0], j[k][1], 2.3, 0, 7); g.fill(); g.stroke(); }
+      const fa = Math.atan2(j[n][1] - j[n - 1][1], j[n][0] - j[n - 1][0]);
+      if (l.fork) { g.beginPath(); [-.6, .6].forEach((o) => { g.moveTo(j[n][0], j[n][1]); g.lineTo(j[n][0] + Math.cos(fa + o) * 9 * sc, j[n][1] + Math.sin(fa + o) * 9 * sc); }); g.stroke(); }
+      g.fillStyle = l.st >= 1 && l.grip && !held && !stun ? cols[i % 3] : ink; g.beginPath(); g.arc(j[n][0], j[n][1], 2.8, 0, 7); g.fill();
     });
-    // body: a long abdomen, a small head and one lens that never leaves you
-    const bob = Math.sin(now / 90) * Math.min(1.6, speed * .006);
-    g.save(); g.translate(p.x, p.y + bob); g.rotate(this.head); g.scale(sc, sc);
-    g.fillStyle = ink; g.beginPath(); g.ellipse(-15, 0, 15, 9.5, 0, 0, 7); g.fill();
-    g.beginPath(); g.ellipse(4, 0, 9, 7.5, 0, 0, 7); g.fill();
-    g.strokeStyle = bg; g.lineWidth = 1; g.beginPath(); g.moveTo(-22, -4); g.lineTo(-10, -5.5); g.moveTo(-22, 4); g.lineTo(-10, 5.5); g.stroke();
-    g.fillStyle = bg; g.beginPath(); g.arc(8, 0, 4.2, 0, 7); g.fill();
-    g.fillStyle = this.aim > 0 ? this.colors()[1] : ink; g.beginPath(); g.arc(9.4, 0, 1.9 + (this.aim > 0 ? this.aim * 1.2 : 0), 0, 7); g.fill();
-    g.restore();
-    const ex = p.x + ch * 12 * sc, ey = p.y + sh * 12 * sc;
+    // two thin feelers that reach for you
+    this.feel.forEach((l, i) => {
+      const a = this.head + l.a, hx = p.x + Math.cos(a) * R, hy = p.y + Math.sin(a) * R, w = now / 260 + i * 2.1, far = Math.min(l.tot * .9 * sc, Math.max(18, dMouse - 6));
+      const tx2 = held ? hx + Math.sin(w * 2) * 12 : hx + Math.cos(a + Math.sin(w) * .5) * far, ty2 = held ? hy + l.tot * .8 * sc : hy + Math.sin(a + Math.sin(w) * .5) * far;
+      l.fx += (tx2 - l.fx) * .2; l.fy += (ty2 - l.fy) * .2;
+      solve(l, hx, hy, l.fx, l.fy, sc, i ? -1 : 1, Math.sin(w * 1.7) * 2);
+      const j = l.j, n = j.length - 1; g.strokeStyle = ink; g.lineWidth = 1; g.beginPath(); j.forEach((q, k) => (k ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]))); g.stroke();
+      g.fillStyle = bg; g.beginPath(); g.arc(j[n][0], j[n][1], 2.6, 0, 7); g.fill(); g.stroke();
+    });
+    // body: a ring with one lens floating in it, and a smaller ring budding off its side
+    const bob = Math.sin(now / 90) * Math.min(1.6, speed * .006), shake = this.rage > 1 ? rnd(-1, 1) * (this.rage - 1) : pet && stroking ? rnd(-.6, .6) : 0;
+    const bx0 = p.x + shake, by0 = p.y + bob + shake, hot = this.aim > 0 || pounce || carry || this.rage > 1.2;
+    g.strokeStyle = ink; g.lineWidth = 1.8; g.fillStyle = bg; g.beginPath(); g.arc(bx0, by0, R, 0, 7); g.fill(); g.stroke();
+    const ba = this.head + 2.2 + Math.sin(now / 500) * .3; g.lineWidth = 1.3; g.beginPath(); g.arc(bx0 + Math.cos(ba) * (R + 4 * sc), by0 + Math.sin(ba) * (R + 4 * sc), Math.max(.4, 3.6 * sc + Math.sin(now / 300) * .6 * sc), 0, 7); g.fill(); g.stroke();
+    const look = held ? 0 : 3.4 * sc, ex = bx0 + ch * look, ey = by0 + sh * look;
+    if (stun) { g.lineWidth = 1.3; g.beginPath(); g.moveTo(bx0 - 3, by0 - 3); g.lineTo(bx0 + 3, by0 + 3); g.moveTo(bx0 + 3, by0 - 3); g.lineTo(bx0 - 3, by0 + 3); g.stroke(); }
+    else if (pet || tame) { g.lineWidth = 1.6; g.beginPath(); g.arc(bx0, by0 + 2, 4.2 * sc, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); }
+    else { g.fillStyle = hot ? "#ff2d4a" : ink; g.beginPath(); g.arc(ex, ey, (held ? 5 : 3.3) * sc + (this.aim > 0 ? this.aim * 1.4 : 0), 0, 7); g.fill(); if (held) { g.fillStyle = bg; g.beginPath(); g.arc(ex + 1.5, ey - 1.5, 1.4, 0, 7); g.fill(); } }
+    // little rings float up off it while you stroke it
+    this.puffs = this.puffs.filter((q) => { const k = (now - q.t) / 900; if (k >= 1) return false; g.globalAlpha = 1 - k; g.strokeStyle = cols[1]; g.lineWidth = 1.2; g.beginPath(); g.arc(q.x + Math.sin(k * 6) * 5, q.y - k * 34, 2 + k * 3, 0, 7); g.stroke(); g.globalAlpha = 1; return true; });
+    if (pet && this.petT < 1.6 && this.petT > .1) { g.strokeStyle = ink; g.lineWidth = 1; g.strokeRect(p.x - 24, p.y + 30, 48, 4); g.fillStyle = cols[1]; g.fillRect(p.x - 24, p.y + 30, 48 * (this.petT / 1.6), 4); }
+    // your cursor, in its grip
+    if (carry) {
+      const wob = Math.sin(now / 45) * .25;
+      g.save(); g.translate(mouthX, mouthY); g.rotate(this.head + Math.PI / 2 + wob); g.scale(1.25, 1.25);
+      g.beginPath(); ARROW.forEach((q, i) => (i ? g.lineTo(q[0] - 3, q[1] - 2) : g.moveTo(q[0] - 3, q[1] - 2))); g.closePath(); g.fillStyle = "#000"; g.fill(); g.strokeStyle = "#fff"; g.lineWidth = 1.2; g.stroke(); g.restore();
+      if (now - (this.smashAt || 0) > 150) {
+        this.smashAt = now;
+        const el = document.elementFromPoint(mouthX, mouthY), t = el && !el.closest(".hole") ? el.closest(SEL) : null;
+        if (t && now - (t._shot || 0) > 700) { t._shot = now; this.impact(mouthX, mouthY, ch, sh, t, pick(cols), 1.3); }
+      }
+      const k = clamp(this.meter / 1500, 0, 1), ty3 = clamp(p.y - 62, 30, H - 30), tx3 = clamp(p.x, 150, W - 150);
+      g.font = '500 10px "Geist Mono",ui-monospace,monospace'; g.textAlign = "center"; g.fillStyle = ink; g.fillText("IT HAS YOUR CURSOR  ::  SHAKE TO BREAK FREE", tx3, ty3);
+      g.strokeStyle = ink; g.lineWidth = 1; g.strokeRect(tx3 - 60, ty3 + 7, 120, 5); g.fillStyle = "#ff2d4a"; g.fillRect(tx3 - 60, ty3 + 7, 120 * k, 5);
+      if (Math.random() < dt * 3) this.sfx("chitter", p.x / W);
+    }
+    if (stun && Math.random() < dt * 5) this.sfx("chitter", p.x / W, .4);
     // lining up a shot: a dotted sightline and a box that closes on you, then it fires (and you've moved)
-    if (!back && this.grow >= 1) {
+    if (st === "out" && this.grow >= 1) {
       this.cool -= dt;
-      if (this.aim <= 0 && this.cool <= 0 && dm < 520) { this.aim = .001; this.sfx.aim?.(); }
+      if (this.aim <= 0 && this.cool <= 0 && dMouse < 620) { this.aim = .001; this.sfx("aim", p.x / W, this.rage); }
       if (this.aim > 0) {
-        this.aim += dt / .34;
-        const c = this.colors()[1], s = 26 - Math.min(1, this.aim) * 14;
-        g.strokeStyle = c; g.lineWidth = 1; g.setLineDash([2, 6]); g.beginPath(); g.moveTo(ex, ey); g.lineTo(m.x, m.y); g.stroke(); g.setLineDash([]);
+        this.aim += dt / Math.max(.14, .3 - this.rage * .05);
+        const s = 26 - Math.min(1, this.aim) * 14;
+        g.strokeStyle = "#ff2d4a"; g.lineWidth = 1; g.setLineDash([2, 6]); g.beginPath(); g.moveTo(ex, ey); g.lineTo(m.x, m.y); g.stroke(); g.setLineDash([]);
         g.strokeRect(m.x - s, m.y - s, s * 2, s * 2);
         if (this.aim >= 1) {
-          this.aim = 0; this.cool = rnd(.5, 1.5);
-          const lx = m.x + m.vx * .06 - ex, ly = m.y + m.vy * .06 - ey, ld = Math.hypot(lx, ly) || 1, sp = rnd(-.05, .05), cs = Math.cos(sp), sn = Math.sin(sp);
-          const ux = (lx / ld) * cs - (ly / ld) * sn, uy = (lx / ld) * sn + (ly / ld) * cs;
-          this.bolts.push({ x: ex, y: ey, ux, uy, d: 0, c: pick(this.colors()) });
-          v.x -= ux * 190; v.y -= uy * 190; this.sfx.shoot?.(ex / W);
+          this.aim = 0; this.cool = rnd(.3, 1) / (1 + this.rage * .6);
+          const ax = m.x + m.vx * .06 - ex, ay = m.y + m.vy * .06 - ey, ld = Math.hypot(ax, ay) || 1, n = Math.random() < .25 + this.rage * .2 ? 3 : 1;
+          for (let k = 0; k < n; k++) { const sp = n === 1 ? rnd(-.05, .05) : (k - 1) * .16 + rnd(-.03, .03), c0 = Math.cos(sp), s0 = Math.sin(sp); this.bolts.push({ x: ex, y: ey, ux: (ax / ld) * c0 - (ay / ld) * s0, uy: (ax / ld) * s0 + (ay / ld) * c0, d: 0, c: pick(cols) }); }
+          v.x -= (ax / ld) * 220; v.y -= (ay / ld) * 220; this.sfx("shoot", ex / W, n);
         }
       }
     }
-    // bolts fly on past you into the page
+    // bolts fly on past you into the page; if nothing stops them they burst on the edge of the screen
     this.bolts = this.bolts.filter((b) => {
-      let left = 1900 * dt, hit = null;
-      while (left > 0 && !hit) {
+      let left = 2100 * dt, hit = null, edge = false;
+      while (left > 0 && !hit && !edge) {
         const stp = Math.min(12, left); b.x += b.ux * stp; b.y += b.uy * stp; b.d += stp; left -= stp;
-        if (b.x < 0 || b.y < 0 || b.x > W || b.y > H || b.d > 2200) return false;
+        if (b.x < 2 || b.y < 2 || b.x > W - 2 || b.y > H - 2 || b.d > 2400) { edge = true; break; }
         if (b.d < 40) continue;
-        const el = document.elementFromPoint(b.x, b.y), t = el && el !== this.hole && !this.hole.contains(el) ? el.closest(SEL) : null;
-        if (t && now - (t._shot || 0) > 500) { t._shot = now; hit = t; }
+        const el = document.elementFromPoint(b.x, b.y), t = el && !el.closest(".hole") ? el.closest(SEL) : null;
+        if (t && now - (t._shot || 0) > 400) { t._shot = now; hit = t; }
       }
-      g.strokeStyle = b.c; g.lineWidth = 2.2; g.beginPath(); g.moveTo(b.x - b.ux * 30, b.y - b.uy * 30); g.lineTo(b.x, b.y); g.stroke();
-      if (hit) {
-        const c = this.mutate(hit, b.ux, b.uy) || b.c, r = hit.getBoundingClientRect();
-        this.rings.push({ x: r.left, y: r.top, w: r.width, h: r.height, t: now, c });
-        for (let k = 0; k < 7; k++) { const a = Math.atan2(b.uy, b.ux) + rnd(-1.1, 1.1), s = rnd(120, 420); this.sparks.push({ x: b.x, y: b.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: now, c }); }
-        this.sfx.hit?.(b.x / W, 1 - b.y / H);
-        return false;
-      }
+      g.strokeStyle = b.c; g.lineWidth = 2.4; g.beginPath(); g.moveTo(b.x - b.ux * 34, b.y - b.uy * 34); g.lineTo(b.x, b.y); g.stroke();
+      if (hit || edge) { this.impact(clamp(b.x, 4, W - 4), clamp(b.y, 4, H - 4), b.ux, b.uy, hit, b.c); return false; }
       return true;
     });
-    this.rings = this.rings.filter((r) => { const k = (now - r.t) / 420; if (k >= 1) return false; const e = 4 + k * 16; g.globalAlpha = 1 - k; g.strokeStyle = r.c; g.lineWidth = 1.5; g.strokeRect(r.x - e, r.y - e, r.w + e * 2, r.h + e * 2); g.globalAlpha = 1; return true; });
-    this.sparks = this.sparks.filter((s) => { const k = (now - s.t) / 380; if (k >= 1) return false; s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= .92; s.vy *= .92; g.globalAlpha = 1 - k; g.strokeStyle = s.c; g.lineWidth = 1.4; g.beginPath(); g.moveTo(s.x, s.y); g.lineTo(s.x - s.vx * .03, s.y - s.vy * .03); g.stroke(); g.globalAlpha = 1; return true; });
+    this.rings = this.rings.filter((r) => { const k = (now - r.t) / 420; if (k >= 1) return false; const e = 4 + k * 22; g.globalAlpha = 1 - k; g.strokeStyle = r.c; g.lineWidth = 1.5; g.strokeRect(r.x - e, r.y - e, r.w + e * 2, r.h + e * 2); g.globalAlpha = 1; return true; });
+    this.sparks = this.sparks.filter((q) => { const k = (now - q.t) / 420; if (k >= 1) return false; q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= .92; q.vy = q.vy * .92 + 14; g.globalAlpha = 1 - k; g.strokeStyle = q.c; g.lineWidth = 1.5; g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x - q.vx * .035, q.y - q.vy * .035); g.stroke(); g.globalAlpha = 1; return true; });
     requestAnimationFrame(this.frame);
   };
 }
