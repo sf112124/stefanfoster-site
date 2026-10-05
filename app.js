@@ -352,7 +352,7 @@ function renderProject(i) {
   };
   const body = groups.map((g) => `<section class="grp${g.sec ? " has" : ""}">
     ${g.sec ? `<div class="gsec"><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p>${esc(g.sec.text)}</p>` : ""}</div>` : ""}
-    <div class="rows${g.sec && g.items.length === 1 ? " hero" : ""}">${g.items.map(tile).join("")}</div></section>`).join("");
+    <div class="rows${g.sec && g.items.length === 1 && g.items[0].w / g.items[0].h < 1.2 ? " hero" : ""}">${g.items.map(tile).join("")}</div></section>`).join("");
   vin.innerHTML = `<article class="proj">
     <header class="ph">
       <div class="phl"><span class="n mono">${pad(i + 1)} <em>/ ${pad(PROJECTS.length)}</em></span><h1 class="rise">${chars(p.title)}</h1><p class="cli mono">${esc(p.client)}</p></div>
@@ -394,6 +394,8 @@ function justify() {
       return;
     }
     const target = Math.max(240, Math.min(520, innerHeight * .46)), maxH = Math.min(target * 1.6, innerHeight * .78);
+    // a wide film on its own is the size it would be sharing the row with another, so it sits level with the rest
+    if (tiles.length === 1 && A(tiles[0]) > 1.2) { const t = tiles[0], h = Math.min(target, (W - gap - 2) / (2 * A(t))); size(t, A(t) * h, h); return; }
     let line = [];
     tiles.forEach((t, k) => {
       line.push(t);
