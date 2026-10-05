@@ -614,6 +614,7 @@ function setNight(on) {
 // ---------- the thing in the hole ----------
 new Crawler({
   holes: [$("hole"), $("hole2")], holeEl: () => (viewOpen ? $("hole2") : $("hole")), reduce,
+  pads: [$("pad"), $("pad2")], padEl: () => (viewOpen ? $("pad2") : $("pad")),
   sfx: (kind, a, b) => sound.critter(kind, a, b),
   // feet like to stand on things: the work, the grid, the ends of words
   anchors: () => {
@@ -626,15 +627,14 @@ new Crawler({
     } else document.querySelectorAll(".tile .tm,.ph h1 .wd,.aname .aw,.acard").forEach((t) => { const q = t.getBoundingClientRect(); if (q.bottom < 0 || q.top > innerHeight) return; out.push([q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]); });
     return out;
   },
-  // a piece that takes a hit is knocked across the grid and comes up a different colour
+  // a piece that takes a hit is knocked across the grid
   nodeHit: (el, dx, dy, c, power = 1) => {
     const n = field.nodes.find((q) => q.b === el); if (!n) return;
     if (n.bx0 == null) { n.bx0 = n.bx; n.by0 = n.by; }
     const k = (50 + Math.random() * 90) * power;
     n.bx = Math.max(12, Math.min(field.W - 12, n.bx + dx * k)); n.by = Math.max(12, Math.min(field.H - 12, n.by + dy * k));
-    if (c) { el.style.setProperty("--sc", c); el.style.setProperty("--hr", `${Math.round(40 + Math.random() * 280)}deg`); el.classList.add("shot"); }
   },
-  nodeReset: () => field.nodes.forEach((n) => { if (n.bx0 != null) { n.bx = n.bx0; n.by = n.by0; n.bx0 = null; } n.b.classList.remove("shot"); }),
+  nodeReset: () => field.nodes.forEach((n) => { if (n.bx0 != null) { n.bx = n.bx0; n.by = n.by0; n.bx0 = null; } }),
 });
 $("nite").addEventListener("click", () => { sound.pluck?.(sound.note(.5, document.documentElement.classList.contains("night") ? .7 : .3), .03); setNight(!document.documentElement.classList.contains("night")); });
 try { if (localStorage.getItem("night") === "1") setNight(true); } catch (e) {}

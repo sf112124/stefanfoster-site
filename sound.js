@@ -260,6 +260,47 @@ export class Sound {
         this.vox(820, 1250, .16, .045, pan, { type: "triangle", mid: 1900, wet: .3 });
         this.vox(1300, 1650, .07, .03, pan, { at: .19, type: "triangle", wet: .3 });
         break;
+      // ----- the ship, and the fight -----
+      case "launch": // out of its bay: a rising hum and a breath of air
+        this.vox(160, 880, .4, .05, 0, { type: "triangle", wet: .4, a: .05 });
+        this.nz(400, 1, .4, .03, 0, { to: 3200, wet: .4 });
+        break;
+      case "dock": // and back in
+        this.vox(820, 150, .45, .045, 0, { type: "triangle", wet: .4, a: .03 });
+        break;
+      case "thrust": // the engine: a soft low rush for as long as you're burning
+        if (gate("thrust", 70)) this.nz(r(170, 260), .7, .13, .03, pan, { ft: "lowpass", wet: .1 });
+        break;
+      case "pew": // your gun: a clean bright blip, nothing like its zap
+        if (gate("pew", 60)) this.vox(1650, 520, .085, .035, pan, { type: "triangle", wet: .18 });
+        break;
+      case "tink": // one of your shots hitting the page
+        if (!gate("tink", 40)) break;
+        this.nz(r(2600, 5200), 7, .045, .035, pan, { wet: .3 }); this.vox(130, 62, .09, .06, pan, { type: "sine" });
+        break;
+      case "shiphit": // you take one: a clang and a shudder
+        this.vox(320, 90, .26, .08, pan, { bp: 900, q: 1.2 }); this.nz(1700, 1, .16, .08, pan, { to: 400 });
+        this.vox(1900, 1850, .3, .02, pan, { type: "sine", wet: .6, at: .01 });
+        break;
+      case "boom": // the ship goes up
+        this.nz(1100, .7, .7, .16, pan, { ft: "lowpass", to: 80, wet: .6 }); this.vox(150, 28, .55, .18, pan, { type: "sine", wet: .4 });
+        for (let k = 0; k < 5; k++) this.nz(r(2500, 7000), 10, .04, .03, pan + r(-.4, .4), { at: .08 + k * r(.04, .09), wet: .6 });
+        break;
+      case "hurt": // you land one on it: a yelp
+        if (gate("hurt", 60)) this.vox(r(1500, 1900), r(800, 1000), .13, .05, pan, { fm: 220, rate: 44, bp: 1800, q: 1.4 });
+        break;
+      case "beaten": // it's had enough: a long wail that winds all the way down, and its clicks slowing to nothing
+        this.vox(1700, 150, 1.3, .06, pan, { fm: 130, rate: 8, bp: 1100, q: .9 });
+        for (let k = 0; k < 7; k++) this.vox(1400 - k * 130, 1100 - k * 120, .03, .024, pan, { at: .5 + k * k * .045, bp: 1600, q: 3 });
+        this.vox(120, 40, .5, .12, pan, { type: "sine", at: .1, wet: .4 });
+        break;
+      case "drag": // hauling itself along: a scrape, and a small sound it can't help making
+        this.nz(520, .8, .42, .04, pan, { to: 190, wet: .25 });
+        if (Math.random() < .6) this.vox(r(620, 760), r(430, 520), .22, .016, pan, { type: "triangle", at: .12, wet: .4 });
+        break;
+      case "win": // down the hole. Yours.
+        [660, 880, 1320].forEach((f, k) => this.vox(f, f * 1.004, .22 + k * .12, .035, (k - 1) * .3, { type: "triangle", at: k * .13, wet: .5 }));
+        break;
       case "thud": // put down
         this.vox(130, 48, .14, .12, pan, { type: "sine" }); this.nz(900, 1, .05, .03, pan, { ft: "lowpass" });
         break;

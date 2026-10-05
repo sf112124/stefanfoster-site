@@ -503,16 +503,22 @@ html.night{--mute:#fff;--line:rgba(255,255,255,.3)}
 .hole.open i::before,.hole.open i::after{display:none}
 @keyframes peek{0%,78%,100%{opacity:0}82%,88%{opacity:.9}85%{opacity:0}92%{opacity:.9}96%{opacity:0}}
 .night .hole i{box-shadow:inset 0 4px 6px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.55)}
-.vbar .hole{justify-self:end;margin:-8px -6px -8px 0;font-size:11px;background:rgba(246,245,241,.72);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
-.vbar .hole:hover{background:rgba(246,245,241,.95)}
-.night .vbar .hole{background:rgba(24,24,28,.72)}
-.lite .vbar .hole{-webkit-backdrop-filter:none;backdrop-filter:none}
-.touch .hole{display:none}
+/* the ship's bay, next to it */
+.pad{display:flex;align-items:center;gap:8px;padding:4px 13px 4px 8px;margin:-7px 0;min-height:32px;border-radius:99px;border:1px solid var(--line);color:var(--ink);font:inherit;font-size:11px;letter-spacing:.1em;white-space:nowrap;transition:background .3s,border-color .3s,color .3s}
+.pad:hover{background:rgba(127,127,127,.12)}
+.pad svg{flex:none;display:block;transition:transform .35s var(--snap)}
+.pad:hover svg{transform:translateY(-2px)}
+.pad.open{border-color:#3d5bff;color:#3d5bff}
+.night .pad.open{border-color:#46ff8a;color:#46ff8a}
+.pad.open svg{opacity:.3}
+.vtools{justify-self:end;display:flex;gap:10px;align-items:center;margin-right:-6px}
+.vbar .hole,.vbar .pad{margin:-8px 0;font-size:11px;background:rgba(246,245,241,.72);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.vbar .hole:hover,.vbar .pad:hover{background:rgba(246,245,241,.95)}
+.night .vbar .hole,.night .vbar .pad{background:rgba(24,24,28,.72)}
+.lite .vbar .hole,.lite .vbar .pad{-webkit-backdrop-filter:none;backdrop-filter:none}
+.touch .hole,.touch .pad{display:none}
 .crawl{position:fixed;inset:0;width:100%;height:100%;z-index:70;pointer-events:none}
-.node.shot .dm{filter:hue-rotate(var(--hr,120deg)) saturate(1.6)}
-.node.shot:not(.open):not(.sib){background:var(--sc,#3d5bff)}
-.night .node.shot:not(.open):not(.sib){background:var(--sc,#46ff8a)}
 /* it has your cursor, or you have it */
 html.caught,html.caught *{cursor:none!important}
 html.holding,html.holding *{cursor:grabbing!important}
-@media (max-width:700px){.hole{display:none}}
+@media (max-width:700px){.hole,.pad,.vtools{display:none}}
