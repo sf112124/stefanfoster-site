@@ -48,6 +48,8 @@ export const PROJECTS = [
     slug: "ai-experiments", title: "Ai Experiments", client: "Personal", kind: "AI film",
     blurb: "",
     items: [
+      { head: "Grow" },
+      { file: "grow.mp4" },
       { head: "Zombie Cowboys", text: "Trailers for a zombie cowboy movie that one day I’ll have enough AI credits to make." },
       { file: "zombie-movie_compressed.mp4" },
       { file: "Sequence-01_1.mp4" },
