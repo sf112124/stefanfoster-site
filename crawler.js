@@ -30,7 +30,7 @@ export class Crawler {
     this.sfx.out?.();
     requestAnimationFrame(this.frame);
   }
-  recall() { if (!this.on || this.state !== "out") return; this.state = "back"; this.aim = 0; this.sfx.back?.(); }
+  recall() { if (!this.on || this.state !== "out") return; this.state = "back"; this.backAt = performance.now(); this.aim = 0; this.bolts = []; this.sfx.back?.(); }
   finish() {
     this.on = false; this.state = "home";
     this.hole.classList.remove("open"); this.hole.querySelector("span").textContent = "DO NOT OPEN";
@@ -99,14 +99,16 @@ export class Crawler {
     this.orbit += dt * .55;
     const stand = back ? 0 : 150 + Math.sin(now / 1700) * 30, ox = Math.cos(this.orbit), oy = Math.sin(this.orbit);
     const gx = tx - (dxm / dm) * stand * .75 + ox * stand * .5, gy = ty - (dym / dm) * stand * .75 + oy * stand * .5;
-    const ax = gx - p.x, ay = gy - p.y, ad = Math.hypot(ax, ay) || 1, want = Math.min(560, ad * 3.2);
+    const ax = gx - p.x, ay = gy - p.y, ad = Math.hypot(ax, ay) || 1, want = back ? Math.min(1100, 200 + ad * 5) : Math.min(560, ad * 3.2);
     v.x += ((ax / ad) * want - v.x) * Math.min(1, dt * 4.5); v.y += ((ay / ad) * want - v.y) * Math.min(1, dt * 4.5);
     p.x += v.x * dt; p.y += v.y * dt;
     if (!back) { p.x = clamp(p.x, 30, W - 30); p.y = clamp(p.y, 30, H - 30); }
     // it always faces what it's hunting
     let da = Math.atan2(dym, dxm) - this.head; da = Math.atan2(Math.sin(da), Math.cos(da)); this.head += da * Math.min(1, dt * 7);
-    if (back && dm < 26) { this.grow -= dt * 4; if (this.grow <= 0) { this.finish(); return; } }
-    const sc = Math.max(.05, this.grow) * (back && dm < 26 ? Math.max(.05, this.grow) : 1) * 1.3, ch = Math.cos(this.head), sh = Math.sin(this.head);
+    // home: it shrinks down into the hole (and if anything holds it up, it's pulled in anyway)
+    const inHole = back && (dm < 34 || now - this.backAt > 3200);
+    if (inHole) { this.grow -= Math.max(dt, .016) * 4; if (this.grow <= 0) { this.finish(); return; } }
+    const sc = Math.max(.05, this.grow) * (inHole ? Math.max(.05, this.grow) : 1) * 1.3, ch = Math.cos(this.head), sh = Math.sin(this.head);
     // things a foot can hold on to
     if (now - this.ptsAt > 450) { this.ptsAt = now; try { this.pts = this.anchors?.() || []; } catch (e) { this.pts = []; } }
     const speed = Math.hypot(v.x, v.y), moving = this.legs.filter((l) => l.st < 1).length;
