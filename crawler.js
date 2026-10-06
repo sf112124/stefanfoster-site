@@ -104,7 +104,8 @@ export class Crawler {
     this.ensure();
     const h = this.holePos();
     this.on = true; this.state = "out"; this.grow = 0; this.rage = 0; this.meter = 0; this.hp = HP; this.hurtAt = 0;
-    this.p = { x: h.x, y: h.y }; this.v = { x: -200, y: 260 }; this.head = Math.PI / 2; this.orbit = Math.random() * 6;
+    const up = h.y > innerHeight / 2 ? -1 : 1;                 // it climbs out towards the middle of the page, wherever its hole is
+    this.p = { x: h.x, y: h.y }; this.v = { x: -200, y: 260 * up }; this.head = up * Math.PI / 2; this.orbit = Math.random() * 6;
     this.legs = LEGS.map(chain); this.feel = FEEL.map(chain); this.tail = Array.from({ length: 6 }, () => [h.x, h.y]);
     [...this.legs, ...this.feel].forEach((l) => { l.fx = l.sx = l.tx = h.x; l.fy = l.sy = l.ty = h.y; l.j.forEach((q) => { q[0] = h.x; q[1] = h.y; }); });
     this.aim = 0; this.cool = 1.2; this.pcool = 2.5; this.pts = []; this.ptsAt = 0; this.m.moved = performance.now();
@@ -142,7 +143,7 @@ export class Crawler {
     if (this.ship.on) return;
     this.ensure();
     const h = this.padPos(), now = performance.now();
-    Object.assign(this.ship, { on: true, alive: true, docking: false, x: h.x, y: h.y, vx: rnd(-50, 50), vy: 240, a: Math.PI / 2, spin: 0, hull: HULL, safe: now + 1500, born: now, fireAt: 0, drove: false, fired: false, size: 0, trail: [] });
+    Object.assign(this.ship, { on: true, alive: true, docking: false, x: h.x, y: h.y, vx: rnd(-50, 50), vy: h.y > innerHeight / 2 ? -240 : 240, a: Math.PI / 2, spin: 0, hull: HULL, safe: now + 1500, born: now, fireAt: 0, drove: false, fired: false, size: 0, trail: [] });
     this.keys = {};
     this.padLabel("DOCK"); document.documentElement.classList.add("flying");
     this.sfx("launch");
@@ -464,7 +465,7 @@ export class Crawler {
       S.x += dx * k; S.y += dy * k; S.vx = S.vy = 0; let da = Math.atan2(dy, dx) - S.a; S.a += Math.atan2(Math.sin(da), Math.cos(da)) * Math.min(1, dt * 9);
       if (d < 26) { S.size -= dt * 5; if (S.size <= 0) { this.parked(); return; } } else { ix = dx / d; iy = dy / d; }
     } else if (!S.alive) {
-      if (now > S.respawn) Object.assign(S, { alive: true, x: pad.x, y: pad.y, vx: rnd(-50, 50), vy: 240, a: Math.PI / 2, spin: 0, hull: HULL, safe: now + 1800, size: 0, trail: [] });
+      if (now > S.respawn) Object.assign(S, { alive: true, x: pad.x, y: pad.y, vx: rnd(-50, 50), vy: pad.y > H / 2 ? -240 : 240, a: Math.PI / 2, spin: 0, hull: HULL, safe: now + 1800, size: 0, trail: [] });
       else return;
     } else {
       S.size = Math.min(1, S.size + dt * 3);
