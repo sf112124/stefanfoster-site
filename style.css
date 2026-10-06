@@ -325,7 +325,6 @@ body:not(.entered) .top,body:not(.entered) .bot{opacity:0;pointer-events:none}
 /* scrolling on phones: the films and pictures never take the touch, the page does */
 .view{-webkit-overflow-scrolling:touch}
 .tm img,.tm video,.tm .play{pointer-events:none}
-.tile,.tm{touch-action:pan-y pinch-zoom}
 .rows.hero{justify-content:flex-start}
 @media (max-width:700px){.rows{justify-content:center}}
 /* the hero film sits in the middle of the page, its section name floating up in the corner */
@@ -559,3 +558,10 @@ html.flying{-webkit-user-select:none;user-select:none}
   .links{gap:16px}
 }
 .chip::before{flex:none}
+/* Safari on a phone: a picture or a film is just part of the page under a finger. No touch rules of their own (Safari was
+   refusing to scroll the sheet when a drag started on one), no hover zoom, no 3D context or clipping on the sheet. */
+.touch .tile,.touch .tm,.touch .tm *{touch-action:auto}
+.touch .tm img,.touch .tm video{transition:opacity .25s;transform:none!important}
+.touch .proj{overflow:visible;perspective:none}
+.touch .tile,.touch .view.open,.touch .view.open .proj{cursor:auto}
+.touch .view{-webkit-overflow-scrolling:auto}
