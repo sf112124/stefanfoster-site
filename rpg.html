@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Foster Valley · Stefan Foster</title>
+<meta name="description" content="Stefan Foster's portfolio as a small adventure. The projects have escaped into the long grass. Beat them to see them.">
+<meta name="color-scheme" content="light">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="game/rpg.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="frame" id="frame">
+    <canvas id="cv" width="320" height="180" aria-label="Foster Valley, a small adventure game"></canvas>
+    <div class="ui">
+      <div class="toast" id="toast" aria-live="polite"></div>
+      <div class="hud" id="hud" hidden><button id="bfolio" type="button" hidden>FOLIO 0/8</button><button id="bsnd" type="button">SOUND ON</button><a href="./">EXIT</a></div>
+      <div class="stat foe" id="sfoe" hidden></div>
+      <div class="stat me" id="sme" hidden></div>
+      <div class="dlg" id="dlg" hidden><b id="who" hidden></b><p id="txt" aria-live="polite"></p><i id="more" hidden>▼</i></div>
+      <div class="menu" id="menu" hidden></div>
+      <div class="title" id="title">
+        <p class="kick">STEFAN FOSTER PRESENTS</p>
+        <h1>FOSTER<br>VALLEY</h1>
+        <p class="tag">A portfolio you have to fight for.</p>
+        <div class="tmons" id="tmons"></div>
+        <div class="tb"><button id="bcont" type="button" hidden>Continue</button><button id="bnew" type="button">Start</button></div>
+        <p class="keys">Arrows or WASD to walk · Enter to talk · F for your folio</p>
+        <a class="skip" href="./">or skip the game and just see the work →</a>
+      </div>
+      <div class="over" id="folio" hidden></div>
+      <div class="over" id="card" hidden></div>
+    </div>
+  </div>
+  <div class="pad" id="pad" aria-hidden="true">
+    <div class="dp"><button data-k="up" class="u" type="button">▲</button><button data-k="left" class="l" type="button">◀</button><button data-k="right" class="r" type="button">▶</button><button data-k="down" class="d" type="button">▼</button></div>
+    <div class="ab"><button data-k="b" class="b" type="button">B</button><button data-k="a" class="a" type="button">A</button></div>
+  </div>
+</main>
+<script type="module" src="game/main.js"></script>
+</body>
+</html>
