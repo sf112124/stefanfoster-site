@@ -1,9 +1,9 @@
-// Foster Valley. The same portfolio as the real site, except the projects have got out, and you have to beat each one
-// in a fight before it'll show you its work. Walk with the arrows or WASD, talk and confirm with Enter, Space or Z.
+// Foster Valley. The same portfolio as the real site, as a small adventure: the projects are out in the long grass,
+// and you beat each one to see its work. Walk with the arrows or WASD, talk and confirm with Enter, Space or Z.
 import { PROJECTS, ABOUT } from "../projects.js";
 import MEDIA from "../media.js";
 import { buildArt, C } from "./art.js";
-import { buildWorld, buildHouse, STARTERS, FOES, EXTRA, SAY, ZONES, TT, TNAME, eff, WHY } from "./data.js";
+import { buildWorld, buildHouse, STARTERS, FOES, EXTRA, SAY, ZONES, TT, TNAME, eff } from "./data.js";
 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -21,7 +21,7 @@ const cv = $("cv"), g = cv.getContext("2d"); g.imageSmoothingEnabled = false;
 // ---------- what's remembered between visits ----------
 const S = { starter: null, lvl: 3, hp: null, won: [], flags: {} };
 const save = () => { try { localStorage.setItem("foster-valley", JSON.stringify(S)); } catch (e) {} };
-const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && d.starter) { Object.assign(S, d); return true; } } catch (e) {} return false; };
+const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); return true; } } catch (e) {} return false; };
 const stats = (lvl) => ({ max: 30 + lvl * 6, atk: 10 + lvl, def: 10 + lvl });
 
 // ---------- sound: a few square waves, like an old handheld ----------
@@ -162,13 +162,13 @@ function prep(m) {
 }
 const maps = { world: prep(buildWorld()), house: prep(buildHouse()) };
 let map = maps.house, mode = "title", busy = false, t0 = 0, cam = { x: 0, y: 0 }, nightOn = false, zoneNow = "", fade = 0, bt = null;
-const P = { x: 3, y: 4, fx: 3, fy: 4, px: 48, py: 64, dir: "down", moving: false, t: 0, steps: 0, grass: 0, calm: 0 };
+const P = { x: 3, y: 4, fx: 3, fy: 4, px: 48, py: 64, dir: "down", moving: false, t: 0, steps: 0, grass: 0 };
 const objAt = (x, y) => map.objs.find((o) => !o.gone && y === o.y && x >= o.x && x < o.x + o.w && (o.solid || o.act));
 const blocked = (x, y) => x < 0 || y < 0 || x >= map.W || y >= map.H || map.solid[map.I(x, y)] || map.objs.some((o) => o.k === "npc" && !o.gone && y === o.y && x >= o.x && x < o.x + o.w);
 function place(m, x, y, dir) { map = m; P.x = P.fx = x; P.y = P.fy = y; P.px = x * 16; P.py = y * 16; P.moving = false; if (dir) P.dir = dir; P.grass = 0; }
 async function warp(m, x, y, dir) { busy = true; au.sfx("door"); await fadeTo(1, 220); place(m, x, y, dir); zoneNow = ""; await fadeTo(0, 220); busy = false; }
 function fadeTo(v, ms) { return new Promise((res) => { const a = fade, s = performance.now(); const step = (n) => { const k = clamp((n - s) / ms, 0, 1); fade = a + (v - a) * k; if (k < 1) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); }); }
-function night() { nightOn = !nightOn; au.sfx("secret"); toast(nightOn ? SAY.night[0] : "DAY MODE. As you were."); }
+function night() { nightOn = !nightOn; au.sfx("secret"); toast(nightOn ? "NIGHT MODE" : "DAY MODE"); }
 
 // ---------- walking about ----------
 function walk(dt) {
@@ -185,7 +185,6 @@ function walk(dt) {
     if (blocked(P.x + dx, P.y + dy)) { if (tap[d]) au.sfx("bump"); tap[d] = false; return; }
     tap[d] = false; P.fx = P.x; P.fy = P.y; P.x += dx; P.y += dy; P.t = 0; P.moving = true; P.steps++; return;
   }
-  if (map.id === "world" && !S.flags.idle && performance.now() - lastInput > 45000) { S.flags.idle = 1; script(() => ui.say(SAY.idle)); }
 }
 async function script(fn) { if (busy) return; busy = true; try { await fn(); } finally { busy = false; for (const k in tap) tap[k] = false; } }
 function arrive() {
@@ -200,22 +199,11 @@ function arrive() {
     if (zn && zn !== zoneNow) toast(zn.toUpperCase(), 1800); zoneNow = zn;
     const tg = map.tg[i];
     if (tg) {
-      const slug = PROJECTS[tg - 1].slug; P.grass++; P.calm++;
-      if (!S.won.includes(slug)) { if (P.grass >= 2 && (P.grass >= 7 || Math.random() < .3)) { P.grass = 0; script(() => fight(FOES[slug], slug)); } }
-      else if (P.calm > 14 && Math.random() < .07) { P.calm = 0; script(() => fight(EXTRA[pick(["deadline", "feedback", "impostor"])])); }
+      const slug = PROJECTS[tg - 1].slug; P.grass++;
+      if (!S.won.includes(slug) && P.grass >= 2 && (P.grass >= 7 || Math.random() < .3)) { P.grass = 0; script(() => fight(FOES[slug], slug)); }
     } else P.grass = 0;
   }
 }
-// the intern has nowhere to be
-function drift(dt) {
-  maps.world.objs.forEach((o) => {
-    if (!o.wander || busy) return; o.wt = (o.wt || 2) - dt; if (o.wt > 0) return; o.wt = rnd(1.2, 3.5);
-    const d = pick(["up", "down", "left", "right"]), [dx, dy] = DIRS[d], nx = o.x + dx, ny = o.y + dy; o.dir = d;
-    if (map.id !== "world" || Math.abs(nx - 41) > 3 || Math.abs(ny - 26) > 2 || maps.world.solid[maps.world.I(nx, ny)] || (nx === P.x && ny === P.y) || maps.world.base[maps.world.I(nx, ny)] !== TT.grass) return;
-    o.x = nx; o.y = ny; o.step = (o.step || 0) + 1;
-  });
-}
-
 // ---------- everything you can poke ----------
 async function run(act, o) {
   await script(async () => {
@@ -224,15 +212,11 @@ async function run(act, o) {
     else if (a === "pick") await choosePick(b);
     else if (a === "stefan") await stefan();
     else if (a === "coffee") { await ui.say(SAY.coffee[0]); S.hp = stats(S.lvl).max; au.sfx("heal"); if (S.starter) await ui.say(SAY.coffee[1]); save(); }
-    else if (a === "intern") { o.n = (o.n || 0); await ui.say(SAY.intern[o.n % SAY.intern.length], { who: "THE INTERN" }); o.n++; }
     else if (a === "goat") { au.sfx("baa"); await ui.say(SAY.goat); }
-    else if (a === "page") {
-      const r = await fight(EXTRA.page); if (r === "win") { S.flags.page = 1; o.gone = true; save(); await ui.say(SAY.pageGone); toast("THE BRIDGE IS OPEN"); }
-    }
     else if (a === "hole") {
       if (S.flags.crawler) { await ui.say(SAY.holeDone); return; }
       await ui.say(SAY.hole, { keep: true }); const c = await ui.choose(["Leave it", "Open it"], { cls: "yn" }); ui.hide();
-      if (c === 1) { au.sfx("secret"); const r = await fight(EXTRA.crawler); if (r === "win") { S.flags.crawler = 1; save(); await ui.say(["You got a badge: PEST CONTROL.", "It does nothing. It's very shiny."]); } }
+      if (c === 1) { au.sfx("secret"); const r = await fight(EXTRA.crawler); if (r === "win") { S.flags.crawler = 1; save(); } }
     }
     else if (SAY[a]) await ui.say(SAY[a]);
   });
@@ -241,20 +225,21 @@ async function choosePick(id) {
   const m = STARTERS[id];
   if (S.starter) { await ui.say(S.starter === id ? SAY.taken : SAY.left); return; }
   if (!S.flags.intro) { await stefan(); return; }
-  await ui.say([`${m.name}. ${m.type} type.`, m.about], { keep: true });
-  const c = await ui.choose([`Take ${m.name}`, "Have another look"], { cls: "yn" }); ui.hide();
+  await ui.say([m.about], { keep: true });
+  const c = await ui.choose([`Take ${m.name}`, "Not yet"], { cls: "yn" }); ui.hide();
   if (c !== 0) return;
   S.starter = id; S.lvl = 3; S.hp = stats(3).max; au.sfx("level"); save(); hud();
-  await ui.say([`You took ${m.name}!`]); await ui.say([m.picked, ...SAY.after], { who: "STEFAN" });
+  await ui.say([`You took ${m.name}.`]); await ui.say(SAY.after, { who: "STEFAN" });
   toast(touch ? "WALK WITH THE PAD · A TO TALK · FOLIO IS UP TOP" : "WALK: ARROWS OR WASD · TALK: ENTER · FOLIO: F", 5000);
 }
 async function stefan() {
   const who = "STEFAN";
   if (!S.flags.intro) { S.flags.intro = 1; await ui.say(SAY.intro, { who }); return; }
-  if (!S.starter) { await ui.say(["Go on. One of the three on the stands. They don't bite. Much."], { who }); return; }
+  if (!S.starter) { await ui.say(SAY.noPick, { who }); return; }
   const n = S.won.length;
   if (n >= PROJECTS.length) { await ui.say(SAY.ending, { who }); S.flags.end = 1; save(); await endCard(); return; }
-  await ui.say(SAY.stefan[n === 0 ? 0 : n === 1 ? 1 : n < 4 ? 2 : n === 4 ? 3 : n < 7 ? 4 : 5], { who });
+  const next = PROJECTS.find((p) => !S.won.includes(p.slug));
+  await ui.say([`${n} of ${PROJECTS.length} found.`, `${next.title} is at ${FOES[next.slug].zone}.`], { who });
 }
 
 // ---------- a fight ----------
@@ -263,28 +248,25 @@ async function fight(def, slug) {
   const mine = STARTERS[S.starter], st = stats(S.lvl), boss = def.boss || 0, L = (slug ? 2 : boss ? 2 + boss : 1) + S.won.length;
   const me = { ...mine, lvl: S.lvl, max: st.max, hp: clamp(S.hp ?? st.max, 1, st.max), atk: st.atk, def: st.def, am: 1, dm: 1, ox: -200, oy: 0, a: 1, fl: 0 };
   const foe = { ...def, lvl: L, max: Math.round((20 + L * 6) * (boss ? 1.35 : 1)), atk: 6 + L, def: 9 + L, am: 1, dm: 1, ox: 200, oy: 0, a: 1, fl: 0 }; foe.hp = foe.max;
-  const shiny = !!slug && Math.random() < .08;
   au.sfx("encounter"); au.music(null);
   for (let k = 0; k < 3; k++) { fade = .9; await sleep(70); fade = 0; await sleep(70); } await fadeTo(1, 260);
-  bt = { me, foe, bg: BG[slug] || BG.x, shake: 0, shiny, t: 0 }; mode = "battle"; hud(); au.music("battle"); bars(); $("sfoe").hidden = $("sme").hidden = false;
+  bt = { me, foe, bg: BG[slug] || BG.x, shake: 0, t: 0 }; mode = "battle"; hud(); au.music("battle"); bars(); $("sfoe").hidden = $("sme").hidden = false;
   await fadeTo(0, 200); await tween(420, (k) => { foe.ox = 200 * (1 - k); me.ox = -200 * (1 - k); });
-  await ui.line(def.intro, {}); if (shiny) await ui.line("It's a different colour from usual. This changes nothing.");
+  await ui.line(def.intro || `${def.name} appears!`, {});
   let result = null;
   const tell = (t) => ui.line(t, { auto: 1.15 });
   const hurt = async (who, n, e) => { au.sfx(e > 1 ? "super" : "hit"); bt.shake = e > 1 ? 7 : 4; for (let k = 0; k < 4; k++) { who.a = .15; await sleep(55); who.a = 1; await sleep(55); } const from = who.hp, to = Math.max(0, who.hp - n); await tween(380, (k) => { who.hp = from + (to - from) * k; bars(); }); who.hp = to; bars(); };
   const act = async (att, dfn, mv, isMe) => {
     await tell(`${att.name} uses ${mv.n}!`);
-    if (mv.kind === "heal") { const to = Math.min(att.max, att.hp + Math.round(att.max * .45)), from = att.hp; au.sfx("heal"); att.fl = 1; await tween(450, (k) => { att.hp = from + (to - from) * k; att.fl = 1 - k; bars(); }); await tell(mv.say); return; }
-    if (mv.kind === "buff") { att.am = Math.min(1.75, att.am * 1.3); au.sfx("buff"); await tween(300, (k) => (att.oy = -Math.sin(k * Math.PI) * 8)); await tell(mv.say); return; }
-    if (mv.kind === "debuff") { dfn.dm = Math.max(.55, dfn.dm * .78); au.sfx("buff"); await tween(300, (k) => (dfn.oy = Math.sin(k * Math.PI) * 5)); await tell(mv.say); return; }
-    if (!mv.p) { await tween(360, (k) => (att.oy = -Math.abs(Math.sin(k * Math.PI * 2)) * 4)); await tell(mv.say); return; }
-    if (mv.acc && Math.random() > mv.acc) { au.sfx("miss"); await tell(mv.miss || "It missed."); return; }
+    if (mv.kind === "heal") { const to = Math.min(att.max, att.hp + Math.round(att.max * .45)), from = att.hp; au.sfx("heal"); att.fl = 1; await tween(450, (k) => { att.hp = from + (to - from) * k; att.fl = 1 - k; bars(); }); await tell(`${att.name} got some health back.`); return; }
+    if (mv.kind === "buff") { att.am = Math.min(1.75, att.am * 1.3); au.sfx("buff"); await tween(300, (k) => (att.oy = -Math.sin(k * Math.PI) * 8)); await tell(`${att.name}'s attack rose.`); return; }
+    if (mv.acc && Math.random() > mv.acc) { au.sfx("miss"); await tell("It missed."); return; }
     const pw = Array.isArray(mv.p) ? rnd(mv.p[0], mv.p[1]) : mv.p, e = isMe ? eff(mv.t, dfn.type) : eff(att.type, dfn.type), crit = Math.random() < .08;
     const n = Math.max(1, Math.round(pw * ((att.atk * att.am) / (dfn.def * dfn.dm)) * (.55 + att.lvl * .09) * e * (crit ? 1.5 : 1) * rnd(.88, 1.08)));
     const dir = isMe ? 1 : -1; await tween(150, (k) => { att.ox = dir * 26 * Math.sin(k * Math.PI); att.oy = -dir * 10 * Math.sin(k * Math.PI); });
-    await hurt(dfn, n, e); if (mv.say) await tell(mv.say);
-    if (crit) await tell("Right in the brief. A critical hit!");
-    if (e > 1) await tell(`It's super effective! ${WHY[`${isMe ? mv.t : att.type}>${dfn.type}`] || ""}`); else if (e < 1) await tell("It's not very effective.");
+    await hurt(dfn, n, e);
+    if (crit) await tell("A critical hit!");
+    if (e > 1) await tell("It's super effective!");
   };
   while (!result) {
     ui.show(`What will ${me.name} do?`);
@@ -298,15 +280,15 @@ async function fight(def, slug) {
     if (me.hp <= 0) { result = "lose"; break; }
   }
   if (result === "win") {
-    au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(def.down);
+    au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${def.name} is beaten.`);
     au.music(null); au.sfx("win");
     if (slug) {
       S.won.push(slug); S.lvl = Math.min(14, S.lvl + 1); S.hp = stats(S.lvl).max; me.hp = me.max; bars(); save(); hud();
       await ui.line(`${me.name} grew to level ${S.lvl}!`); au.sfx("level");
-      await ui.line(`${def.name} rolls over and shows you its work.`);
-    } else { S.hp = stats(S.lvl).max; save(); await ui.line(boss ? `${me.name} looks very pleased with itself.` : `${me.name} shakes it off. Back to full health.`); }
+      await ui.line(`${def.name} is in your folio.`);
+    } else { S.hp = stats(S.lvl).max; save(); await ui.line(`${me.name} is back to full health.`); }
   } else if (result === "lose") {
-    au.music(null); au.sfx("lose"); await tween(500, (k) => { me.oy = k * 40; me.a = 1 - k; }); await ui.line(`${me.name} has had enough.`);
+    au.music(null); au.sfx("lose"); await tween(500, (k) => { me.oy = k * 40; me.a = 1 - k; }); await ui.line(`${me.name} is out of health.`);
   } else await ui.line(SAY.ran[0]);
   ui.hide(); await fadeTo(1, 300);
   bt = null; mode = "world"; hud(); $("sfoe").hidden = $("sme").hidden = true;
@@ -314,7 +296,7 @@ async function fight(def, slug) {
   if (result !== "win") S.hp = result === "run" ? Math.max(1, Math.round(me.hp)) : S.hp;
   au.music("world"); await fadeTo(0, 300);
   if (result === "lose") await ui.say(SAY.lost);
-  if (result === "win" && slug) { await card(slug); if (S.won.length === PROJECTS.length) toast("THAT'S ALL EIGHT. GO AND TELL STEFAN.", 5000); }
+  if (result === "win" && slug) { await card(slug); if (S.won.length === PROJECTS.length) toast("ALL EIGHT FOUND. GO BACK AND SEE STEFAN.", 5000); }
   return result;
 }
 function tween(ms, fn) { return new Promise((res) => { const s = performance.now(); const step = (n) => { const k = clamp((n - s) / ms, 0, 1); fn(k); if (k < 1) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); }); }
@@ -349,7 +331,7 @@ function folio() {
   const el = $("folio"), m = STARTERS[S.starter];
   el.innerHTML = `<div class="sheet"><div class="fh"><h2>FOLIO</h2><span>${S.won.length} of ${PROJECTS.length} beaten</span><button type="button" id="fclose">Close</button></div>
     <div class="grid">${PROJECTS.map((p, i) => { const got = S.won.includes(p.slug), f = FOES[p.slug]; return `<button type="button" class="slot${got ? " got" : ""}" data-s="${p.slug}" ${got ? "" : "disabled"}><img src="${monImg(f.art)}" alt=""><b>${got ? esc(p.title) : "? ? ?"}</b><i>${got ? esc(p.client) : esc(f.zone)}</i></button>`; }).join("")}</div>
-    <p class="with"><img src="${monImg(m.art)}" alt=""><span>With you: <b>${m.name}</b>, level ${S.lvl}, ${m.type} type.${S.flags.crawler ? " Badge: PEST CONTROL." : ""}</span></p></div>`;
+    <p class="with"><img src="${monImg(m.art)}" alt=""><span>With you: <b>${m.name}</b>, level ${S.lvl}.</span></p></div>`;
   el.hidden = false;
   $("fclose").addEventListener("click", closeFolio);
   el.querySelectorAll(".slot.got").forEach((b) => b.addEventListener("click", async () => { closeFolio(); await script(() => card(b.dataset.s)); }));
@@ -359,7 +341,7 @@ function endCard() {
   return new Promise((res) => {
     const el = $("card");
     el.innerHTML = `<div class="sheet end"><span class="no">THE END</span><h2>${esc(ABOUT.name)}</h2><p class="meta">${esc(ABOUT.role)}</p>
-      <p class="blurb">You fought the whole portfolio and won. That's more than most people do with a portfolio.</p>
+      <p class="blurb">You found all eight projects. Thanks for playing.</p>
       <div class="btns col"><a class="go" href="mailto:${esc(ABOUT.email)}">${esc(ABOUT.email)}</a>${(ABOUT.socials || []).map((s) => `<a class="go alt" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)}</a>`).join("")}<a class="go alt" href="./">See the proper site →</a><button type="button" id="cclose">Keep wandering</button></div></div>`;
     el.hidden = false; au.sfx("win"); busyCard = () => { el.hidden = true; busyCard = null; res(); };
     $("cclose").addEventListener("click", () => busyCard && busyCard());
@@ -382,15 +364,15 @@ function drawWorld(now) {
     if (t === TT.water) g.drawImage(A.tile.glint[(f4 + x + y * 2) % 4], x * 16 - cx, y * 16 - cy); else if (t === TT.fizz) g.drawImage(A.tile.bubble[(f4 + x * 3 + y) % 4], x * 16 - cx, y * 16 - cy);
     if (map.tg[i]) g.drawImage(A.grass[map.tg[i]][(f2 + x + y) % 2], x * 16 - cx, y * 16 - cy);
   }
-  const spr = (o) => o.k === "npc" ? (o.who === "page" ? A.who.page[f2] : A.who[o.who][o.dir || "down"][(o.step || 0) % 2]) : o.k === "wallart" ? A.obj[o.art] : Array.isArray(A.obj[o.k]) ? A.obj[o.k][o.k === "geyser" ? Math.floor(now / 300 + o.x) % 3 : f2] : A.obj[o.k];
+  const spr = (o) => o.k === "npc" ? A.who[o.who][o.dir || "down"][(o.step || 0) % 2] : o.k === "wallart" ? A.obj[o.art] : Array.isArray(A.obj[o.k]) ? A.obj[o.k][o.k === "geyser" ? Math.floor(now / 300 + o.x) % 3 : f2] : A.obj[o.k];
   const put = (o) => {
     if (o.gone) return; if (o.k === "wire") return wire(o, cx, cy, now);
     const s = spr(o); if (!s) return; const bx = (o.x + o.w / 2) * 16 - cx, by = (o.y + 1) * 16 - cy;
     if (bx < -60 || bx > VW + 60 || by < -10 || by > VH + 90) return;
     if (o.k === "wallart") { g.drawImage(s, Math.round(bx - s.width / 2), by - s.height - 6); return; }
-    if (o.k === "npc" && o.who !== "page") g.drawImage(A.sh[12], Math.round(bx - 6), by - 4);
-    g.drawImage(s, Math.round(bx - s.width / 2), by - s.height - (o.flat ? 4 : o.k === "npc" && o.who !== "page" ? 1 : 0));
-    if (o.k === "stand" && S.starter !== o.pick) { const it = A.obj[o.pick === "bevel" ? "pick1" : o.pick === "hallu" ? "pick2" : "pick3"]; g.drawImage(it, Math.round(bx - it.width / 2), by - 12 - it.height + Math.round(Math.sin(now / 300 + o.x) * 1.2)); }
+    if (o.k === "npc") g.drawImage(A.sh[12], Math.round(bx - 6), by - 4);
+    g.drawImage(s, Math.round(bx - s.width / 2), by - s.height - (o.flat ? 4 : o.k === "npc" ? 1 : 0));
+    if (o.k === "stand" && S.starter !== o.pick) { const it = A.obj["pick_" + o.pick]; g.drawImage(it, Math.round(bx - it.width / 2), by - 12 - it.height + Math.round(Math.sin(now / 300 + o.x) * 1.2)); }
   };
   map.flat.forEach(put);
   // everything standing up, back to front, with you in among it
@@ -416,8 +398,7 @@ function drawBattle(now) {
   g.fillStyle = "rgba(43,31,59,.14)"; g.beginPath(); g.ellipse(238 + sh, 91, 54, 11, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(84 + sh, 144, 60, 12, 0, 0, 7); g.fill();
   const fig = (m, x, y, sc, bob) => {
     const s = A.mon[m.art], w = 48 * sc, h = 48 * sc; g.globalAlpha = m.a;
-    if (b.shiny && m === b.foe) try { g.filter = "hue-rotate(150deg) saturate(1.3)"; } catch (e) {}
-    g.drawImage(s, Math.round(x - w / 2 + m.ox + sh), Math.round(y - h + m.oy + bob), w, h); g.filter = "none";
+    g.drawImage(s, Math.round(x - w / 2 + m.ox + sh), Math.round(y - h + m.oy + bob), w, h);
     if (m.fl > 0) { g.globalAlpha = m.fl * .6; g.fillStyle = "#b7f3c8"; g.beginPath(); g.ellipse(x + m.ox, y - h / 2, w * .5, h * .5, 0, 0, 7); g.fill(); }
     g.globalAlpha = 1;
   };
@@ -428,7 +409,7 @@ function frame(now) {
   const dt = clamp((now - t0) / 1000, 0, .05); t0 = now;
   if (busyCard) { if (took("a") || took("b")) busyCard(); }
   else if (folioOpen) { if (took("b") || took("f") || took("a")) closeFolio(); }
-  else { ui.update(dt); if (mode === "world") { walk(dt); drift(dt); } }
+  else { ui.update(dt); if (mode === "world") walk(dt); }
   if (took("m")) $("bsnd").click();
   if (mode === "battle" && bt) drawBattle(now); else drawWorld(now);
   if (fade > 0) { g.fillStyle = `rgba(255,248,236,${fade})`; g.fillRect(0, 0, VW, VH); }
@@ -444,8 +425,7 @@ function fit() {
 addEventListener("resize", fit); fit();
 async function start(fresh) {
   au.unlock(); au.sfx("ok");
-  if (fresh) { Object.assign(S, { starter: null, lvl: 3, hp: null, won: [], flags: {} }); save(); maps.world.objs.forEach((o) => { if (o.id === "page") o.gone = false; }); }
-  if (S.flags.page) maps.world.objs.forEach((o) => { if (o.id === "page") o.gone = true; });
+  if (fresh) { Object.assign(S, { starter: null, lvl: 3, hp: null, won: [], flags: {} }); save(); }
   await fadeTo(1, 250); $("title").hidden = true; mode = "world"; hud(); au.music("world");
   if (S.starter) place(maps.world, 35, 37, "down"); else place(maps.house, 3, 4, "right");
   await fadeTo(0, 300);
@@ -454,8 +434,8 @@ async function start(fresh) {
 const had = load();
 $("bcont").hidden = !had; $("bnew").textContent = had ? "New game" : "Start";
 $("bnew").addEventListener("click", () => start(true)); $("bcont").addEventListener("click", () => start(false));
-// the three of them, bobbing on the title screen
-$("tmons").innerHTML = ["bevel", "hallu", "scribb"].map((k, i) => `<img src="${monImg(k)}" alt="" style="animation-delay:${-i * .4}s">`).join("");
+// the three tools, bobbing on the title screen
+$("tmons").innerHTML = ["ai", "ps", "pr"].map((k, i) => `<img src="${monImg(k)}" alt="" style="animation-delay:${-i * .4}s">`).join("");
 addEventListener("keydown", (e) => { if (mode === "title" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); start(!had); } });
 place(maps.world, 35, 39, "down");
 requestAnimationFrame(frame);
