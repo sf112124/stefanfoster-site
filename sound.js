@@ -301,6 +301,18 @@ export class Sound {
       case "win": // down the hole. Yours.
         [660, 880, 1320].forEach((f, k) => this.vox(f, f * 1.004, .22 + k * .12, .035, (k - 1) * .3, { type: "triangle", at: k * .13, wet: .5 }));
         break;
+      // ----- the live toy on the experiments page -----
+      case "munch": // it eats: two wet little bites and a gulp going down
+        if (!gate("munch", 80)) break;
+        this.nz(1400, 3, .05, .06, pan, { to: 500, wet: .2 }); this.nz(1100, 3, .05, .05, pan, { at: .09, to: 400, wet: .2 });
+        this.vox(420, 150, .16, .06, pan, { type: "sine", at: .17, wet: .3 });
+        break;
+      case "boing": // poked: a rubbery wobble, higher towards its tail
+        if (gate("boing", 70)) this.vox(260 + b * 380, 180 + b * 260, .34, .06, pan, { type: "triangle", fm: 60 + b * 60, rate: 13, wet: .3 });
+        break;
+      case "plop": // something dropped in
+        if (gate("plop", 50)) this.vox(r(520, 700), 190, .1, .05, pan, { type: "sine", wet: .4 });
+        break;
       case "thud": // put down
         this.vox(130, 48, .14, .12, pan, { type: "sine" }); this.nz(900, 1, .05, .03, pan, { ft: "lowpass" });
         break;

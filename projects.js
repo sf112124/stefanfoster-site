@@ -47,6 +47,8 @@ export const PROJECTS = [
   {
     slug: "ai-experiments", title: "Ai Experiments", client: "Personal", kind: "AI film",
     blurb: "",
+    // a live piece at the top of the page: not a film, a thing you play with
+    live: { head: "Squig", text: "Not a film, a live one, drawn in 3D as you watch. It follows your cursor, eats what you drop for it and does whatever the sliders say." },
     items: [
       { head: "Grow" },
       { file: "grow.mp4" },

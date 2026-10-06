@@ -290,7 +290,7 @@ export class Crawler {
     if (this.cv.width !== Math.round(W * dpr) || this.cv.height !== Math.round(H * dpr)) { this.cv.width = Math.round(W * dpr); this.cv.height = Math.round(H * dpr); }
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
     if (!this.on && !this.ship.on) { this.running = false; return; }
-    const dt = Math.min(.05, (now - this.t) / 1000); this.t = now;
+    const dt = clamp((now - this.t) / 1000, 0, .05); this.t = now;
     const cs = getComputedStyle(document.documentElement), ink = cs.getPropertyValue("--ink").trim() || "#0d0d0e", bg = cs.getPropertyValue("--bg").trim() || "#f4f3ef";
     const F = { now, dt, g, W, H, ink, bg, cols: this.colors() };
     g.lineCap = "round"; g.lineJoin = "round";

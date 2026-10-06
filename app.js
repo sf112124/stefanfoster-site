@@ -353,17 +353,22 @@ function renderProject(i) {
   const body = groups.map((g) => `<section class="grp${g.sec ? " has" : ""}">
     ${g.sec ? `<div class="gsec"><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p>${esc(g.sec.text)}</p>` : ""}</div>` : ""}
     <div class="rows${g.sec && g.items.length === 1 && g.items[0].w / g.items[0].h < 1.2 ? " hero" : ""}">${g.items.map(tile).join("")}</div></section>`).join("");
+  // a live piece, if the project has one: a stage to play on, its controls beside it
+  const live = p.live ? `<section class="grp has live"><div class="gsec"><h2>${esc(p.live.head)}</h2><p>${esc(p.live.text)}</p></div>
+    <div class="toy"><canvas></canvas><span class="toy-hint mono" aria-hidden="true"></span></div><div class="knobs mono"></div></section>` : "";
+  page?.toy?.destroy();
   vin.innerHTML = `<article class="proj">
     <header class="ph">
       <div class="phl"><span class="n mono">${pad(i + 1)} <em>/ ${pad(PROJECTS.length)}</em></span><h1 class="rise">${chars(p.title)}</h1><p class="cli mono">${esc(p.client)}</p></div>
       ${p.blurb ? `<p class="lead">${esc(p.blurb)}</p>` : ""}
     </header>
-    <div class="work${big ? " big" : ""}">${body}</div>
+    <div class="work${big ? " big" : ""}">${live}${body}</div>
     <footer class="pf"><a class="nx" href="#${nx.slug}"><span class="mono">Next</span><span class="nt">${esc(nx.title)} →</span></a></footer>
   </article>`;
   $("vt").textContent = p.title;
   page = { p, pieces, big, tiles: [...vin.querySelectorAll(".tile")], tall: pieces.every((x) => !x.yt && x.w / x.h < .8) };
   if (page.tall) vin.querySelector(".work")?.classList.add("tall");
+  if (p.live) { const pg = page; import("./toy.js").then((m) => { if (page === pg && vin.querySelector(".toy")) pg.toy = new m.Toy(vin.querySelector(".toy"), vin.querySelector(".knobs"), { sfx: (k, a, b) => sound.critter(k, a, b), touch, flat: document.documentElement.classList.contains("lite") }); }).catch(() => {}); }
   wireTiles();
   fitTitle(); document.fonts?.ready?.then(fitTitle);
   glassPage();
@@ -573,7 +578,7 @@ function close() {
   if (!viewOpen) return;
   viewOpen = false; view.classList.remove("open"); document.body.classList.remove("viewing"); setTimeout(() => { if (!viewOpen) document.body.classList.remove("isabout"); }, 600); view.setAttribute("aria-hidden", "true");
   if (lbk >= 0) lbClose(true);
-  page?.io?.disconnect(); page = null;
+  page?.io?.disconnect(); page?.toy?.destroy(); page = null;
   sound.quiet(false); field.setActive(innerWidth > 700); wheel.paused = false; thermal.setActive(!document.hidden);
   setTimeout(() => { if (!viewOpen) vin.innerHTML = ""; }, 600);
 }
