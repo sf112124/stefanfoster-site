@@ -538,3 +538,24 @@ html.flying,html.flying *{cursor:crosshair!important}
 html.flying .hole,html.flying .hole *,html.flying .pad,html.flying .pad *,html.flying .snd,html.flying .snd *,html.flying .nite,html.flying .nite *{cursor:pointer!important}
 html.flying{-webkit-user-select:none;user-select:none}
 @media (max-width:700px){.hole,.pad,.toys{display:none}}
+
+/* ---------- phones and tablets ---------- */
+/* nothing blurs live near a page a finger is dragging: the sheet is solid, the home behind it just dims, and a page opens
+   on a plain fade. Glass over a moving background costs more than a phone can spare mid-scroll. */
+.touch .proj{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:rgba(248,247,244,.97);animation-name:arise-lite}
+.touch.night .proj{background:rgba(20,20,24,.97)}
+.touch body.viewing .app,.touch body.isabout.viewing .app{filter:none!important;opacity:0;transform:none}
+.touch .view,.touch .view.open{filter:none!important;transition:opacity .35s ease!important}
+.touch .vbar a[data-home]{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(246,245,241,.96)}
+.touch.night .vbar a[data-home]{background:rgba(30,30,36,.96)}
+.touch .tile{animation:none}
+/* a page on its way out never catches the tap meant for what's behind it */
+.view:not(.open){pointer-events:none}
+/* the top of a phone: just the name, night and about */
+@media (max-width:700px){
+  .chip{font-size:0}
+  .chip b{font-size:11px;letter-spacing:.08em;white-space:nowrap}
+  .links .snd{display:none}
+  .links{gap:16px}
+}
+.chip::before{flex:none}

@@ -567,14 +567,14 @@ function open() {
   viewOpen = true; view.classList.add("open"); document.body.classList.add("viewing"); view.setAttribute("aria-hidden", "false");
   view.scrollTop = 0; view.focus({ preventScroll: true });
   requestAnimationFrame(justify);
-  sound.quiet(true); field.setActive(false); setTimeout(() => { if (viewOpen) thermal.setActive(false); }, 1300); if (page?.p && thermal.palette) thermal.palette(WAYS[document.documentElement.classList.contains("night") ? "night" : "day"][(PROJECTS.indexOf(page.p) % 2) + 1]);
+  sound.quiet(true); field.setActive(false); wheel.paused = true; setTimeout(() => { if (viewOpen) thermal.setActive(false); }, 1300); if (page?.p && thermal.palette) thermal.palette(WAYS[document.documentElement.classList.contains("night") ? "night" : "day"][(PROJECTS.indexOf(page.p) % 2) + 1]);
 }
 function close() {
   if (!viewOpen) return;
   viewOpen = false; view.classList.remove("open"); document.body.classList.remove("viewing"); setTimeout(() => { if (!viewOpen) document.body.classList.remove("isabout"); }, 600); view.setAttribute("aria-hidden", "true");
   if (lbk >= 0) lbClose(true);
   page?.io?.disconnect(); page = null;
-  sound.quiet(false); field.setActive(innerWidth > 700); thermal.setActive(!document.hidden);
+  sound.quiet(false); field.setActive(innerWidth > 700); wheel.paused = false; thermal.setActive(!document.hidden);
   setTimeout(() => { if (!viewOpen) vin.innerHTML = ""; }, 600);
 }
 document.addEventListener("click", (e) => {

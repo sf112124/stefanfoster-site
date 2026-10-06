@@ -29,12 +29,13 @@ export class Wheel {
       if (e.pointerType !== "touch") return;
       e.target.releasePointerCapture?.(e.pointerId);
       this.mx = e.clientX; this.my = e.clientY;
-      const i = this.hit(e); this.td = { x: e.clientX, y: e.clientY, i, moved: false, was: this.armed };
+      const i = this.hit(e); this.td = { x: e.clientX, y: e.clientY, i, moved: false, far: 0, t: performance.now(), was: this.armed };
       if (i >= 0) { this.over = i; this.onFocus?.(i); }
     });
     addEventListener("pointermove", (e) => {
       const d = this.td; if (!d || e.pointerType !== "touch") return;
-      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8) d.moved = true;
+      // a thumb never lands dead still, and a phone only reports the move once it's already a good few pixels: be generous
+      const far = Math.hypot(e.clientX - d.x, e.clientY - d.y); if (far > d.far) d.far = far; if (far > 18) d.moved = true;
       const i = this.hit(e);
       if (i >= 0 && i !== this.over) { this.over = i; this.onFocus?.(i); }
     });
@@ -44,7 +45,9 @@ export class Wheel {
       this.over = -1;
       // phones have no grid to preview into, so a tap on a name goes straight in
       // a tap opens the name your finger landed on, even if the type has shifted under it since
-      if (!d.moved && d.i >= 0 && (this.compact || d.was === d.i)) { this.onPick?.(d.i); return; }
+      // (and a quick dab that slid a little on the way is still a tap)
+      const tap = !d.moved || (performance.now() - d.t < 320 && d.far < 36), pi = d.i >= 0 ? d.i : this.compact ? i : -1;
+      if (tap && pi >= 0 && (this.compact || d.was === pi)) { this.onPick?.(pi); return; }
       const k = i >= 0 ? i : d.i >= 0 && !d.moved ? d.i : -1;
       if (k >= 0) { this.onFocus?.(k); this.armed = k; this.target = k; this.lit = true; }
       this.mx = this.my = -1e4;
@@ -57,8 +60,9 @@ export class Wheel {
   // what's under a finger: the name itself, or failing that the nearest name within easy reach (fingers are wide, names are thin)
   hit(e) {
     const a = document.elementFromPoint(e.clientX, e.clientY)?.closest?.(".wi"); if (a) return this.items.indexOf(a);
-    let best = -1, bd = 26;
-    this.items.forEach((it, i) => { const r = it.querySelector(".wt").getBoundingClientRect(); if (e.clientX < r.left - 20 || e.clientX > r.right + 20) return; const d = Math.abs(e.clientY - (r.top + r.height / 2)); if (d < bd) { bd = d; best = i; } });
+    // on a phone the whole row counts, not just the letters
+    let best = -1, bd = this.compact ? 44 : 26;
+    this.items.forEach((it, i) => { const r = it.querySelector(".wt").getBoundingClientRect(); if (!this.compact && (e.clientX < r.left - 20 || e.clientX > r.right + 20)) return; const d = Math.abs(e.clientY - (r.top + r.height / 2)); if (d < bd) { bd = d; best = i; } });
     return best;
   }
   set(i) { this.target = i; this.lit = i != null; if (i == null) this.armed = -1; }
@@ -70,6 +74,8 @@ export class Wheel {
     return 64 + R * (1 - Math.cos(th)) + this.maxW * Math.max(.35, Math.cos(th));
   }
   frame = (now) => {
+    // nothing to draw while a page is open over the top of it
+    if (this.paused) { requestAnimationFrame(this.frame); return; }
     if (!this.H || !this.fs || this._h !== innerHeight + innerWidth) { this._h = innerHeight + innerWidth; this.maxW = 0; this.fs = parseFloat(getComputedStyle(this.items[0]).fontSize) || 40; this.H = this.el.clientHeight; }
     const H = this.H, fs = this.fs, n = this.items.length, R = (this.R = Math.max(H * .8, 420)), step = (this.compact ? Math.min(fs * 1.75, (H * .8) / n) : fs * 1.3) / R, x0 = this.compact ? 14 : 64, mid = (n - 1) / 2, t = now / 1000;
     const er = this.el.getBoundingClientRect(), ly = this.my - er.top, lx = this.mx - er.left;
