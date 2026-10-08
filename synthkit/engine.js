@@ -43,7 +43,7 @@ const RAW = Object.fromEntries(Object.entries(FILES).map(([k, u]) => [k, fetch(u
 
 export class Engine {
   constructor() {
-    this.bpm = 172; this.playing = false; this.step = 0; this.ms = 0; this.q = 0; this.bar = 0; this.ev = []; this.pat = PRESETS.JUNGLE(); this.cur = this.pat;
+    this.bpm = 172; this.playing = false; this.step = 0; this.ms = 0; this.q = 0; this.bar = 0; this.ev = []; this.pat = blank(); this.cur = this.pat;
     this.k = { filter: 0, res: .2, crush: 0, delay: .12, drill: 0, swing: 0, chaos: .55, pitch: 0, tone: .5, bassv: 0, react: .7, rate: 3, depth: 0, dest: 0, shape: 0, vol: .72 };
     this.mutate = false; this.rec = false; this.loops = [null, null, null, null]; this.pend = [undefined, undefined, undefined, undefined];
     this.dj = null; this.gate = false; this.ready = null; this.B = {};
@@ -291,7 +291,13 @@ export class Engine {
     else this.mg.port.postMessage({ mode });
   }
   release() { this.mg && this.mg.port.postMessage({ mode: "off" }); }
-  clear() { const s = this.pat.brkSel; this.pat = blank(); this.pat.brkSel = s; this.cur = this.pat; }
+  // wipe the lot: every lane, every loop, any break bar still to come
+  clear() {
+    const s = this.pat.brkSel; this.pat = blank(); this.pat.brkSel = s; this.cur = this.pat;
+    this.loops = [null, null, null, null]; this.pend = [undefined, undefined, undefined, undefined];
+    if (this.ctx) { const n = this.ctx.currentTime; (this.bars || []).forEach((h) => { try { h.g.gain.cancelScheduledValues(n); h.g.gain.setTargetAtTime(0, n, .005); h.s.stop(n + .05); } catch (e) {} }); this.stopBass(n); this.reese.amp.gain.cancelScheduledValues(n); this.reese.amp.gain.setTargetAtTime(0, n, .01); }
+    this.bars = [];
+  }
 }
 
 function mutate(p) {

@@ -230,7 +230,7 @@ async function toggle() {
 $("play").addEventListener("click", toggle);
 
 document.querySelectorAll(".pre").forEach((b) => b.addEventListener("click", () => { E.pat = PRESETS[b.dataset.pre](); E.cur = E.pat; renderSeq(); if (bank === 0) renderPads(); }));
-$("clr").addEventListener("click", () => { E.clear(); renderSeq(); });
+$("clr").addEventListener("click", () => { E.clear(); renderSeq(); loopLights(); });
 $("chop").addEventListener("click", () => {
   const p = E.pat; let any = false;
   for (let s = 0; s < 16; s++) { if (p.brk[s] < 0) continue; any = true; const r = Math.random(); p.brk[s] = s % 8 === 0 ? (Math.random() < .7 ? 0 : 4) : r < .35 ? s : r < .55 ? p.brk[Math.max(0, s - 1)] : Math.floor(Math.random() * 16); p.rev[s] = Math.random() < .1 ? 1 : 0; }
