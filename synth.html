@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Synth-folio · Stefan Foster</title>
+<meta name="description" content="Stefan Foster's portfolio as a jungle sequencer. Make drum and bass, and the music cuts the work together live.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0f130d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="synth/synth.css">
+</head>
+<body>
+<div class="rig" id="rig">
+  <header class="top">
+    <a class="brand" href="./#play" title="Back to the site"><b>SYNTH-FOLIO</b><span>// STEFAN FOSTER</span></a>
+    <div class="tp">
+      <button id="play" class="big" type="button" aria-pressed="false"><i class="tri"></i><span>PLAY</span></button>
+      <button id="rec" type="button" aria-pressed="false" title="Record pads into the pattern (R is a pad, so use the button)"><i class="dot"></i>REC</button>
+      <button id="mut" type="button" aria-pressed="false" title="Each bar plays a variation">MUTATE</button>
+      <span class="sep"></span>
+      <span class="lbl">PATTERN</span>
+      <button class="pre" data-pre="JUNGLE" type="button">JUNGLE</button>
+      <button class="pre" data-pre="HALFTIME" type="button">HALF</button>
+      <button class="pre" data-pre="DRILL" type="button">DRILL</button>
+      <button id="chop" type="button" title="Shuffle the break">CHOP</button>
+      <button id="clr" type="button">CLEAR</button>
+    </div>
+    <div class="tr">
+      <button id="full" type="button">FULL SCREEN</button>
+      <a href="./#play" class="exit">EXIT</a>
+    </div>
+  </header>
+
+  <aside class="crate panel">
+    <div class="ph"><span>// CRATE</span><span class="dim">TICK = IN THE MIX · NAME = PREVIEW</span></div>
+    <div class="clist" id="crate"></div>
+    <div class="ph"><span>// ARCHIVES</span><span class="dim">LIVE</span></div>
+    <canvas class="scopes" id="scopes"></canvas>
+  </aside>
+
+  <section class="mid">
+    <div class="mon panel" id="mon">
+      <canvas id="vdj"></canvas>
+      <div class="pv" id="pv" hidden></div>
+      <div class="mo tl"><span id="mproj">PROJECT # 00</span><span class="dim">///</span></div>
+      <div class="mo tr2"><span id="mmode">M1</span></div>
+      <div class="mo bl"><span id="mtc">00:00:00</span></div>
+      <div class="mo br"><span id="mclip"></span></div>
+      <div class="pvbar" id="pvbar" hidden><span id="pvt"></span><button id="samp" type="button">SAMPLE IT</button><button id="pvx" type="button">STOP PREVIEW</button></div>
+      <div class="hint" id="hint"><b>SPACE</b> TO PLAY · PADS ON <b>1-4 Q-R A-F Z-V</b> · HOLD <b>6 7 8 9 0</b> FOR EFFECTS</div>
+    </div>
+    <div class="under">
+      <div class="globe panel"><canvas id="globe"></canvas></div>
+      <div class="read panel" id="read"></div>
+    </div>
+  </section>
+
+  <aside class="side panel">
+    <div class="ph"><span>// PADS</span><span class="banks" id="banks"></span></div>
+    <div class="pads" id="pads"></div>
+    <div class="ph"><span>// HOLD</span><span class="dim">MANGLES SOUND AND PICTURE</span></div>
+    <div class="holds" id="holds"></div>
+    <div class="ph"><span>// CONTROL</span><span class="dim">DRAG · DOUBLE-CLICK RESETS</span></div>
+    <div class="knobs" id="knobs"></div>
+  </aside>
+
+  <section class="seq panel" id="seq"></section>
+</div>
+<script type="module" src="synth/main.js"></script>
+</body>
+</html>

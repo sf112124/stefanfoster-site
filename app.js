@@ -535,6 +535,30 @@ function renderAbout() {
     requestAnimationFrame(loop);
   })(t0);
 }
+// play: the things that aren't quite the portfolio, all in one place
+function renderPlay() {
+  const rows = [
+    ["synth", "Synth-folio", "A jungle sequencer. You make the drum and bass, and the beat cuts the work together live."],
+    ["rpg", "Poke-folio", "Walk the valley with AI, Photoshop or Premiere. Find each project in the long grass and beat it to see it."],
+    ["crawl", "Web Crawler", touch ? "Let the spider out and fight it with a ship. Needs a mouse, so it's desktop only." : "Let the spider out, then fly the ship and shoot it off the site. WASD to fly, mouse to aim."],
+    ["#ai-experiments", "Ai Experiments", "Short films I make with AI."],
+  ];
+  vin.innerHTML = `<div class="astage"><article class="acard pcard">
+      <i class="ashine" aria-hidden="true"></i>
+      <p class="akick mono">Play</p>
+      <ol class="plist">${rows.map(([h, n, d], i) => {
+        const inner = `<span class="pn mono">${String(i + 1).padStart(2, "0")}</span><b class="pt">${esc(n)}</b><span class="pd">${esc(d)}</span><span class="pgo mono">${h === "crawl" ? (touch ? "Desktop only" : "Let it out →") : "Open →"}</span>`;
+        return `<li>${h === "crawl" ? `<button type="button" class="prow" id="pcrawl" ${touch ? "disabled" : ""}>${inner}</button>` : `<a class="prow" href="${h}">${inner}</a>`}</li>`;
+      }).join("")}</ol>
+    </article></div>`;
+  $("vt").textContent = "Play"; page = null;
+  document.body.classList.add("isabout");
+  const c = $("pcrawl");
+  if (c && !touch) c.addEventListener("click", () => {
+    document.body.classList.add("crawl"); goHome();
+    setTimeout(() => { if (!$("hole").classList.contains("open")) $("hole").click(); setTimeout(() => { if (!$("pad").classList.contains("open")) $("pad").click(); }, 900); }, 700);
+  });
+}
 function countUp(el) {
   if (reduce) return;
   const src = el.dataset.count, nums = [...src.matchAll(/\d+(\.\d+)?/g)];
@@ -563,9 +587,10 @@ function route() {
   else if (history.state?.d == null) { depth += 1; history.replaceState({ d: depth }, ""); }
   else depth = history.state.d;
   const i = PROJECTS.findIndex((p) => p.slug === h);
-  if (i >= 0 || h === "about") enter(true);
+  if (i >= 0 || h === "about" || h === "play") enter(true);
   if (i >= 0) { renderProject(i); open(); }
   else if (h === "about") { renderAbout(); open(); }
+  else if (h === "play") { renderPlay(); open(); }
   else close();
 }
 function open() {
