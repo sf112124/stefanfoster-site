@@ -3,7 +3,7 @@
 // snares flash it, and the held DJ controls stutter, double, reverse and freeze it. None of it makes a sound.
 const VS = "attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}";
 const COMP = `precision highp float;varying vec2 v;
-uniform sampler2D A,B,F;uniform vec4 ta,tb;uniform float hasA,hasB,mode,x,t,kick,snr,bass,hat,chaos,seed,crush,tiles,segs,bright,lo,mi,hi,react,trails,mirror;
+uniform sampler2D A,B,F;uniform vec4 ta,tb;uniform float hasA,hasB,mode,x,t,kick,snr,bass,hat,chaos,seed,crush,tiles,segs,bright,lo,mi,hi,react,trails,mirror,fspace,fpitch,fflange;
 float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7))+seed*13.7)*43758.5453);}
 float lum(vec3 c){return dot(c,vec3(.299,.587,.114));}
 vec2 mir(vec2 u){return 1.-abs(1.-mod(u,2.));}
@@ -19,6 +19,7 @@ void main(){
   u=rot(u,sin(t*.7)*mi*.18*react);
   u+=(rr>0.?cc/rr:vec2(0.))*sin(rr*38.-t*9.)*lo*.012*react;
   u+=vec2(hs(vec2(floor(u.y*60.),floor(t*30.)))-.5,0.)*hi*.03*react;
+  u=(u-.5)*pow(2.,-fpitch*.8)+.5;u=rot(u,fpitch*.6);u.x+=sin(u.y*28.+t*9.)*fflange*.05;u.y+=sin(u.x*17.+t*5.)*fflange*.02;
   if(crush>.01){float g=mix(220.,10.,crush);u=(floor(u*g)+.5)/g;}
   vec3 col;int m=int(mode+.5);
   if(m==0){float g=mix(6.,48.,chaos);vec2 q=floor(u*g);float n=hs(q);float e=smoothstep(x-.06,x+.06,n);vec2 d=(vec2(hs(q+1.),hs(q+2.))-.5)*(1.-abs(x*2.-1.))*.08;col=mix(sb(u+d),sa(u-d),e);}
@@ -32,14 +33,17 @@ void main(){
   col=mix(col,1.-col,snr*step(.75,chaos));
   col=min(col*(1.+lo*.18*react+kick*.08),vec3(1.));
   if(trails>.5)col=mix(col,texture2D(F,(v-.5)*.982+.5).rgb,.62);
+  col=mix(col,texture2D(F,rot((v-.5)*.955+.5,.01)).rgb,fspace*.86);
   gl_FragColor=vec4(col*bright,1.);
 }`;
-const POST = `precision highp float;varying vec2 v;uniform sampler2D S;uniform float phos,flash,dark,therm,mono,inv,pix,post,edge,hi,react;
+const POST = `precision highp float;varying vec2 v;uniform sampler2D S;uniform float phos,flash,dark,therm,mono,inv,pix,post,edge,hi,react,ffilt;
 float lum(vec3 c){return dot(c,vec3(.299,.587,.114));}
 vec3 ramp(float L){return mix(mix(vec3(.035,.06,.03),vec3(.30,.47,.14),smoothstep(0.,.5,L)),vec3(.78,.94,.52),smoothstep(.48,1.,L));}
 vec3 heat(float L){return L<.25?mix(vec3(.02,0.,.08),vec3(.35,0.,.55),L*4.):L<.5?mix(vec3(.35,0.,.55),vec3(.95,.1,.2),(L-.25)*4.):L<.75?mix(vec3(.95,.1,.2),vec3(1.,.6,0.),(L-.5)*4.):mix(vec3(1.,.6,0.),vec3(1.,1.,.85),(L-.75)*4.);}
 void main(){vec2 u=v;if(pix>.5){float g=mix(90.,26.,hi*react);u=(floor(u*g)+.5)/g;}
 vec3 c=texture2D(S,u).rgb;
+if(ffilt<-.02){float r=-ffilt*14./640.;vec3 s=c;for(int i=0;i<8;i++){float a=float(i)*.785;s+=texture2D(S,u+vec2(cos(a),sin(a))*r).rgb;}c=s/9.;}
+if(ffilt>.02){vec2 o=vec2(1.5/640.);float lx=lum(texture2D(S,u+vec2(o.x,0.)).rgb)-lum(texture2D(S,u-vec2(o.x,0.)).rgb),ly=lum(texture2D(S,u+vec2(0.,o.y)).rgb)-lum(texture2D(S,u-vec2(0.,o.y)).rgb);c=mix(c,vec3(clamp(length(vec2(lx,ly))*7.,0.,1.)),ffilt);}
 if(edge>.5){vec2 o=vec2(1.5/640.);float lx=lum(texture2D(S,u+vec2(o.x,0.)).rgb)-lum(texture2D(S,u-vec2(o.x,0.)).rgb),ly=lum(texture2D(S,u+vec2(0.,o.y)).rgb)-lum(texture2D(S,u-vec2(0.,o.y)).rgb);c=vec3(clamp(length(vec2(lx,ly))*6.,0.,1.))*mix(vec3(1.),c*2.,.5);}
 if(post>.5)c=floor(c*4.+.5)/4.;
 if(mono>.5)c=vec3(smoothstep(.25,.75,lum(c)));
@@ -135,7 +139,7 @@ export class Blender {
       gl.uniform1f(U.hasA, hA ? 1 : 0); gl.uniform1f(U.hasB, hB ? 1 : 0); gl.uniform1f(U.mode, this.mode); gl.uniform1f(U.x, this.x); gl.uniform1f(U.t, now / 1000);
       const lz = s.lfo * s.depth;
       gl.uniform1f(U.kick, f.kick); gl.uniform1f(U.snr, f.snr > .6 ? 1 : 0); gl.uniform1f(U.bass, Math.min(1, f.bass * (.4 + s.chaos) + (s.dest === 1 ? Math.abs(lz) * .6 : 0))); gl.uniform1f(U.hat, f.hat);
-      gl.uniform1f(U.chaos, this.react); gl.uniform1f(U.seed, f.seed); gl.uniform1f(U.crush, Math.min(1, s.crush + (s.dest === 2 ? Math.max(0, lz) * .6 : 0)));
+      gl.uniform1f(U.chaos, this.react); gl.uniform1f(U.seed, f.seed); gl.uniform1f(U.crush, 0); const fx = s.fx || {}; gl.uniform1f(U.fspace, fx.space || 0); gl.uniform1f(U.fpitch, fx.pitch || 0); gl.uniform1f(U.fflange, fx.flange || 0);
       gl.uniform1f(U.lo, s.lo || 0); gl.uniform1f(U.mi, s.mi || 0); gl.uniform1f(U.hi, s.hi || 0); gl.uniform1f(U.react, this.react); gl.uniform1f(U.trails, this.look.trails); gl.uniform1f(U.mirror, this.look.mirror);
       gl.uniform1f(U.tiles, hold === "x2" ? 2 : hold === "x4" ? 4 : 1); gl.uniform1f(U.segs, f.segs); gl.uniform1f(U.bright, tape ? Math.max(.2, 1 - (now - this.ht) / 900) : 1);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); this.fb = [fn, fo];
@@ -151,14 +155,14 @@ export class Blender {
     else if (this.stut > now) src = back(Math.floor(now / 30) % 3);
     // to the screen
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, this.cv.width, this.cv.height); const Q = this.P.post; gl.useProgram(Q.p);
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, src); gl.uniform1i(Q.u.S, 0); gl.uniform1f(Q.u.phos, this.look.phos); ["therm", "mono", "inv", "pix", "post", "edge"].forEach((k) => gl.uniform1f(Q.u[k], this.look[k])); gl.uniform1f(Q.u.hi, s.hi || 0); gl.uniform1f(Q.u.react, this.react);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, src); gl.uniform1i(Q.u.S, 0); gl.uniform1f(Q.u.phos, this.look.phos); ["therm", "mono", "inv", "pix", "post", "edge"].forEach((k) => gl.uniform1f(Q.u[k], this.look[k])); gl.uniform1f(Q.u.hi, s.hi || 0); gl.uniform1f(Q.u.react, this.react); gl.uniform1f(Q.u.ffilt, (s.fx && s.fx.filter) || 0);
     const strobe = this.strobe > now ? (Math.floor(now / 40) % 2) * .35 : 0; gl.uniform1f(Q.u.flash, Math.max(f.flash, strobe));
-    gl.uniform1f(Q.u.dark, (hold === "gate" ? (Math.floor(now / (s.sd * 500)) % 2) * .85 : 0) + (s.dest === 3 ? Math.max(0, lz(s)) * .6 : 0));
+    gl.uniform1f(Q.u.dark, (hold === "gate" ? (Math.floor(now / (s.sd * 500)) % 2) * .85 : 0) + (s.dest === 2 ? Math.max(0, lz(s)) * .6 : 0));
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     f.kick *= .85; f.snr *= .7; f.bass *= .93; f.hat *= .8; f.flash *= .8;
     function lz(s) { return s.lfo * s.depth; }
   }
-  blit(t) { const gl = this.gl, Q = this.P.post; gl.viewport(0, 0, RES, RES); gl.useProgram(Q.p); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(Q.u.S, 0); ["phos", "flash", "dark", "therm", "mono", "inv", "pix", "post", "edge"].forEach((k) => gl.uniform1f(Q.u[k], 0)); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
+  blit(t) { const gl = this.gl, Q = this.P.post; gl.viewport(0, 0, RES, RES); gl.useProgram(Q.p); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(Q.u.S, 0); ["phos", "flash", "dark", "therm", "mono", "inv", "pix", "post", "edge", "ffilt"].forEach((k) => gl.uniform1f(Q.u[k], 0)); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); }
 }
 
 // the archive scopes: each part of the mix drawn as a stack of bars

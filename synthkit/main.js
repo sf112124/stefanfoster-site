@@ -1,7 +1,7 @@
 // Synth-folio: the portfolio as a jungle sampler. You play the music; the music blends whatever you throw into the circle.
 import { PROJECTS } from "../projects.js";
 import MEDIA from "../media.js";
-import { Engine, PRESETS, FILMS, FX, LOOPS, BREAKS, BASSV, BARPADS, DRUMPADS, noteName } from "./engine.js";
+import { Engine, PRESETS, FILMS, FX, LOOPS, LOOPROWS, BREAKS, BASSV, BARPADS, DRUMPADS, noteName } from "./engine.js";
 import { Blender, MODES, scopes as mkScopes } from "./vdj.js";
 
 const $ = (id) => document.getElementById(id);
@@ -96,7 +96,7 @@ function setBank(b) { bank = (b + BANKS.length) % BANKS.length; $("banks").query
 const padId = (i) => ["l", "k", "d", "x", "f"][bank] + i;
 function padName(i) { return [LOOPS[i], BARPADS[i][0], DRUMPADS[i][0], FX[i], FILMS[i].n][bank]; }
 function renderPads() {
-  $("pads").innerHTML = Array.from({ length: 16 }, (_, i) => `<button class="pad${bank === LB ? " loop" : ""}${bank === 1 ? " bar" : ""}" type="button" data-i="${i}"><b>${esc(padName(i))}</b><i>${touch ? "" : KEYS[i].toUpperCase()}${bank === LB ? ` · ${["BREAK", "BASS", "MUSIC", "PERC"][i >> 2]}` : bank === 1 ? " · 1 BAR" : ""}</i></button>`).join("");
+  $("pads").innerHTML = Array.from({ length: 16 }, (_, i) => `<button class="pad${bank === LB ? " loop" : ""}${bank === 1 ? " bar" : ""}" type="button" data-i="${i}"><b>${esc(padName(i))}</b><i>${touch ? "" : KEYS[i].toUpperCase()}${bank === LB ? ` · ${LOOPROWS[i >> 2]}` : bank === 1 ? " · 1 BAR" : ""}</i></button>`).join("");
   $("pads").querySelectorAll(".pad").forEach((b) => b.addEventListener("pointerdown", (e) => { e.preventDefault(); hitPad(+b.dataset.i); }));
   loopLights();
 }
@@ -111,19 +111,20 @@ function loopLights() {
 }
 renderPads();
 // ---------------- the DJ controls ----------------
-const HOLDS = [["repeat", "REPEAT", "5"], ["roll", "ROLL", "6"], ["mash", "MASHER", "7", 1], ["x2", "×2", "8", 1], ["x4", "×4", "9", 1], ["half", "HALF", "0", 1], ["tape", "TAPE STOP", "t"], ["rev", "REVERSE", "y"], ["freeze", "FREEZE", "u"], ["gate", "GATE", "i", 1]];
+const HOLDS = [["repeat", "REPEAT", "5"], ["roll", "ROLL", "6"], ["mash", "MASHER", "7", 1], ["half", "HALF", "8", 1], ["tape", "TAPE STOP", "9"], ["rev", "REVERSE", "0"], ["freeze", "FREEZE", "t"], ["gate", "GATE", "y", 1]];
 $("holds").innerHTML = HOLDS.map(([m, n, k, dj]) => `<button class="hold${dj ? " dj" : ""}" type="button" data-m="${m}"><b>${n}</b><i>${touch ? "HOLD" : k.toUpperCase()}</i></button>`).join("");
-let held = null;
-const SEQ = { mash: 1, x2: 1, x4: 1, half: 1 };
+let held = null, holdT = 0;
+const SEQ = { mash: 1, half: 1 };
 async function hold(m) {
   await E.ensure(); if (held === m) return; if (held) unhold(held); held = m;
-  if (SEQ[m]) E.setDJ(m); else if (m === "gate") E.setGate(true); else E.hold(m);
-  V.setHold(m); $("holds").querySelectorAll(".hold").forEach((b) => b.classList.toggle("on", b.dataset.m === m));
+  let wait = 0; if (SEQ[m]) E.setDJ(m); else if (m === "gate") E.setGate(true); else wait = E.hold(m);
+  // the picture waits for the same beat the sound does
+  clearTimeout(holdT); if (wait > .01) holdT = setTimeout(() => held === m && V.setHold(m), wait * 1000); else V.setHold(m); $("holds").querySelectorAll(".hold").forEach((b) => b.classList.toggle("on", b.dataset.m === m));
 }
 function unhold(m) {
   if (!held || (m && held !== m)) return; const h = held; held = null;
   if (SEQ[h]) E.setDJ(null); else if (h === "gate") E.setGate(false); else E.release();
-  V.setHold(null); $("holds").querySelectorAll(".hold").forEach((b) => b.classList.remove("on"));
+  clearTimeout(holdT); V.setHold(null); $("holds").querySelectorAll(".hold").forEach((b) => b.classList.remove("on"));
 }
 $("holds").querySelectorAll(".hold").forEach((b) => {
   b.addEventListener("pointerdown", (e) => { e.preventDefault(); b.setPointerCapture(e.pointerId); hold(b.dataset.m); });
@@ -131,13 +132,27 @@ $("holds").querySelectorAll(".hold").forEach((b) => {
 });
 
 // ---------------- knobs ----------------
-const RATES = ["1 BAR", "1/2", "1/4", "1/8", "1/16", "1/32", "1/4T"], DESTS = ["FILTER", "PITCH", "CRUSH", "GATE"], SHAPES = ["SINE", "SQUARE", "RAMP"];
+// ---------------- the six faders: push them, let go, they spring back ----------------
+const FADERS = [["filter", "FILTER", -1, "LP", "HP"], ["space", "SPACE", 0], ["echo", "ECHO", 0], ["pitch", "PITCH", -1, "DOWN", "UP"], ["roll", "ROLL", 0], ["flange", "FLANGE", 0]];
+$("faders").innerHTML = FADERS.map(([k, n, lo, a, b]) => `<div class="fd${lo < 0 ? " bi" : ""}" data-k="${k}"><span class="fv">${lo < 0 ? b : "MAX"}</span><div class="ftr"><i class="ffill"></i><i class="fcap"></i></div><span class="fv">${lo < 0 ? a : ""}</span><b>${n}</b></div>`).join("");
+function drawFader(el, v, lo) { const f = lo < 0 ? (v + 1) / 2 : v, fill = el.querySelector(".ffill"), cap = el.querySelector(".fcap"); cap.style.top = `${(1 - f) * 100}%`; if (lo < 0) { fill.style.top = `${Math.min(f, .5) === f ? 50 : (1 - f) * 100}%`; fill.style.bottom = `${f < .5 ? f * 100 : 50}%`; } else { fill.style.top = `${(1 - f) * 100}%`; fill.style.bottom = "0"; } el.classList.toggle("live", Math.abs(v) > .02); }
+FADERS.forEach(([k, , lo]) => {
+  const el = $("faders").querySelector(`[data-k="${k}"]`), tr = el.querySelector(".ftr"); let raf = 0;
+  const set = (v) => { E.setFx(k, v); drawFader(el, v, lo); if (k === "roll" && (v >= .12) !== !!el._on) { el._on = v >= .12; V.setHold(el._on ? "repeat" : held || null); } };
+  const at = (e) => { const r = tr.getBoundingClientRect(), f = clamp(1 - (e.clientY - r.top) / r.height, 0, 1); return lo < 0 ? f * 2 - 1 : f; };
+  drawFader(el, 0, lo);
+  el.addEventListener("pointerdown", (e) => { e.preventDefault(); cancelAnimationFrame(raf); el.setPointerCapture(e.pointerId); E.ensure().then(() => set(at(e))); });
+  el.addEventListener("pointermove", (e) => { if (el.hasPointerCapture(e.pointerId) && E.ctx) set(at(e)); });
+  const back = () => { const v0 = E.fx[k], t0 = performance.now(); cancelAnimationFrame(raf); const step = (n) => { const k2 = Math.min(1, (n - t0) / 170), v = v0 * (1 - k2) * (1 - k2); set(Math.abs(v) < .01 ? 0 : v); if (k2 < 1) raf = requestAnimationFrame(step); else set(0); }; raf = requestAnimationFrame(step); };
+  el.addEventListener("pointerup", back); el.addEventListener("pointercancel", back);
+});
+
+// ---------------- knobs ----------------
+const RATES = ["1 BAR", "1/2", "1/4", "1/8", "1/16", "1/32", "1/4T"], DESTS = ["FILTER", "PITCH", "GATE"], SHAPES = ["SINE", "SQUARE", "RAMP"];
 const KN = [
-  ["filter", "FILTER", -1, 1, 0, (v) => (Math.abs(v) < .02 ? "OPEN" : v < 0 ? `LP ${Math.round(20000 * Math.pow(2, v * 9))}` : `HP ${Math.round(10 * Math.pow(2, v * 10.5))}`), 1],
-  ["res", "RESONANCE", 0, 1, .2], ["crush", "CRUSH", 0, 1, 0], ["delay", "DUB DELAY", 0, 1, .12], ["drill", "DRILL", 0, 1, 0, (v) => (v < .01 ? "OFF" : Math.round(v * 100))],
-  ["swing", "SWING", 0, 1, 0], ["react", "PICTURE REACT", 0, 1, .7], ["pitch", "BREAK TUNE", -12, 12, 0, (v) => `${v > 0 ? "+" : ""}${Math.round(v)} ST`, 0, 1],
+  ["react", "PICTURE REACT", 0, 1, .7], ["pitch", "BREAK TUNE", -12, 12, 0, (v) => `${v > 0 ? "+" : ""}${Math.round(v)} ST`, 0, 1],
   ["bassv", "BASS SOUND", 0, 4, 0, (v) => BASSV[v], 0, 1, 1], ["tone", "BASS TONE", 0, 1, .5], ["rate", "LFO RATE", 0, 6, 3, (v) => RATES[v], 0, 1, 1], ["depth", "LFO DEPTH", 0, 1, 0, (v) => (v < .01 ? "OFF" : Math.round(v * 100))],
-  ["dest", "LFO TO", 0, 3, 0, (v) => DESTS[v], 0, 1, 1], ["shape", "LFO SHAPE", 0, 2, 0, (v) => SHAPES[v], 0, 1, 1], ["vol", "VOLUME", 0, 1, .72],
+  ["dest", "LFO TO", 0, 2, 0, (v) => DESTS[v], 0, 1, 1], ["shape", "LFO SHAPE", 0, 2, 0, (v) => SHAPES[v], 0, 1, 1], ["vol", "VOLUME", 0, 1, .7],
 ];
 $("knobs").innerHTML = KN.map(([k, n, , , , , , , cyc]) => `<div class="kn${cyc ? " cyc" : ""}" data-k="${k}"><span class="kl">${n}</span><span class="kb">${"<i></i>".repeat(16)}</span><span class="kv"></span></div>`).join("");
 function showKnob(k) {
@@ -292,7 +307,7 @@ function frame(now) {
       RX[k] = d > RX[k] ? d : RX[k] * (k === "hi" ? .82 : .9);
     });
   }
-  const st = { lo: Math.min(1.2, RX.lo * 2.2), mi: Math.min(1, RX.mi * 2), hi: Math.min(1, RX.hi * 2.5), playing: E.playing, sd, chaos: V.react, crush: E.k.crush, lfo: C ? E.lfoAt(at) : 0, depth: E.k.depth, dest: E.k.dest };
+  const st = { lo: Math.min(1.2, RX.lo * 2.2), mi: Math.min(1, RX.mi * 2), hi: Math.min(1, RX.hi * 2.5), playing: E.playing, sd, chaos: V.react, crush: 0, fx: E.fx, lfo: C ? E.lfoAt(at) : 0, depth: E.k.depth, dest: E.k.dest };
   V.draw(now, st); SC.draw(E.scopes);
   const dk = `${V.ia}.${V.ib}.${V.layers.length}`; if (dk !== lastDeck) { lastDeck = dk; $("deck").querySelectorAll(".slot[data-i]").forEach((s) => { const i = +s.dataset.i; s.classList.toggle("a", i === V.ia); s.classList.toggle("b", i === V.ib && V.ib !== V.ia); s.dataset.r = i === V.ia ? "A" : "B"; }); }
   let lvl = 0; if (E.out) { E.out.getFloatTimeDomainData(lvBuf); let s = 0; for (let i = 0; i < lvBuf.length; i++) s += lvBuf[i] * lvBuf[i]; lvl = Math.sqrt(s / lvBuf.length) * 3.2; }
