@@ -55,9 +55,9 @@ export class Engine {
     this.G = G;
     // buses: drums glued and a touch driven, like it's coming off a sampler
     this.mix = G(1); this.drums = G(.7); this.brkBus = G(.72); this.bassBus = G(.72); this.padBus = G(.65); this.voxBus = G(.85);
-    const shaper = (drive) => { const s = C.createWaveShaper(), c = new Float32Array(2048); for (let i = 0; i < 2048; i++) { const x = i / 1023.5 - 1; c[i] = Math.tanh(x * drive) / Math.tanh(drive); } s.curve = c; s.oversample = "2x"; return s; };
-    const glue = C.createDynamicsCompressor(); glue.threshold.value = -16; glue.ratio.value = 3; glue.attack.value = .01; glue.release.value = .12;
-    const dsat = shaper(1.5); this.drums.connect(glue); this.brkBus.connect(glue); glue.connect(dsat); dsat.connect(this.mix);
+    const shaper = (drive) => { const s = C.createWaveShaper(), c = new Float32Array(2048); for (let i = 0; i < 2048; i++) { const x = i / 1023.5 - 1; c[i] = Math.tanh(x * drive) / Math.tanh(drive); } s.curve = c; return s; };
+    // no compressors anywhere: each one holds the sound back a few milliseconds, which you feel when you play the pads
+    const dsat = shaper(1.6); this.drums.connect(dsat); this.brkBus.connect(dsat); dsat.connect(this.mix);
     const bsat = shaper(1.8), bhp = C.createBiquadFilter(); bhp.type = "highpass"; bhp.frequency.value = 28; this.bassLP = C.createBiquadFilter(); this.bassLP.type = "lowpass"; this.bassLP.Q.value = .9;
     this.bassBus.connect(this.bassLP); this.bassLP.connect(bsat); bsat.connect(bhp); bhp.connect(this.mix);
     this.padBus.connect(this.mix); this.voxBus.connect(this.mix);
@@ -70,10 +70,8 @@ export class Engine {
     (this.mg ? (this.mix.connect(this.mg), this.mg) : this.mix).connect(this.hp); this.hp.connect(this.lp); this.lp.connect(this.gateG); this.gateG.connect(this.trem); this.trem.connect(this.post); this.post.connect(this.master);
     this.dsend = G(this.k.delay); this.dl = C.createDelay(2); this.dfb = G(.48); this.dlp = C.createBiquadFilter(); this.dlp.type = "lowpass"; this.dlp.frequency.value = 2600; this.dhp = C.createBiquadFilter(); this.dhp.type = "highpass"; this.dhp.frequency.value = 250;
     this.post.connect(this.dsend); this.dsend.connect(this.dl); this.dl.connect(this.dlp); this.dlp.connect(this.dhp); this.dhp.connect(this.dfb); this.dfb.connect(this.dl); this.dhp.connect(this.master);
-    const comp = C.createDynamicsCompressor(); comp.threshold.value = -12; comp.ratio.value = 3; comp.attack.value = .006; comp.release.value = .18;
-    const lim = C.createDynamicsCompressor(); lim.threshold.value = -3; lim.ratio.value = 20; lim.attack.value = .001; lim.release.value = .08;
-    const clip = shaper(1.1); this.out = C.createAnalyser(); this.out.fftSize = 1024; this.out.minDecibels = -80; this.out.maxDecibels = -12; this.out.smoothingTimeConstant = .35;
-    this.master.connect(comp); comp.connect(lim); lim.connect(clip); clip.connect(this.out); this.out.connect(C.destination);
+    const clip = shaper(1.4); this.out = C.createAnalyser(); this.out.fftSize = 1024; this.out.minDecibels = -80; this.out.maxDecibels = -12; this.out.smoothingTimeConstant = .35;
+    this.master.connect(clip); clip.connect(C.destination); clip.connect(this.out);
     this.scopes = [this.drums, this.brkBus, this.bassBus, this.padBus, this.post].map((b) => { const a = C.createAnalyser(); a.fftSize = 512; b.connect(a); return a; });
     // the reese: six saws spread wide, two filters, some drive, and a clean sine underneath
     this.reese = { amp: G(0), o: [] };
@@ -222,9 +220,11 @@ export class Engine {
   }
   // ---------------- pads ----------------
   // ids: "k3" a one-bar break (starts on the next beat), "d2" a drum hit, "x5" an effect, "f7" a film chop; all but breaks play the moment you hit them
-  async pad(id, t) {
-    await this.ensure(); const C = this.ctx; if (C.state !== "running") C.resume();
-    const now = C.currentTime + .004, k = id[0], i = +id.slice(1);
+  pad(id, t) {
+    // straight through once the sounds are in: no waiting on anything
+    if (!this.B.drums) return this.ensure().then(() => this.pad(id, t));
+    const C = this.ctx; if (C.state !== "running") C.resume();
+    const now = C.currentTime, k = id[0], i = +id.slice(1);
     if (k === "k") { t = this.breakBar(i); }
     else {
       t = now;
@@ -253,7 +253,7 @@ export class Engine {
   }
   // hear a step as you place it
   async audition(lane, val, rev) {
-    await this.ensure(); const C = this.ctx; if (C.state !== "running") C.resume(); const t = C.currentTime + .005;
+    await this.ensure(); const C = this.ctx; if (C.state !== "running") C.resume(); const t = C.currentTime;
     if (lane === "brk") this.slice(this.pat.brkSel, val, t, this.sliceLen(this.pat.brkSel) * 1.2, rev);
     else if (lane === "bass") this.bassNote(val, t, .32, false);
     else this.hit(lane, t, lane === "ghost" ? .45 : .9);
