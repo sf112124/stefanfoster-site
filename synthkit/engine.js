@@ -1,5 +1,5 @@
 // The sound of Synth-folio. Real breaks (a real Amen, three bars of it, plus four more), a jungle kit, sub and 808
-// basses, rave stabs and hoovers, chops from Stefan's films, and whatever you record into the mic. The synth only
+// basses, rave stabs and hoovers, and chops from Stefan's films. The synth only
 // makes the reese, the pads and the bells.
 import { DRUMS, FXS, BASSES } from "./samples.js";
 export const STEPS = 16;
@@ -20,6 +20,13 @@ export const FILMS = [
   ["relax", "RELAX 1", 6.95946], ["relax", "RELAX 2", 7.53941], ["relax", "RELAX 3", 8.11937], ["relax", "RELAX 4", 8.69932],
 ].map(([p, n, o]) => ({ p, n, o, d: .55 }));
 export const FX = Object.keys(FXS);
+// the BREAKS pads: one bar each, straight, edited, reversed or rolled
+const ED = [0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 10, 11, 12, 12, 14, 4], HALF = [0, 1, 2, 3, 2, 3, 0, 1, 4, 5, 6, 7, 6, 13, 14, 15], ROLL = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 12, 12, 12], RV = Array(16).fill(1), DBL = [0, 2, 4, 6, 8, 10, 12, 14, 0, 2, 4, 6, 8, 10, 12, 14];
+export const BARPADS = [["AMEN 1", "AMEN 1"], ["AMEN 2", "AMEN 2"], ["AMEN 3", "AMEN 3"], ["AMEN EDIT", "AMEN 1", ED], ["AMEN HALF", "AMEN 2", HALF], ["AMEN ROLL", "AMEN 1", ROLL], ["AMEN REVERSE", "AMEN 1", null, RV], ["AMEN DOUBLE", "AMEN 3", DBL],
+  ["RAW", "RAW"], ["RAW EDIT", "RAW", ED], ["PLEAD", "PLEAD"], ["PLEAD HALF", "PLEAD", HALF], ["STACK", "STACK"], ["STACK EDIT", "STACK", ED], ["STOMP", "STOMP"], ["STOMP ROLL", "STOMP", ROLL]];
+// the DRUMS pads: hits that play the moment you touch them
+export const DRUMPADS = [["KICK", "hit", "kick"], ["AMEN KICK", "sl", "AMEN 1", 0], ["SNARE", "hit", "snare"], ["AMEN SNARE", "sl", "AMEN 1", 4], ["GHOST", "hit", "ghost", .7], ["AMEN GHOST", "sl", "AMEN 1", 7], ["HAT", "hit", "hat", .8], ["OPEN HAT", "hit", "ohat"],
+  ["RAW KICK", "sl", "RAW", 0], ["RAW SNARE", "sl", "RAW", 4], ["PLEAD SNARE", "sl", "PLEAD", 4], ["STOMP KICK", "sl", "STOMP", 0], ["RIDE", "fx", "RIDE", .9], ["CRASH", "fx", "CRASH"], ["SUB DROP", "fx", "SUB DROP"], ["REV BASS", "fx", "REV BASS"]];
 export const LOOPS = ["AMEN", "RAW", "PLEAD", "STACK", "808 A", "808 B", "REESE", "WAH", "PAD", "STABS", "HOOVER", "CHOIR", "RIDE", "HATS", "DRILL", "SWELL"];
 
 export const blank = () => ({ brkSel: 0, kick: Array(16).fill(0), snare: Array(16).fill(0), ghost: Array(16).fill(0), hat: Array(16).fill(0), ohat: Array(16).fill(0), brk: Array(16).fill(-1), rev: Array(16).fill(0), bass: Array(16).fill(-1), pads: Array.from({ length: 16 }, () => []) });
@@ -37,9 +44,9 @@ const RAW = Object.fromEntries(Object.entries(FILES).map(([k, u]) => [k, fetch(u
 export class Engine {
   constructor() {
     this.bpm = 172; this.playing = false; this.step = 0; this.ms = 0; this.q = 0; this.bar = 0; this.ev = []; this.pat = PRESETS.JUNGLE(); this.cur = this.pat;
-    this.k = { filter: 0, res: .2, crush: 0, delay: .12, drill: 0, swing: 0, chaos: .55, pitch: 0, tone: .5, bassv: 0, rate: 3, depth: 0, dest: 0, shape: 0, vol: .72 };
+    this.k = { filter: 0, res: .2, crush: 0, delay: .12, drill: 0, swing: 0, chaos: .55, pitch: 0, tone: .5, bassv: 0, react: .7, rate: 3, depth: 0, dest: 0, shape: 0, vol: .72 };
     this.mutate = false; this.rec = false; this.loops = [null, null, null, null]; this.pend = [undefined, undefined, undefined, undefined];
-    this.dj = null; this.gate = false; this.voice = null; this.ready = null; this.B = {};
+    this.dj = null; this.gate = false; this.ready = null; this.B = {};
   }
   ensure() { return this.ready || (this.ready = this.init()); }
   async init() {
@@ -65,9 +72,9 @@ export class Engine {
     this.post.connect(this.dsend); this.dsend.connect(this.dl); this.dl.connect(this.dlp); this.dlp.connect(this.dhp); this.dhp.connect(this.dfb); this.dfb.connect(this.dl); this.dhp.connect(this.master);
     const comp = C.createDynamicsCompressor(); comp.threshold.value = -12; comp.ratio.value = 3; comp.attack.value = .006; comp.release.value = .18;
     const lim = C.createDynamicsCompressor(); lim.threshold.value = -3; lim.ratio.value = 20; lim.attack.value = .001; lim.release.value = .08;
-    const clip = shaper(1.1); this.out = C.createAnalyser(); this.out.fftSize = 1024;
+    const clip = shaper(1.1); this.out = C.createAnalyser(); this.out.fftSize = 1024; this.out.minDecibels = -80; this.out.maxDecibels = -12; this.out.smoothingTimeConstant = .35;
     this.master.connect(comp); comp.connect(lim); lim.connect(clip); clip.connect(this.out); this.out.connect(C.destination);
-    this.scopes = [this.drums, this.brkBus, this.bassBus, this.padBus, this.voxBus].map((b) => { const a = C.createAnalyser(); a.fftSize = 512; b.connect(a); return a; });
+    this.scopes = [this.drums, this.brkBus, this.bassBus, this.padBus, this.post].map((b) => { const a = C.createAnalyser(); a.fftSize = 512; b.connect(a); return a; });
     // the reese: six saws spread wide, two filters, some drive, and a clean sine underneath
     this.reese = { amp: G(0), o: [] };
     const rl1 = C.createBiquadFilter(), rl2 = C.createBiquadFilter(); [rl1, rl2].forEach((f) => { f.type = "lowpass"; f.Q.value = 1.2; f.frequency.value = 700; }); this.reese.f = [rl1, rl2];
@@ -174,7 +181,6 @@ export class Engine {
       const d = p.bass[s], tied = s > 0 && p.bass[s - 1] === d; let n = 1; while (s + n < 16 && p.bass[s + n] === d) n++;
       if (!tied || this.dj) { this.bassNote(d, t, n * sd, s > 0 && p.bass[s - 1] >= 0 && !this.dj); this.emit("bass", t, { d, n }); }
     }
-    p.pads[s].forEach((id) => this.pad(id, t, true));
     this.loops.forEach((id) => id != null && this.loopStep(id, s, t, sd));
   }
   // ---------------- voices ----------------
@@ -196,6 +202,7 @@ export class Engine {
     const buf = rev ? this.B.drumsRev : this.B.drums, off = rev ? buf.duration - (m.o + (i + 1) * L) : m.o + i * L;
     const h = this.sp(buf, off, play, t, this.brkBus, v, rate, .005);
     if (h) { this.lfoG.p.connect(h.s.detune); h.s.onended = () => { try { this.lfoG.p.disconnect(h.s.detune); } catch (e) {} }; }
+    return h;
   }
   stopBass(t) { if (this.bs) { try { this.bs.g.gain.cancelScheduledValues(t); this.bs.g.gain.setTargetAtTime(0, t, .012); this.bs.s.stop(t + .1); } catch (e) {} this.bs = null; } }
   bassNote(d, t, len, glide, deg = null) {
@@ -214,16 +221,35 @@ export class Engine {
     s.start(t, m.o, m.d); s.stop(t + Math.min(m.d / rate, len + .3)); this.bs = { s, g, end: t + len };
   }
   // ---------------- pads ----------------
-  // ids: "b3" a slice of the current break, "f7" a film chop, "x2" an effect, "v0" a chop of what you recorded
-  async pad(id, t, fromSeq) {
+  // ids: "k3" a one-bar break (starts on the next beat), "d2" a drum hit, "x5" an effect, "f7" a film chop; all but breaks play the moment you hit them
+  async pad(id, t) {
     await this.ensure(); const C = this.ctx; if (C.state !== "running") C.resume();
-    t = t ?? C.currentTime + .004; const k = id[0], i = +id.slice(1);
-    if (k === "b") this.slice(this.pat.brkSel, i, t, this.sliceLen(this.pat.brkSel) * 1.3, 0);
-    else if (k === "f" && this.B.films) { const f = FILMS[i]; this.sp(this.B.films, f.o, f.d, t, this.padBus, 1, 1, .02); }
-    else if (k === "x") { const m = FXS[FX[i]]; this.sp(this.B.fx, m.o, m.d, t, this.padBus, .9, 1, .03); }
-    else if (k === "v" && this.voice && this.voice.cuts[i]) { const [o, d] = this.voice.cuts[i]; this.sp(this.voice.b, o, d, t, this.voxBus, 1, 1, .015); }
-    if (!fromSeq && this.rec && this.playing) { const st = ((Math.round(this.ms - (this.nextT - t) / this.sd()) % 16) + 16) % 16; if (!this.pat.pads[st].includes(id)) this.pat.pads[st].push(id); this.emit("recd", t, st); }
+    const now = C.currentTime + .004, k = id[0], i = +id.slice(1);
+    if (k === "k") { t = this.breakBar(i); }
+    else {
+      t = now;
+      if (k === "d") this.drumPad(i, t);
+      else if (k === "x") { const m = FXS[FX[i]]; this.sp(this.B.fx, m.o, m.d, t, this.padBus, .9, 1, .03); }
+      else if (k === "f" && this.B.films) { const f = FILMS[i]; this.sp(this.B.films, f.o, f.d, t, this.padBus, 1, 1, .02); }
+    }
     this.emit("pad", t, { id, p: k === "f" ? FILMS[i].p : null });
+  }
+  // one bar of a break, lined up to the next beat, tuned to the tempo; a new one cuts the last
+  breakBar(i) {
+    const C = this.ctx, sd = this.sd(), [name, src, order, rev] = BARPADS[i], bk = BREAKS.indexOf(src);
+    let t = C.currentTime + .01;
+    if (this.playing) { let k = 0; while ((this.ms + k) % 4 !== 0) k++; t = Math.max(t, this.nextT + k * sd); }
+    (this.bars || []).forEach((h) => { try { h.g.gain.cancelScheduledValues(t); h.g.gain.setTargetAtTime(0, t, .004); h.s.stop(t + .03); } catch (e) {} });
+    this.bars = [];
+    for (let s = 0; s < 16; s++) { const sl = order ? order[s] : s; if (sl < 0) continue; const h = this.slice(bk, sl, t + s * sd, sd, rev ? rev[s] : 0, .95); if (h) this.bars.push(h); this.emit("brk", t + s * sd, { sl, s, rv: rev ? rev[s] : 0 }); if (s % 4 === 0) this.emit(s === 0 ? "kick" : "snare", t + s * sd, 1); }
+    return t;
+  }
+  drumPad(i, t) {
+    const [, kind, a, b] = DRUMPADS[i];
+    if (kind === "hit") this.hit(a, t, b || 1);
+    else if (kind === "fx") { const m = FXS[a]; this.sp(this.B.fx, m.o, Math.min(m.d, b || m.d), t, this.drums, .8, 1, .03); }
+    else if (kind === "sl") { const bk = BREAKS.indexOf(a), m = DRUMS[a], L = m.d / 16; this.sp(this.B.drums, m.o + b * L, L * 1.6, t, this.brkBus, 1, 1, .02); }
+    this.emit(i < 2 || i === 7 || i === 11 ? "kick" : "snare", t, 1);
   }
   // hear a step as you place it
   async audition(lane, val, rev) {
@@ -265,43 +291,9 @@ export class Engine {
     else this.mg.port.postMessage({ mode });
   }
   release() { this.mg && this.mg.port.postMessage({ mode: "off" }); }
-  // ---------------- the mic: record something, it gets chopped onto sixteen pads ----------------
-  async micStart() {
-    await this.ensure(); const C = this.ctx; if (C.state !== "running") await C.resume();
-    if (!this.mic) {
-      const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-      const src = C.createMediaStreamSource(st), tap = new AudioWorkletNode(C, "tap", { processorOptions: { sec: 10 } }), z = this.G(0);
-      src.connect(tap); tap.connect(z); z.connect(C.destination); this.mic = { st, tap };
-    }
-    this.micT = C.currentTime;
-  }
-  micStop() {
-    return new Promise((res) => {
-      if (!this.mic) return res(null); const C = this.ctx, n = Math.min(Math.round((C.currentTime - this.micT + .15) * C.sampleRate), C.sampleRate * 10);
-      this.mic.tap.port.onmessage = (e) => {
-        const d = e.data; let pk = 0; for (let i = 0; i < d.length; i++) pk = Math.max(pk, Math.abs(d[i]));
-        if (pk < .01 || d.length < C.sampleRate * .2) return res(null);
-        const b = C.createBuffer(1, d.length, C.sampleRate), o = b.getChannelData(0); for (let i = 0; i < d.length; i++) o[i] = (d[i] / pk) * .92;
-        this.voice = { b, cuts: chop(o, C.sampleRate) }; res(this.voice);
-      };
-      this.mic.tap.port.postMessage({ n });
-    });
-  }
   clear() { const s = this.pat.brkSel; this.pat = blank(); this.pat.brkSel = s; this.cur = this.pat; }
 }
 
-// sixteen chops at the strongest onsets, the way you'd slice a vocal by hand
-function chop(x, sr) {
-  const hop = 256, n = Math.floor(x.length / hop), e = new Float32Array(n);
-  for (let i = 0; i < n; i++) { let s = 0; for (let k = 0; k < hop; k++) s += x[i * hop + k] ** 2; e[i] = Math.log(s + 1e-6); }
-  const on = []; for (let i = 2; i < n - 1; i++) { const d = e[i] - e[i - 2]; if (d > 1.6 && e[i] > -6) on.push([i * hop, d]); }
-  on.sort((a, b) => b[1] - a[1]); const pts = [];
-  for (const [p] of on) { if (pts.every((q) => Math.abs(q - p) > sr * .09)) pts.push(p); if (pts.length >= 16) break; }
-  if (!pts.includes(0) && pts.length < 16) pts.push(0);
-  pts.sort((a, b) => a - b);
-  while (pts.length < 16) { let gi = 0, gl = 0; for (let i = 0; i < pts.length; i++) { const L = (pts[i + 1] ?? x.length) - pts[i]; if (L > gl) { gl = L; gi = i; } } pts.splice(gi + 1, 0, pts[gi] + Math.floor(gl / 2)); }
-  return pts.map((p, i) => { const end = pts[i + 1] ?? x.length; return [p / sr, Math.min(1.2, Math.max(.06, (end - p) / sr))]; });
-}
 function mutate(p) {
   const q = JSON.parse(JSON.stringify(p)), r = Math.floor(rnd(1, 4));
   for (let k = 0; k < r; k++) {

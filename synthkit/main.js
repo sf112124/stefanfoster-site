@@ -1,7 +1,7 @@
 // Synth-folio: the portfolio as a jungle sampler. You play the music; the music blends whatever you throw into the circle.
 import { PROJECTS } from "../projects.js";
 import MEDIA from "../media.js";
-import { Engine, PRESETS, FILMS, FX, LOOPS, BREAKS, BASSV, noteName } from "./engine.js";
+import { Engine, PRESETS, FILMS, FX, LOOPS, BREAKS, BASSV, BARPADS, DRUMPADS, noteName } from "./engine.js";
 import { Blender, MODES, scopes as mkScopes } from "./vdj.js";
 
 const $ = (id) => document.getElementById(id);
@@ -79,46 +79,37 @@ $("file").addEventListener("change", (e) => { addFiles(e.target.files); e.target
   });
 }
 // modes: auto, or lock one
-$("modes").innerHTML = `<button type="button" data-m="-1" aria-pressed="true">AUTO</button>` + MODES.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${m}</button>`).join("") + `<button type="button" id="phos" aria-pressed="false" title="Green screen">PHOSPHOR</button>`;
+$("modes").innerHTML = `<button type="button" data-m="-1" aria-pressed="true">AUTO</button>` + MODES.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${m}</button>`).join("");
 $("modes").querySelectorAll("[data-m]").forEach((b) => b.addEventListener("click", () => { const m = +b.dataset.m; V.setLock(m < 0 ? null : m); $("modes").querySelectorAll("[data-m]").forEach((x) => x.setAttribute("aria-pressed", x === b)); }));
-$("phos").addEventListener("click", () => { V.phos = V.phos ? 0 : 1; $("phos").setAttribute("aria-pressed", !!V.phos); });
+// looks: switch on as many as you like, they stay on (and they're remembered)
+const LOOKS = [["phos", "PHOSPHOR"], ["therm", "THERMAL"], ["mono", "MONO"], ["inv", "INVERT"], ["mirror", "MIRROR"], ["trails", "TRAILS"], ["pix", "PIXEL"], ["post", "POSTER"], ["edge", "EDGES"]];
+try { Object.assign(V.look, JSON.parse(localStorage.getItem("sf-looks") || "{}")); } catch (e) {}
+$("looks").innerHTML = LOOKS.map(([k, n]) => `<button type="button" data-k="${k}" aria-pressed="${!!V.look[k]}">${n}</button>`).join("");
+$("looks").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { const k = b.dataset.k; V.look[k] = V.look[k] ? 0 : 1; b.setAttribute("aria-pressed", !!V.look[k]); try { localStorage.setItem("sf-looks", JSON.stringify(V.look)); } catch (e) {} }));
 
 // ---------------- pads ----------------
-const KEYS = "1234qwerasdfzxcv", BANKS = ["BREAK", "LOOPS", "FILMS", "FX", "VOICE"];
+const KEYS = "1234qwerasdfzxcv", BANKS = ["LOOPS", "BREAKS", "DRUMS", "FX", "FILMS"], LB = 0;
 let bank = 0;
 $("banks").innerHTML = BANKS.map((b, i) => `<button type="button" data-b="${i}" aria-pressed="${i === bank}">${b}</button>`).join("");
 $("banks").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => setBank(+b.dataset.b)));
 function setBank(b) { bank = (b + BANKS.length) % BANKS.length; $("banks").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", +x.dataset.b === bank)); renderPads(); }
-const padId = (i) => ["b", "l", "f", "x", "v"][bank] + i;
-function padName(i) {
-  if (bank === 0) return `${BREAKS[E.pat.brkSel]} ${i.toString(16).toUpperCase()}`;
-  if (bank === 1) return LOOPS[i];
-  if (bank === 2) return FILMS[i].n;
-  if (bank === 3) return FX[i];
-  return E.voice ? `CHOP ${i + 1}` : "EMPTY";
-}
+const padId = (i) => ["l", "k", "d", "x", "f"][bank] + i;
+function padName(i) { return [LOOPS[i], BARPADS[i][0], DRUMPADS[i][0], FX[i], FILMS[i].n][bank]; }
 function renderPads() {
-  $("pads").innerHTML = Array.from({ length: 16 }, (_, i) => `<button class="pad${bank === 1 ? " loop" : ""}${bank === 4 && !E.voice ? " empty" : ""}" type="button" data-i="${i}"><b>${esc(padName(i))}</b><i>${touch ? "" : KEYS[i].toUpperCase()}${bank === 1 ? ` · ${["BREAK", "BASS", "MUSIC", "PERC"][i >> 2]}` : ""}</i></button>`).join("");
+  $("pads").innerHTML = Array.from({ length: 16 }, (_, i) => `<button class="pad${bank === LB ? " loop" : ""}${bank === 1 ? " bar" : ""}" type="button" data-i="${i}"><b>${esc(padName(i))}</b><i>${touch ? "" : KEYS[i].toUpperCase()}${bank === LB ? ` · ${["BREAK", "BASS", "MUSIC", "PERC"][i >> 2]}` : bank === 1 ? " · 1 BAR" : ""}</i></button>`).join("");
   $("pads").querySelectorAll(".pad").forEach((b) => b.addEventListener("pointerdown", (e) => { e.preventDefault(); hitPad(+b.dataset.i); }));
   loopLights();
 }
 function lightPad(i) { const b = $("pads").querySelector(`[data-i="${i}"]`); if (!b) return; b.classList.add("lit"); clearTimeout(b._t); b._t = setTimeout(() => b.classList.remove("lit"), 110); }
 async function hitPad(i) {
-  if (bank === 1) { await E.ensure(); E.toggleLoop(i); loopLights(); return; }
-  if (bank === 4 && !E.voice) return;
+  if (bank === LB) { await E.ensure(); E.toggleLoop(i); loopLights(); return; }
   E.pad(padId(i)); lightPad(i);
 }
 function loopLights() {
-  if (bank !== 1) return;
+  if (bank !== LB) return;
   $("pads").querySelectorAll(".pad").forEach((b) => { const i = +b.dataset.i, row = i >> 2, p = E.pend[row]; b.classList.toggle("on", E.loops[row] === i); b.classList.toggle("wait", p !== undefined && (p === i || (p === null && E.loops[row] === i))); });
 }
 renderPads();
-// the mic: hold, say something, let go; it lands on the VOICE pads
-{ const b = $("mic"); let on = false;
-  const start = async (e) => { e.preventDefault(); try { await E.micStart(); on = true; b.classList.add("on"); b.querySelector("span").textContent = "RECORDING · LET GO TO CHOP"; } catch (err) { $("micn").textContent = "NO MIC ACCESS"; } };
-  const stop = async () => { if (!on) return; on = false; b.classList.remove("on"); b.querySelector("span").textContent = "HOLD TO RECORD THE MIC"; const v = await E.micStop(); $("micn").textContent = v ? "CHOPPED ONTO 16 PADS" : "TOO QUIET, TRY AGAIN"; if (v) setBank(4); };
-  b.addEventListener("pointerdown", start); ["pointerup", "pointercancel", "pointerleave"].forEach((t) => b.addEventListener(t, stop)); }
-
 // ---------------- the DJ controls ----------------
 const HOLDS = [["repeat", "REPEAT", "5"], ["roll", "ROLL", "6"], ["mash", "MASHER", "7", 1], ["x2", "×2", "8", 1], ["x4", "×4", "9", 1], ["half", "HALF", "0", 1], ["tape", "TAPE STOP", "t"], ["rev", "REVERSE", "y"], ["freeze", "FREEZE", "u"], ["gate", "GATE", "i", 1]];
 $("holds").innerHTML = HOLDS.map(([m, n, k, dj]) => `<button class="hold${dj ? " dj" : ""}" type="button" data-m="${m}"><b>${n}</b><i>${touch ? "HOLD" : k.toUpperCase()}</i></button>`).join("");
@@ -144,7 +135,7 @@ const RATES = ["1 BAR", "1/2", "1/4", "1/8", "1/16", "1/32", "1/4T"], DESTS = ["
 const KN = [
   ["filter", "FILTER", -1, 1, 0, (v) => (Math.abs(v) < .02 ? "OPEN" : v < 0 ? `LP ${Math.round(20000 * Math.pow(2, v * 9))}` : `HP ${Math.round(10 * Math.pow(2, v * 10.5))}`), 1],
   ["res", "RESONANCE", 0, 1, .2], ["crush", "CRUSH", 0, 1, 0], ["delay", "DUB DELAY", 0, 1, .12], ["drill", "DRILL", 0, 1, 0, (v) => (v < .01 ? "OFF" : Math.round(v * 100))],
-  ["swing", "SWING", 0, 1, 0], ["chaos", "BLEND CHAOS", 0, 1, .55], ["pitch", "BREAK TUNE", -12, 12, 0, (v) => `${v > 0 ? "+" : ""}${Math.round(v)} ST`, 0, 1],
+  ["swing", "SWING", 0, 1, 0], ["react", "PICTURE REACT", 0, 1, .7], ["pitch", "BREAK TUNE", -12, 12, 0, (v) => `${v > 0 ? "+" : ""}${Math.round(v)} ST`, 0, 1],
   ["bassv", "BASS SOUND", 0, 4, 0, (v) => BASSV[v], 0, 1, 1], ["tone", "BASS TONE", 0, 1, .5], ["rate", "LFO RATE", 0, 6, 3, (v) => RATES[v], 0, 1, 1], ["depth", "LFO DEPTH", 0, 1, 0, (v) => (v < .01 ? "OFF" : Math.round(v * 100))],
   ["dest", "LFO TO", 0, 3, 0, (v) => DESTS[v], 0, 1, 1], ["shape", "LFO SHAPE", 0, 2, 0, (v) => SHAPES[v], 0, 1, 1], ["vol", "VOLUME", 0, 1, .72],
 ];
@@ -154,7 +145,7 @@ function showKnob(k) {
   el.querySelector(".kv").textContent = fmt ? fmt(v) : Math.round(f * 100);
   el.querySelectorAll(".kb i").forEach((b, i) => { const x = (i + .5) / 16, on = bip ? (f >= .5 ? x >= .5 && x <= f + .03 : x <= .5 && x >= f - .03) : x <= f + .03 && f > .005; b.className = on ? (Math.abs(x - f) < .07 ? "f h" : "f") : ""; });
 }
-function setK(k, v) { E.set(k, v); showKnob(k); if (k === "bassv") renderSeqLabels(); }
+function setK(k, v) { E.set(k, v); if (k === "react") V.react = v; showKnob(k); if (k === "bassv") renderSeqLabels(); }
 KN.forEach(([k, , lo, hi, def, , , int, cyc]) => {
   const el = $("knobs").querySelector(`[data-k="${k}"]`); let sx = 0, sv = 0, moved = false;
   showKnob(k);
@@ -176,7 +167,6 @@ function buildSeq() {
   LANES.forEach(([k, n]) => (h += `<div class="lane" data-l="${k}"><span class="ln">${n}</span>${cellsHtml()}<button class="lx" type="button" data-x="${k}">CLEAR</button></div>`));
   h += `<div class="lane gap" data-l="brk"><button class="ln lb" type="button" id="brksel" title="Change the break"></button>${cellsHtml()}<button class="lx" type="button" data-x="brk">CLEAR</button></div>`;
   for (let d = 7; d >= 0; d--) h += `<div class="lane bass${d === 7 ? " gap" : ""}" data-l="bass" data-d="${d}">${d === 7 ? `<button class="ln lb" type="button" id="bassel" title="Change the bass"></button>` : `<span class="ln">${noteName(d)}</span>`}${cellsHtml("b")}${d === 7 ? `<button class="lx" type="button" data-x="bass">CLEAR</button>` : "<span></span>"}</div>`;
-  h += `<div class="lane gap" data-l="pads"><span class="ln">PADS (REC)</span>${cellsHtml()}<button class="lx" type="button" data-x="pads">CLEAR</button></div>`;
   $("seq").innerHTML = h;
   $("seq").querySelectorAll(".lane").forEach((ln) => { const key = ln.dataset.l === "bass" ? "bass" + ln.dataset.d : ln.classList.contains("steps") ? "steps" : ln.dataset.l; cells[key] = [...ln.querySelectorAll(".c")]; });
   $("seq").querySelectorAll(".lx").forEach((b) => b.addEventListener("click", () => { const x = b.dataset.x, p = E.pat; if (x === "brk") { p.brk.fill(-1); p.rev.fill(0); } else if (x === "bass") p.bass.fill(-1); else if (x === "pads") p.pads.forEach((a) => (a.length = 0)); else p[x].fill(0); E.cur = E.pat; renderSeq(); }));
@@ -190,7 +180,6 @@ function renderSeq() {
   LANES.forEach(([k]) => cells[k].forEach((c, s) => c.classList.toggle("on", !!p[k][s])));
   cells.brk.forEach((c, s) => { const on = p.brk[s] >= 0; c.classList.toggle("on", on); c.classList.toggle("rv", on && !!p.rev[s]); c.textContent = on ? p.brk[s].toString(16).toUpperCase() : ""; });
   for (let d = 0; d < 8; d++) cells["bass" + d].forEach((c, s) => c.classList.toggle("on", p.bass[s] === d));
-  cells.pads.forEach((c, s) => { const n = p.pads[s].length; c.classList.toggle("on", n > 0); c.textContent = n > 1 ? n : ""; });
   renderSeqLabels();
 }
 function wireSeq() {
@@ -239,8 +228,7 @@ async function toggle() {
   await E.play(); loopLights();
 }
 $("play").addEventListener("click", toggle);
-$("rec").addEventListener("click", () => { E.rec = !E.rec; $("rec").setAttribute("aria-pressed", E.rec); });
-$("mut").addEventListener("click", () => { E.mutate = !E.mutate; $("mut").setAttribute("aria-pressed", E.mutate); if (!E.mutate) E.cur = E.pat; });
+
 document.querySelectorAll(".pre").forEach((b) => b.addEventListener("click", () => { E.pat = PRESETS[b.dataset.pre](); E.cur = E.pat; renderSeq(); if (bank === 0) renderPads(); }));
 $("clr").addEventListener("click", () => { E.clear(); renderSeq(); });
 $("chop").addEventListener("click", () => {
@@ -277,7 +265,7 @@ $("read").innerHTML = RD.map(([n, id, drag]) => `<div class="rr${drag ? " drag" 
   el.addEventListener("pointermove", (e) => { if (el.hasPointerCapture(e.pointerId)) E.setBpm(sb + (e.clientX - sx) / 4); });
   el.addEventListener("dblclick", () => E.setBpm(172)); }
 const blocks = (v, n = 8) => "▮".repeat(Math.round(clamp(v, 0, 1) * n)) + "▯".repeat(n - Math.round(clamp(v, 0, 1) * n));
-const R = { note: "—" }, lvBuf = new Float32Array(1024);
+const R = { note: "—" }, lvBuf = new Float32Array(1024), fq = new Uint8Array(512), RX = { lo: 0, mi: 0, hi: 0, mlo: 0, mmi: 0, mhi: 0 };
 let lastDeck = "";
 
 // ---------------- the loop that keeps the picture on the beat ----------------
@@ -286,17 +274,25 @@ function frame(now) {
   const C = E.ctx, at = C ? C.currentTime : 0, sd = E.sd();
   if (C) while (E.ev.length && E.ev[0].t <= at) {
     const e = E.ev.shift();
-    V.ev(e, E.k.chaos, sd);
+    V.ev(e, V.react, sd);
     if (e.type === "step") markStep(e.d);
     else if (e.type === "tick") markTick(e.d);
     else if (e.type === "bass") R.note = noteName(e.d.d);
     else if (e.type === "bar") loopLights();
-    else if (e.type === "recd") renderSeq();
-    else if (e.type === "pad") { const id = e.d.id, b = "blfxv".indexOf(id[0]); if (b === bank) lightPad(+id.slice(1)); }
+    else if (e.type === "pad") { const id = e.d.id, b = "lkdxf".indexOf(id[0]); if (b === bank) lightPad(+id.slice(1)); }
     else if (e.type === "stop") { markStep(-1); markTick(-1); }
   }
   if (E.ev.length > 600) E.ev.splice(0, E.ev.length - 300);
-  const st = { playing: E.playing, sd, chaos: E.k.chaos, crush: E.k.crush, lfo: C ? E.lfoAt(at) : 0, depth: E.k.depth, dest: E.k.dest };
+  // listen to the actual sound: lows, mids and highs, quick to rise, slower to fall
+  if (E.out) {
+    E.out.getByteFrequencyData(fq); const band = (a, b) => { let m = 0; for (let i = a; i < b; i++) m += fq[i]; return m / (b - a) / 255; };
+    // each band is measured against its own recent average, so the picture moves with hits and drops, not with loudness
+    [["lo", band(1, 4)], ["mi", band(5, 60)], ["hi", band(60, 300)]].forEach(([k, x]) => {
+      RX["m" + k] += (x - RX["m" + k]) * .025; const d = Math.max(0, x - RX["m" + k] * .9) / Math.max(.12, 1 - RX["m" + k] * .9);
+      RX[k] = d > RX[k] ? d : RX[k] * (k === "hi" ? .82 : .9);
+    });
+  }
+  const st = { lo: Math.min(1.2, RX.lo * 2.2), mi: Math.min(1, RX.mi * 2), hi: Math.min(1, RX.hi * 2.5), playing: E.playing, sd, chaos: V.react, crush: E.k.crush, lfo: C ? E.lfoAt(at) : 0, depth: E.k.depth, dest: E.k.dest };
   V.draw(now, st); SC.draw(E.scopes);
   const dk = `${V.ia}.${V.ib}.${V.layers.length}`; if (dk !== lastDeck) { lastDeck = dk; $("deck").querySelectorAll(".slot[data-i]").forEach((s) => { const i = +s.dataset.i; s.classList.toggle("a", i === V.ia); s.classList.toggle("b", i === V.ib && V.ib !== V.ia); s.dataset.r = i === V.ia ? "A" : "B"; }); }
   let lvl = 0; if (E.out) { E.out.getFloatTimeDomainData(lvBuf); let s = 0; for (let i = 0; i < lvBuf.length; i++) s += lvBuf[i] * lvBuf[i]; lvl = Math.sqrt(s / lvBuf.length) * 3.2; }

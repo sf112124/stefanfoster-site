@@ -160,3 +160,7 @@ a{color:inherit;text-decoration:none}
 .ln.lb{border:1px solid var(--ln2);padding:0 5px;height:15px;font-size:9px;color:var(--hi);background:none;cursor:pointer;justify-content:flex-start;margin-right:4px}
 .ln.lb:hover{border-color:var(--mid)}
 .lane.bass .ln.lb{height:12px}
+.looks button[aria-pressed="true"]{background:var(--mid);border-color:var(--mid);color:var(--bg)}
+.looks::before{content:"LOOK";color:var(--dim);font-size:10px;align-self:center;margin-right:4px}
+.modes:not(.looks)::before{content:"BLEND";color:var(--dim);font-size:10px;align-self:center;margin-right:4px}
+.pad.bar i{color:var(--mid)}
