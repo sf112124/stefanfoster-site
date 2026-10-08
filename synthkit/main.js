@@ -55,6 +55,12 @@ const dots = [...ring.querySelectorAll("i")];
 // the step lights sit just inside the rim, wherever the circle is
 function placeDots() { const r = $("platter").getBoundingClientRect().width / 2 - 6; dots.forEach((d, s) => { const a = (s / 16) * Math.PI * 2 - Math.PI / 2; d.style.transform = `translate(${(Math.cos(a) * r).toFixed(1)}px,${(Math.sin(a) * r).toFixed(1)}px)`; }); }
 placeDots(); addEventListener("resize", placeDots); new ResizeObserver(placeDots).observe($("stage"));
+// click and drag in the circle to smear, swirl and dissolve the picture
+{ const cv = $("vdj"); cv.style.touchAction = "none"; cv.style.cursor = "crosshair";
+  const pos = (e) => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, 1 - (e.clientY - r.top) / r.height]; };
+  cv.addEventListener("pointerdown", (e) => { e.preventDefault(); cv.setPointerCapture(e.pointerId); const [x, y] = pos(e); V.poke(x, y, false); V.poke(x, y, true); });
+  cv.addEventListener("pointermove", (e) => { if (cv.hasPointerCapture(e.pointerId)) { const [x, y] = pos(e); V.poke(x, y, true); } });
+  const up = (e) => { const [x, y] = pos(e); V.poke(x, y, false); }; cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up); }
 function throwIn(src) { V.add(src); deck(); document.body.classList.add("has"); }
 function deck() {
   $("deck").innerHTML = V.layers.map((L, i) => `<div class="slot${i === V.ia ? " a" : ""}${i === V.ib && V.ib !== V.ia ? " b" : ""}" data-r="${i === V.ia ? "A" : "B"}" data-i="${i}">${L.type === "video" && !L.thumb ? `<video src="${L.url}" muted playsinline autoplay loop></video>` : `<img src="${L.thumb || L.url}" alt="">`}<button class="x" type="button" aria-label="Take it out">×</button></div>`).join("") +

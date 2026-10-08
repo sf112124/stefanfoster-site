@@ -3,7 +3,7 @@
 // snares flash it, and the held DJ controls stutter, double, reverse and freeze it. None of it makes a sound.
 const VS = "attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}";
 const COMP = `precision highp float;varying vec2 v;
-uniform sampler2D A,B,F;uniform vec4 ta,tb;uniform float hasA,hasB,mode,x,t,kick,snr,bass,hat,chaos,seed,crush,tiles,segs,bright,lo,mi,hi,react,trails,mirror,fspace,fpitch,fflange;
+uniform sampler2D A,B,F;uniform vec4 ta,tb;uniform float hasA,hasB,mode,x,t,kick,snr,bass,hat,chaos,seed,crush,tiles,segs,bright,lo,mi,hi,react,trails,mirror,fspace,fpitch,fflange,tamt;uniform vec2 tp,tv;
 float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7))+seed*13.7)*43758.5453);}
 float lum(vec3 c){return dot(c,vec3(.299,.587,.114));}
 vec2 mir(vec2 u){return 1.-abs(1.-mod(u,2.));}
@@ -19,6 +19,8 @@ void main(){
   u=rot(u,sin(t*.7)*mi*.18*react);
   u+=(rr>0.?cc/rr:vec2(0.))*sin(rr*38.-t*9.)*lo*.012*react;
   u+=vec2(hs(vec2(floor(u.y*60.),floor(t*30.)))-.5,0.)*hi*.03*react;
+  float td=length(v-tp),tk=tamt*smoothstep(.36,0.,td);
+  u-=tv*tk*3.5;u=tp+rot(u-tp+.5,tk*(2.6+length(tv)*34.))-.5;u+=(v-tp)*tk*.5*sin(t*14.+td*40.);
   u=(u-.5)*pow(2.,-fpitch*.8)+.5;u=rot(u,fpitch*.6);u.x+=sin(u.y*28.+t*9.)*fflange*.05;u.y+=sin(u.x*17.+t*5.)*fflange*.02;
   if(crush>.01){float g=mix(220.,10.,crush);u=(floor(u*g)+.5)/g;}
   vec3 col;int m=int(mode+.5);
@@ -34,6 +36,9 @@ void main(){
   col=min(col*(1.+lo*.18*react+kick*.08),vec3(1.));
   if(trails>.5)col=mix(col,texture2D(F,(v-.5)*.982+.5).rgb,.62);
   col=mix(col,texture2D(F,rot((v-.5)*.955+.5,.01)).rgb,fspace*.86);
+  if(tk>.001){vec2 q=floor(v*mix(70.,14.,tk));float n=hs(q+floor(t*24.));
+    if(n<tk)col=sb(u+(vec2(hs(q+3.),hs(q+5.))-.5)*.45*tk);
+    col=mix(col,texture2D(F,v-tv*2.4).rgb,tk*.85);}
   gl_FragColor=vec4(col*bright,1.);
 }`;
 const POST = `precision highp float;varying vec2 v;uniform sampler2D S;uniform float phos,flash,dark,therm,mono,inv,pix,post,edge,hi,react,ffilt;
@@ -59,7 +64,7 @@ export class Blender {
     this.cv = cv; const gl = (this.gl = cv.getContext("webgl", { antialias: false, alpha: true, premultipliedAlpha: false }));
     this.ok = !!gl; this.layers = []; this.ia = 0; this.ib = 0; this.x = 0; this.xt = 0; this.mode = 0; this.lock = null; this.hold = null;
     this.f = { kick: 0, snr: 0, bass: 0, hat: 0, flash: 0, seed: 1, segs: 6 }; this.w = 0; this.filled = 0; this.pos = 0;
-    this.ta = [1, 1, 0, 0]; this.tb = [1, 1, 0, 0]; this.look = { phos: 0, therm: 0, mono: 0, inv: 0, mirror: 0, trails: 0, pix: 0, post: 0, edge: 0 }; this.react = .7;
+    this.T = { x: .5, y: .5, vx: 0, vy: 0, amt: 0, down: false }; this.ta = [1, 1, 0, 0]; this.tb = [1, 1, 0, 0]; this.look = { phos: 0, therm: 0, mono: 0, inv: 0, mirror: 0, trails: 0, pix: 0, post: 0, edge: 0 }; this.react = .7;
     if (!gl) return;
     const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s)); return s; };
     const prog = (fs) => { const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.bindAttribLocation(p, 0, "p"); gl.linkProgram(p); const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); u[a.name] = gl.getUniformLocation(p, a.name); } return { p, u }; };
@@ -106,6 +111,8 @@ export class Blender {
     else if (e.type === "pad") { const i = e.d.p ? this.layers.findIndex((l) => l.p === e.d.p) : -1; if (i >= 0) this.show(i); f.flash = Math.max(f.flash, .3); f.kick = 1; }
     else if (e.type === "bar") { if (this.lock == null && e.d.bar % (chaos > .6 ? 2 : 4) === 0) this.mode = Math.floor(Math.random() * MODES.length); }
   }
+  // your finger in the picture: where it is, how fast it's going, whether it's down
+  poke(x, y, down) { const T = this.T; if (down && T.down) { T.vx = T.vx * .5 + (x - T.x) * .5; T.vy = T.vy * .5 + (y - T.y) * .5; } T.x = x; T.y = y; T.down = down; }
   jig(k) { const z = 1 + Math.random() * .25; this[k] = [0, 0, (Math.random() - .5) * .2, (Math.random() - .5) * .2]; this[k + "z"] = z; }
   setLock(m) { this.lock = m; if (m != null) this.mode = m; }
   setHold(m) {
@@ -140,6 +147,7 @@ export class Blender {
       const lz = s.lfo * s.depth;
       gl.uniform1f(U.kick, f.kick); gl.uniform1f(U.snr, f.snr > .6 ? 1 : 0); gl.uniform1f(U.bass, Math.min(1, f.bass * (.4 + s.chaos) + (s.dest === 1 ? Math.abs(lz) * .6 : 0))); gl.uniform1f(U.hat, f.hat);
       gl.uniform1f(U.chaos, this.react); gl.uniform1f(U.seed, f.seed); gl.uniform1f(U.crush, 0); const fx = s.fx || {}; gl.uniform1f(U.fspace, fx.space || 0); gl.uniform1f(U.fpitch, fx.pitch || 0); gl.uniform1f(U.fflange, fx.flange || 0);
+      const T = this.T; T.amt = T.down ? Math.min(1, T.amt + .25) : T.amt * .9; gl.uniform1f(U.tamt, T.amt); gl.uniform2f(U.tp, T.x, T.y); gl.uniform2f(U.tv, T.vx, T.vy); T.vx *= .82; T.vy *= .82;
       gl.uniform1f(U.lo, s.lo || 0); gl.uniform1f(U.mi, s.mi || 0); gl.uniform1f(U.hi, s.hi || 0); gl.uniform1f(U.react, this.react); gl.uniform1f(U.trails, this.look.trails); gl.uniform1f(U.mirror, this.look.mirror);
       gl.uniform1f(U.tiles, hold === "x2" ? 2 : hold === "x4" ? 4 : 1); gl.uniform1f(U.segs, f.segs); gl.uniform1f(U.bright, tape ? Math.max(.2, 1 - (now - this.ht) / 900) : 1);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); this.fb = [fn, fo];
