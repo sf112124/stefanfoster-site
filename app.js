@@ -538,7 +538,7 @@ function renderAbout() {
 // play: the things that aren't quite the portfolio, all in one place
 function renderPlay() {
   const rows = [
-    ["synth", "Synth-folio", "A jungle sequencer. You make the drum and bass, and the beat cuts the work together live."],
+    ["synth", "Synth-folio", "A jungle sampler with a real Amen. Make the drum and bass, throw the work into the circle, and the beat blends it."],
     ["rpg", "Poke-folio", "Walk the valley with AI, Photoshop or Premiere. Find each project in the long grass and beat it to see it."],
     ["crawl", "Web Crawler", touch ? "Let the spider out and fight it with a ship. Needs a mouse, so it's desktop only." : "Let the spider out, then fly the ship and shoot it off the site. WASD to fly, mouse to aim."],
     ["#ai-experiments", "Ai Experiments", "Short films I make with AI."],

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Synth-folio · Stefan Foster</title>
-<meta name="description" content="Stefan Foster's portfolio as a jungle sequencer. Make drum and bass, and the music cuts the work together live.">
+<meta name="description" content="Stefan Foster's portfolio as a jungle sampler. Make drum and bass with a real Amen, throw the work into the circle and the beat blends it.">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0f130d">
+<meta name="theme-color" content="#0e120c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap">
@@ -18,7 +18,7 @@
     <a class="brand" href="./#play" title="Back to the site"><b>SYNTH-FOLIO</b><span>// STEFAN FOSTER</span></a>
     <div class="tp">
       <button id="play" class="big" type="button" aria-pressed="false"><i class="tri"></i><span>PLAY</span></button>
-      <button id="rec" type="button" aria-pressed="false" title="Record pads into the pattern (R is a pad, so use the button)"><i class="dot"></i>REC</button>
+      <button id="rec" type="button" aria-pressed="false" title="Record pads into the pattern"><i class="dot"></i>REC</button>
       <button id="mut" type="button" aria-pressed="false" title="Each bar plays a variation">MUTATE</button>
       <span class="sep"></span>
       <span class="lbl">PATTERN</span>
@@ -29,39 +29,38 @@
       <button id="clr" type="button">CLEAR</button>
     </div>
     <div class="tr">
+      <span class="load done" id="load">LOADING SOUNDS</span>
       <button id="full" type="button">FULL SCREEN</button>
       <a href="./#play" class="exit">EXIT</a>
     </div>
   </header>
 
   <aside class="crate panel">
-    <div class="ph"><span>// CRATE</span><span class="dim">TICK = IN THE MIX · NAME = PREVIEW</span></div>
+    <div class="ph"><span>// CRATE</span><span class="dim">DRAG OR TAP INTO THE CIRCLE</span></div>
     <div class="clist" id="crate"></div>
     <div class="ph"><span>// ARCHIVES</span><span class="dim">LIVE</span></div>
     <canvas class="scopes" id="scopes"></canvas>
   </aside>
 
-  <section class="mid">
-    <div class="mon panel" id="mon">
-      <canvas id="vdj"></canvas>
-      <div class="pv" id="pv" hidden></div>
-      <div class="mo tl"><span id="mproj">PROJECT # 00</span><span class="dim">///</span></div>
-      <div class="mo tr2"><span id="mmode">M1</span></div>
-      <div class="mo bl"><span id="mtc">00:00:00</span></div>
-      <div class="mo br"><span id="mclip"></span></div>
-      <div class="pvbar" id="pvbar" hidden><span id="pvt"></span><button id="samp" type="button">SAMPLE IT</button><button id="pvx" type="button">STOP PREVIEW</button></div>
-      <div class="hint" id="hint"><b>SPACE</b> TO PLAY · PADS ON <b>1-4 Q-R A-F Z-V</b> · HOLD <b>6 7 8 9 0</b> FOR EFFECTS</div>
+  <section class="mid" id="mid">
+    <div class="stage" id="stage">
+      <div class="platter" id="platter">
+        <canvas id="vdj"></canvas>
+        <div class="ring" id="ring" aria-hidden="true"></div>
+        <div class="drop" id="drop"><b>DROP IT IN</b></div>
+        <div class="hint" id="hint"><span>DRAG WORK FROM THE CRATE<br>OR YOUR OWN IMAGES AND VIDEOS<br>INTO THE CIRCLE</span></div>
+      </div>
     </div>
-    <div class="under">
-      <div class="globe panel"><canvas id="globe"></canvas></div>
-      <div class="read panel" id="read"></div>
-    </div>
+    <div class="modes" id="modes"></div>
+    <div class="deck" id="deck"></div>
+    <div class="read" id="read"></div>
   </section>
 
   <aside class="side panel">
     <div class="ph"><span>// PADS</span><span class="banks" id="banks"></span></div>
     <div class="pads" id="pads"></div>
-    <div class="ph"><span>// HOLD</span><span class="dim">MANGLES SOUND AND PICTURE</span></div>
+    <div class="microw"><button id="mic" type="button"><i class="dot"></i><span>HOLD TO RECORD THE MIC</span></button><span class="dim" id="micn">CHOPS ONTO THE VOICE PADS</span></div>
+    <div class="ph"><span>// DJ</span><span class="dim">HOLD · SOUND AND PICTURE</span></div>
     <div class="holds" id="holds"></div>
     <div class="ph"><span>// CONTROL</span><span class="dim">DRAG · DOUBLE-CLICK RESETS</span></div>
     <div class="knobs" id="knobs"></div>
@@ -69,6 +68,7 @@
 
   <section class="seq panel" id="seq"></section>
 </div>
+<input type="file" id="file" accept="image/*,video/*" multiple hidden>
 <script type="module" src="synth/main.js"></script>
 </body>
 </html>

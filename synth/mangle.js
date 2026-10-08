@@ -55,10 +55,10 @@ class Mangle extends AudioWorkletProcessor {
     return true;
   }
 }
-// keeps the last few seconds of whatever film you're previewing, so you can sample it
+// keeps the last few seconds of the mic, so you can chop it onto pads
 class Tap extends AudioWorkletProcessor {
-  constructor() {
-    super(); this.N = (sampleRate * 4) | 0; this.b = new Float32Array(this.N); this.w = 0;
+  constructor(o) {
+    super(); this.N = (sampleRate * ((o && o.processorOptions && o.processorOptions.sec) || 4)) | 0; this.b = new Float32Array(this.N); this.w = 0;
     this.port.onmessage = (e) => { const n = Math.min(this.N, e.data.n | 0), o = new Float32Array(n); for (let i = 0; i < n; i++) o[i] = this.b[(this.w - n + i + this.N) % this.N]; this.port.postMessage(o, [o.buffer]); };
   }
   process(ins) {
