@@ -48,6 +48,10 @@ export const PROJECTS = [
     slug: "ai-experiments", title: "Ai Experiments", client: "Personal", kind: "AI film",
     blurb: "",
     items: [
+      { head: "Play", text: "Things I've built to play with. Click one to open it." },
+      { play: "synth", img: "play-synth.webp", sm: "play-synth-sm.webp", caption: "Synth-folio", note: "A jungle sampler" },
+      { play: "rpg", img: "play-rpg.webp", sm: "play-rpg-sm.webp", caption: "Poke-folio", note: "The portfolio as a game" },
+      { play: "crawl", img: "play-crawl.webp", sm: "play-crawl-sm.webp", caption: "Web Crawler", note: "Fight the spider" },
       { head: "Grow" },
       { file: "grow.mp4" },
       { head: "Zombie Cowboys", text: "Trailers for a zombie cowboy movie that one day I’ll have enough AI credits to make." },

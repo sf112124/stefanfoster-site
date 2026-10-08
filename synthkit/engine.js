@@ -31,7 +31,7 @@ export const PRESETS = {
 };
 
 // fetch the sounds as soon as the page opens; decode once there's somewhere to decode them
-const FILES = { drums: "synth/drums.wav", fx: "synth/fx.wav", bass: "synth/bass.wav", films: "synth/films.wav" };
+const FILES = { drums: "synthkit/drums.wav", fx: "synthkit/fx.wav", bass: "synthkit/bass.wav", films: "synthkit/films.wav" };
 const RAW = Object.fromEntries(Object.entries(FILES).map(([k, u]) => [k, fetch(u).then((r) => r.arrayBuffer()).catch(() => null)]));
 
 export class Engine {
@@ -56,7 +56,7 @@ export class Engine {
     this.padBus.connect(this.mix); this.voxBus.connect(this.mix);
     // the mangler on everything
     this.mg = null;
-    try { await C.audioWorklet.addModule("synth/mangle.js"); this.mg = new AudioWorkletNode(C, "mangle", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] }); } catch (e) { this.mg = null; }
+    try { await C.audioWorklet.addModule("synthkit/mangle.js"); this.mg = new AudioWorkletNode(C, "mangle", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] }); } catch (e) { this.mg = null; }
     this.hp = C.createBiquadFilter(); this.hp.type = "highpass"; this.hp.frequency.value = 10;
     this.lp = C.createBiquadFilter(); this.lp.type = "lowpass"; this.lp.frequency.value = 20000;
     this.gateG = G(1); this.trem = G(1); this.post = G(1); this.master = G(this.k.vol);

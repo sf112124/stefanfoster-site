@@ -35,6 +35,8 @@ PROJECTS.forEach((p, pi) => {
   (p.youtube || []).forEach((y) => { const th = y.thumb ? url(p.slug, y.thumb) : `https://i.ytimg.com/vi/${y.id}/maxresdefault.jpg`; p.pieces.push({ pi, slug: p.slug, yt: y, w: 16, h: 9, caption: y.title, stat: y.note, thumb: th, still: th }); });
   p.items.forEach((it) => {
     if (it.head) { sec = it; return; }
+    // the things to play with: a picture of each, and clicking opens the thing itself
+    if (it.play) { const th = url(p.slug, it.sm), st = url(p.slug, it.img); p.pieces.push({ pi, slug: p.slug, sec, play: it.play, w: 16, h: 10, caption: it.caption, stat: it.play === "crawl" && touch ? "Desktop only" : `${it.note} →`, thumb: th, still: st, node: th }); return; }
     const m = lib[it.file]; if (!m) return;
     const x = { ...m, ...it, pi, slug: p.slug, sec };
     x.thumb = url(p.slug, m.type === "video" ? m.poster : m.sm);
@@ -46,7 +48,7 @@ PROJECTS.forEach((p, pi) => {
 });
 // every piece, mixed up so projects weave through each other (the same mix every visit)
 const ALL = (() => {
-  const a = PROJECTS.flatMap((p) => p.pieces.map((x) => ({ ...x, title: p.title, src: x })));
+  const a = PROJECTS.flatMap((p) => p.pieces.filter((x) => !x.play).map((x) => ({ ...x, title: p.title, src: x })));
   let s = 7; const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
@@ -352,7 +354,7 @@ function renderProject(i) {
   };
   const body = groups.map((g) => `<section class="grp${g.sec ? " has" : ""}">
     ${g.sec ? `<div class="gsec"><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p>${esc(g.sec.text)}</p>` : ""}</div>` : ""}
-    <div class="rows${g.sec && g.items.length === 1 && g.items[0].w / g.items[0].h < 1.2 ? " hero" : ""}">${g.items.map(tile).join("")}</div></section>`).join("");
+    <div class="rows${g.sec && g.items.length === 1 && g.items[0].w / g.items[0].h < 1.2 ? " hero" : ""}${g.items.every((x) => x.play) ? " exps" : ""}">${g.items.map(tile).join("")}</div></section>`).join("");
   // a live piece, if the project has one: a stage to play on, its controls beside it
   const live = p.live ? `<section class="grp has live"><div class="gsec"><h2>${esc(p.live.head)}</h2><p>${esc(p.live.text)}</p></div>
     <div class="toy"><canvas></canvas><span class="toy-hint mono" aria-hidden="true"></span></div><div class="knobs mono"></div></section>` : "";
@@ -381,6 +383,7 @@ function justify() {
     const A = (t) => +t.style.getPropertyValue("--a"), size = (t, w, h) => { t.style.width = `${w}px`; t.querySelector(".tm").style.height = `${h}px`; };
     const hOf = (ts) => (W - gap * (ts.length - 1) - 2) / ts.reduce((s, t) => s + A(t), 0);
     if (innerWidth < 700) { tiles.forEach((t) => { const h = Math.min(W / A(t), innerHeight * .8); size(t, A(t) * h, h); }); return; }
+    if (row.classList.contains("exps")) { const h = hOf(tiles); tiles.forEach((t) => size(t, A(t) * h, h)); return; }
     if (row.classList.contains("hero")) { const t = tiles[0], h = Math.min(W / A(t), innerHeight * .86); size(t, A(t) * h, h); return; }
     if (page.tall) {
       // phone-shaped films: equal columns, the same size every time (rows of three, or all of them if there are four or fewer)
@@ -474,7 +477,7 @@ function wireTiles() {
     }
     let tx = 0, ty = 0, tt = 0;
     t.addEventListener("pointerdown", (e) => { tx = e.clientX; ty = e.clientY; tt = performance.now(); });
-    t.addEventListener("click", (e) => { if (touch && (Math.hypot(e.clientX - tx, e.clientY - ty) > 10 || performance.now() - tt > 600 || view.scrolling)) return; lbOpen(page.pieces, k, t.querySelector(".tm")); });
+    t.addEventListener("click", (e) => { if (touch && (Math.hypot(e.clientX - tx, e.clientY - ty) > 10 || performance.now() - tt > 600 || view.scrolling)) return; if (it.play) { launch(it.play); return; } lbOpen(page.pieces, k, t.querySelector(".tm")); });
   });
   vin.querySelectorAll("[data-count]").forEach(countUp);
   if (page.big || touch) {
@@ -535,29 +538,12 @@ function renderAbout() {
     requestAnimationFrame(loop);
   })(t0);
 }
-// play: the things that aren't quite the portfolio, all in one place
-function renderPlay() {
-  const rows = [
-    ["synth", "Synth-folio", "A jungle sampler with a real Amen. Make the drum and bass, throw the work into the circle, and the beat blends it."],
-    ["rpg", "Poke-folio", "Walk the valley with AI, Photoshop or Premiere. Find each project in the long grass and beat it to see it."],
-    ["crawl", "Web Crawler", touch ? "Let the spider out and fight it with a ship. Needs a mouse, so it's desktop only." : "Let the spider out, then fly the ship and shoot it off the site. WASD to fly, mouse to aim."],
-    ["#ai-experiments", "Ai Experiments", "Short films I make with AI."],
-  ];
-  vin.innerHTML = `<div class="astage"><article class="acard pcard">
-      <i class="ashine" aria-hidden="true"></i>
-      <p class="akick mono">Play</p>
-      <ol class="plist">${rows.map(([h, n, d], i) => {
-        const inner = `<span class="pn mono">${String(i + 1).padStart(2, "0")}</span><b class="pt">${esc(n)}</b><span class="pd">${esc(d)}</span><span class="pgo mono">${h === "crawl" ? (touch ? "Desktop only" : "Let it out →") : "Open →"}</span>`;
-        return `<li>${h === "crawl" ? `<button type="button" class="prow" id="pcrawl" ${touch ? "disabled" : ""}>${inner}</button>` : `<a class="prow" href="${h}">${inner}</a>`}</li>`;
-      }).join("")}</ol>
-    </article></div>`;
-  $("vt").textContent = "Play"; page = null;
-  document.body.classList.add("isabout");
-  const c = $("pcrawl");
-  if (c && !touch) c.addEventListener("click", () => {
-    document.body.classList.add("crawl"); goHome();
-    setTimeout(() => { if (!$("hole").classList.contains("open")) $("hole").click(); setTimeout(() => { if (!$("pad").classList.contains("open")) $("pad").click(); }, 900); }, 700);
-  });
+// the experiments: Synth-folio and Poke-folio are their own pages; Web Crawler lets the spider out onto this one
+function launch(k) {
+  if (k === "synth" || k === "rpg") { location.href = k; return; }
+  if (k !== "crawl" || touch) return;
+  document.body.classList.add("crawl"); goHome();
+  setTimeout(() => { if (!$("hole").classList.contains("open")) $("hole").click(); setTimeout(() => { if (!$("pad").classList.contains("open")) $("pad").click(); }, 900); }, 700);
 }
 function countUp(el) {
   if (reduce) return;
@@ -581,16 +567,18 @@ function goHome() {
   if (d > 0) history.go(-d);
   else { history.replaceState({ d: 0 }, "", location.pathname + location.search); route(); }
 }
+let routed = false;
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
+  // landing straight on a page: there's nothing of ours behind it, so going home should stay on the site
+  if (!routed) { routed = true; if (h && history.state?.d == null) history.replaceState({ d: 0 }, ""); }
   if (!h) { depth = 0; if (history.state?.d !== 0) history.replaceState({ d: 0 }, ""); }
   else if (history.state?.d == null) { depth += 1; history.replaceState({ d: depth }, ""); }
   else depth = history.state.d;
   const i = PROJECTS.findIndex((p) => p.slug === h);
-  if (i >= 0 || h === "about" || h === "play") enter(true);
+  if (i >= 0 || h === "about") enter(true);
   if (i >= 0) { renderProject(i); open(); }
   else if (h === "about") { renderAbout(); open(); }
-  else if (h === "play") { renderPlay(); open(); }
   else close();
 }
 function open() {

@@ -10,12 +10,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="synth/synth.css">
+<link rel="stylesheet" href="synthkit/synth.css">
 </head>
 <body>
 <div class="rig" id="rig">
   <header class="top">
-    <a class="brand" href="./#play" title="Back to the site"><b>SYNTH-FOLIO</b><span>// STEFAN FOSTER</span></a>
+    <a class="brand" href="./#ai-experiments" title="Back to the site"><b>SYNTH-FOLIO</b><span>// STEFAN FOSTER</span></a>
     <div class="tp">
       <button id="play" class="big" type="button" aria-pressed="false"><i class="tri"></i><span>PLAY</span></button>
       <button id="rec" type="button" aria-pressed="false" title="Record pads into the pattern"><i class="dot"></i>REC</button>
@@ -31,7 +31,7 @@
     <div class="tr">
       <span class="load done" id="load">LOADING SOUNDS</span>
       <button id="full" type="button">FULL SCREEN</button>
-      <a href="./#play" class="exit">EXIT</a>
+      <a href="./#ai-experiments" class="exit">EXIT</a>
     </div>
   </header>
 
@@ -69,6 +69,6 @@
   <section class="seq panel" id="seq"></section>
 </div>
 <input type="file" id="file" accept="image/*,video/*" multiple hidden>
-<script type="module" src="synth/main.js"></script>
+<script type="module" src="synthkit/main.js"></script>
 </body>
 </html>
