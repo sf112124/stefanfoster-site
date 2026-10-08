@@ -25,7 +25,7 @@ void main(){
   u=(u-.5)*pow(2.,-fpitch*.8)+.5;u=rot(u,fpitch*.6);u.x+=sin(u.y*28.+t*9.)*fflange*.05;u.y+=sin(u.x*17.+t*5.)*fflange*.02;
   if(crush>.01){float g=mix(220.,10.,crush);u=(floor(u*g)+.5)/g;}
   vec3 col;int m=int(mode+.5);
-  if(m==0){float g=mix(6.,48.,chaos);vec2 q=floor(u*g);float n=hs(q);float e=smoothstep(x-.06,x+.06,n);vec2 d=(vec2(hs(q+1.),hs(q+2.))-.5)*(1.-abs(x*2.-1.))*.08;col=mix(sb(u+d),sa(u-d),e);}
+  if(m==0){vec2 q=floor(v*640.);float n=hs(q);float e=smoothstep(x-.04,x+.04,n);vec2 d=(vec2(hs(q+1.),hs(q+2.))-.5)*(1.-abs(x*2.-1.))*.03;col=mix(sb(u+d),sa(u-d),e);}
   else if(m==1){vec2 e=vec2(.006,0.);vec3 b=sb(u);vec2 gr=vec2(lum(sb(u+e.xy))-lum(sb(u-e.xy)),lum(sb(u+e.yx))-lum(sb(u-e.yx)));vec2 w=gr*(1.5+bass*14.)+vec2(sin(u.y*9.+t*2.),cos(u.x*7.+t*1.7))*(.01+bass*.05);col=mix(sa(u+w),b,x*.85);}
   else if(m==2){vec3 s=mix(sa(u),sb(u),x);vec3 pv=texture2D(F,v+vec2((hs(vec2(floor(v.x*90.),seed))-.5)*.003,.006+bass*.03)).rgb;float th=.25+bass*.5+kick*.2;col=lum(s)>th?s:pv*.985;}
   else if(m==3){vec3 a=sa(u),b=sb(u+vec2(sin(t)*.02,0.));float th=.15+x*.7+bass*.15;col=lum(a)<th?b:a;}
@@ -37,7 +37,7 @@ void main(){
   col=min(col*(1.+lo*.18*react+kick*.08),vec3(1.));
   if(trails>.5)col=mix(col,texture2D(F,(v-.5)*.982+.5).rgb,.62);
   col=mix(col,texture2D(F,rot((v-.5)*.955+.5,.01)).rgb,fspace*.86);
-  if(fm>.02){vec2 q=floor(v*46.);if(hs(q+floor(t*12.))<fm*.32)col=sb(u+(vec2(hs(q+3.),hs(q+5.))-.5)*.08);}
+  if(fm>.02){vec2 q=floor(v*640.);float n=hs(q+fract(t*7.)*97.);col=mix(col,sb(u+(vec2(hs(q+3.),hs(q+5.))-.5)*.02),smoothstep(fm*.45,fm*.45-.06,n));}
   gl_FragColor=vec4(col*bright,1.);
 }`;
 const POST = `precision highp float;varying vec2 v;uniform sampler2D S;uniform float phos,flash,dark,therm,mono,inv,pix,post,edge,hi,react,ffilt;
