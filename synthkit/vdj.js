@@ -169,6 +169,8 @@ export class Blender {
     else if (hold === "freeze") src = back(Math.random() < .2 ? 1 : 0);
     else if (hold === "mash") { if (this.pos++ % Math.max(1, Math.round(sdF)) === 0) this.mashK = Math.floor(Math.random() * Math.min(this.filled, K - 1)); src = back(this.mashK || 0); }
     else if (this.stut > now) src = back(Math.floor(now / 30) % 3);
+    // scratching scrubs the picture too, back through the last few frames
+    if (this.scratching) src = back(Math.max(0, Math.min(K - 2, Math.round(-(this.scrub || 0) * 40) + Math.round(((this.spin || 0) * 3) % 4))));
     // to the screen
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, this.cv.width, this.cv.height); const Q = this.P.post; gl.useProgram(Q.p);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, src); gl.uniform1i(Q.u.S, 0); gl.uniform1f(Q.u.phos, this.look.phos); ["therm", "mono", "inv", "pix", "post", "edge"].forEach((k) => gl.uniform1f(Q.u[k], this.look[k])); gl.uniform1f(Q.u.hi, s.hi || 0); gl.uniform1f(Q.u.react, this.react); gl.uniform1f(Q.u.ffilt, (s.fx && s.fx.filter) || 0);

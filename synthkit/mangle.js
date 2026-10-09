@@ -8,7 +8,7 @@ class Mangle extends AudioWorkletProcessor {
     this.w = 0; this.wa = 0; this.m = ""; this.wet = 0; this.tg = 0; this.pend = null;
     // pitch shifter: two read heads sweeping through a short window, crossfaded
     this.PN = 16384; this.pb = [new Float32Array(this.PN), new Float32Array(this.PN)]; this.pw = 0; this.W = Math.round(sampleRate * .06); this.d1 = 64; this.ratio = 1; this.pmix = 0;
-    this.port.onmessage = (e) => { const d = e.data; if (d.pitch !== undefined) { this.ratio = Math.pow(2, d.pitch / 12); return; } if (d.relen) { this.L = d.relen; return; } if (d.scr !== undefined) { this.spT = Math.max(this.wa - this.N + 4096, Math.min(this.wa, this.sw + d.scr)); return; } if (d.at && d.at > currentFrame) this.pend = d; else this.set(d); };
+    this.port.onmessage = (e) => { const d = e.data; if (d.pitch !== undefined) { this.ratio = Math.pow(2, d.pitch / 12); return; } if (d.relen) { this.L = d.relen; return; } if (d.scr !== undefined) { if (this.m !== "scratch" || this.sw === undefined) return; const tg = Math.max(this.wa - this.N + 8192, this.sw + d.scr); this.rf = this.spT; this.rt = tg; this.rn = 0; this.rN = Math.max(48, Math.min(4096, Math.round((d.dt || .016) * sampleRate))); return; } if (d.at && d.at > currentFrame) this.pend = d; else this.set(d); };
   }
   set(d) {
     if (d.mode === "off") { this.tg = 0; return; }
@@ -17,7 +17,7 @@ class Mangle extends AudioWorkletProcessor {
     else if (d.mode === "tape") { this.p = this.w; this.rate = 1; this.dec = 1 / (d.time * sampleRate); }
     else if (d.mode === "rev") { this.p = this.w - 1; }
     // the record under your hand: it holds the moment you grabbed, the track keeps recording underneath
-    else if (d.mode === "scratch") { this.sw = this.wa; this.sp = this.wa; this.spT = this.wa; this.sg = 0; }
+    else if (d.mode === "scratch") { this.sw = this.wa; this.sp = this.wa; this.spT = this.wa; this.rf = this.rt = this.wa; this.rn = this.rN = 1; this.sg = 0; this.tg = 1; }
   }
   rd(c, pos) { const N = this.N, b = this.b[c]; pos = ((pos % N) + N) % N; const i = pos | 0, f = pos - i; return b[i] + (b[(i + 1) % N] - b[i]) * f; }
   prd(c, pos) { const N = this.PN, b = this.pb[c]; pos = ((pos % N) + N) % N; const i = pos | 0, f = pos - i; return b[i] + (b[(i + 1) % N] - b[i]) * f; }
@@ -40,9 +40,14 @@ class Mangle extends AudioWorkletProcessor {
           }
         } else if (m === "tape") { wl = this.rd(0, this.p); wr = this.rd(1, this.p); this.p += this.rate; this.rate = Math.max(0, this.rate - this.dec); const g = Math.min(1, this.rate * 4); wl *= g; wr *= g; }
         else if (m === "scratch") {
-          const prev = this.sp; this.sp += (this.spT - this.sp) * .0025; const vel = this.sp - prev;
-          this.sg += (Math.min(1, Math.abs(vel) * 1.4) - this.sg) * .01;
-          wl = this.rd(0, this.sp) * this.sg; wr = this.rd(1, this.sp) * this.sg;
+          // the hand: each new position is reached smoothly over the time it took to arrive, like a real platter
+          if (this.rn < this.rN) { this.rn++; this.spT = this.rf + (this.rt - this.rf) * (this.rn / this.rN); }
+          const T = Math.min(this.spT, this.wa - 2), prev = this.sp; this.sp += (T - this.sp) * .06; const vel = this.sp - prev;
+          if (!(this.sp === this.sp)) this.sp = this.wa;
+          // a record you're holding still is silent; it comes up as it moves, a little duller when it's slow
+          this.sg += (Math.min(1, Math.abs(vel) * 2.2) - this.sg) * .03;
+          const a = .15 + Math.min(.85, Math.abs(vel) * .9); this.sl0 = (this.sl0 || 0) + (this.rd(0, this.sp) - (this.sl0 || 0)) * a; this.sr0 = (this.sr0 || 0) + (this.rd(1, this.sp) - (this.sr0 || 0)) * a;
+          wl = this.sl0 * this.sg; wr = this.sr0 * this.sg;
         }
         else if (m === "rev") { const i = ((this.p | 0) % N + N) % N; wl = this.b[0][i]; wr = this.b[1][i]; this.p -= 1; }
       }
@@ -59,6 +64,7 @@ class Mangle extends AudioWorkletProcessor {
         l += (pl - l) * this.pmix; r += (pr - r) * this.pmix;
       }
       this.pw = (this.pw + 1) % this.PN;
+      if (!(l === l) || !(r === r)) { l = 0; r = 0; }   // never let a bad number into the effects after this
       out[0][k] = l; if (out[1]) out[1][k] = r;
       this.w = (this.w + 1) % N; this.wa++;
     }

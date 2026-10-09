@@ -354,7 +354,7 @@ export class Engine {
   }
   // scratching: grab and the mix freezes where you grabbed it while the track carries on silently underneath
   scratch(on) { this.mg && this.mg.port.postMessage({ mode: on ? "scratch" : "off" }); }
-  scratchTo(sec) { this.mg && this.mg.port.postMessage({ scr: Math.round(sec * this.ctx.sampleRate) }); }
+  scratchTo(sec, dt) { this.mg && this.ctx && this.mg.port.postMessage({ scr: Math.round(sec * this.ctx.sampleRate), dt }); }
   release() { this.mg && this.mg.port.postMessage({ mode: "off" }); }
   // wipe the lot: every lane, every loop, any break bar still to come
   clear() {

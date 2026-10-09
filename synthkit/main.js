@@ -57,21 +57,22 @@ function placeDots() { const r = $("platter").getBoundingClientRect().width / 2 
 placeDots(); addEventListener("resize", placeDots); new ResizeObserver(placeDots).observe($("stage"));
 // in the circle: drag the middle to smear the picture; grab the rim and turn it to scratch the music.
 // While you scratch the track keeps running silently underneath, so letting go lands you back in time.
-{ const pl = $("platter"), cv = $("vdj"); cv.style.touchAction = "none"; pl.style.touchAction = "none"; let mode = null, lastA = 0, off = 0;
+{ const pl = $("platter"), cv = $("vdj"); cv.style.touchAction = "none"; pl.style.touchAction = "none"; let mode = null, lastA = 0, off = 0, lastT = 0;
   const geo = (e) => { const r = pl.getBoundingClientRect(), c = cv.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2); return { d: Math.hypot(dx, dy) / (r.width / 2), a: Math.atan2(dy, dx), x: (e.clientX - c.left) / c.width, y: 1 - (e.clientY - c.top) / c.height }; };
   pl.addEventListener("pointermove", (e) => {
     const g = geo(e);
     if (!pl.hasPointerCapture(e.pointerId)) { pl.style.cursor = g.d > .8 ? "grab" : "crosshair"; return; }
     if (mode === "smear") V.poke(g.x, g.y, true);
-    else if (mode === "scr") { let da = g.a - lastA; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; lastA = g.a; off += (da / (2 * Math.PI)) * 1.8; off = Math.min(5, Math.max(-5, off)); E.scratchTo(off); V.spin = (V.spin || 0) + da; }
+    else if (mode === "scr") { let da = g.a - lastA; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; lastA = g.a; off += (da / (2 * Math.PI)) * 1.8; off = Math.min(5, Math.max(-5.5, off)); const n = performance.now(); E.scratchTo(off, Math.min(.05, Math.max(.004, (n - lastT) / 1000))); lastT = n; V.spin = (V.spin || 0) + da; V.scrub = off; }
   });
   pl.addEventListener("pointerdown", (e) => {
     const g = geo(e); if (g.d > 1.02) return; e.preventDefault(); pl.setPointerCapture(e.pointerId);
-    if (g.d > .8) { mode = "scr"; lastA = g.a; off = 0; E.ensure().then(() => E.scratch(true)); V.scratching = true; pl.style.cursor = "grabbing"; $("platter").classList.add("scr"); }
+    if (g.d > .8) { mode = "scr"; lastA = g.a; off = 0; lastT = performance.now(); if (E.ctx) E.scratch(true); else E.ensure().then(() => mode === "scr" && E.scratch(true)); V.scratching = true; pl.style.cursor = "grabbing"; $("platter").classList.add("scr"); }
     else { mode = "smear"; V.poke(g.x, g.y, false); V.poke(g.x, g.y, true); }
   });
   const up = (e) => { const g = geo(e); if (mode === "smear") V.poke(g.x, g.y, false); if (mode === "scr") { E.scratch(false); V.scratching = false; $("platter").classList.remove("scr"); } mode = null; pl.style.cursor = g.d > .8 ? "grab" : "crosshair"; };
-  pl.addEventListener("pointerup", up); pl.addEventListener("pointercancel", up); }
+  // however the hand comes off (let go, leaves the window, loses the pointer), the record always starts again
+  pl.addEventListener("pointerup", up); pl.addEventListener("pointercancel", up); pl.addEventListener("lostpointercapture", (e) => mode && up(e)); addEventListener("blur", () => mode === "scr" && up({ clientX: 0, clientY: 0 })); }
 function throwIn(src) { V.add(src); deck(); document.body.classList.add("has"); }
 function deck() {
   $("deck").innerHTML = V.layers.map((L, i) => `<div class="slot${i === V.ia ? " a" : ""}${i === V.ib && V.ib !== V.ia ? " b" : ""}" data-r="${i === V.ia ? "A" : "B"}" data-i="${i}">${L.type === "video" && !L.thumb ? `<video src="${L.url}" muted playsinline autoplay loop></video>` : `<img src="${L.thumb || L.url}" alt="">`}<button class="x" type="button" aria-label="Take it out">×</button></div>`).join("") +
