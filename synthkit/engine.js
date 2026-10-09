@@ -352,6 +352,9 @@ export class Engine {
     else this.mg.port.postMessage({ mode, at });
     return at / sr - this.ctx.currentTime;
   }
+  // scratching: grab and the mix freezes where you grabbed it while the track carries on silently underneath
+  scratch(on) { this.mg && this.mg.port.postMessage({ mode: on ? "scratch" : "off" }); }
+  scratchTo(sec) { this.mg && this.mg.port.postMessage({ scr: Math.round(sec * this.ctx.sampleRate) }); }
   release() { this.mg && this.mg.port.postMessage({ mode: "off" }); }
   // wipe the lot: every lane, every loop, any break bar still to come
   clear() {

@@ -5,10 +5,10 @@ class Mangle extends AudioWorkletProcessor {
   constructor() {
     super();
     this.N = (sampleRate * 6) | 0; this.b = [new Float32Array(this.N), new Float32Array(this.N)];
-    this.w = 0; this.m = ""; this.wet = 0; this.tg = 0; this.pend = null;
+    this.w = 0; this.wa = 0; this.m = ""; this.wet = 0; this.tg = 0; this.pend = null;
     // pitch shifter: two read heads sweeping through a short window, crossfaded
     this.PN = 16384; this.pb = [new Float32Array(this.PN), new Float32Array(this.PN)]; this.pw = 0; this.W = Math.round(sampleRate * .06); this.d1 = 64; this.ratio = 1; this.pmix = 0;
-    this.port.onmessage = (e) => { const d = e.data; if (d.pitch !== undefined) { this.ratio = Math.pow(2, d.pitch / 12); return; } if (d.relen) { this.L = d.relen; return; } if (d.at && d.at > currentFrame) this.pend = d; else this.set(d); };
+    this.port.onmessage = (e) => { const d = e.data; if (d.pitch !== undefined) { this.ratio = Math.pow(2, d.pitch / 12); return; } if (d.relen) { this.L = d.relen; return; } if (d.scr !== undefined) { this.spT = Math.max(this.wa - this.N + 4096, Math.min(this.wa, this.sw + d.scr)); return; } if (d.at && d.at > currentFrame) this.pend = d; else this.set(d); };
   }
   set(d) {
     if (d.mode === "off") { this.tg = 0; return; }
@@ -16,6 +16,8 @@ class Mangle extends AudioWorkletProcessor {
     if (d.mode === "repeat" || d.mode === "roll") { this.L = d.len; this.st = (this.w - d.len + N) % N; this.p = 0; this.rate = 1; this.cnt = 0; this.minL = d.min || 256; this.fade = d.fade || 40; }
     else if (d.mode === "tape") { this.p = this.w; this.rate = 1; this.dec = 1 / (d.time * sampleRate); }
     else if (d.mode === "rev") { this.p = this.w - 1; }
+    // the record under your hand: it holds the moment you grabbed, the track keeps recording underneath
+    else if (d.mode === "scratch") { this.sw = this.wa; this.sp = this.wa; this.spT = this.wa; this.sg = 0; }
   }
   rd(c, pos) { const N = this.N, b = this.b[c]; pos = ((pos % N) + N) % N; const i = pos | 0, f = pos - i; return b[i] + (b[(i + 1) % N] - b[i]) * f; }
   prd(c, pos) { const N = this.PN, b = this.pb[c]; pos = ((pos % N) + N) % N; const i = pos | 0, f = pos - i; return b[i] + (b[(i + 1) % N] - b[i]) * f; }
@@ -37,6 +39,11 @@ class Mangle extends AudioWorkletProcessor {
             if (m === "roll" && this.tg && ++this.cnt >= 2 && this.L > this.minL) { this.L = Math.max(this.minL, this.L / 2); this.rate *= 1.06; this.cnt = 0; }
           }
         } else if (m === "tape") { wl = this.rd(0, this.p); wr = this.rd(1, this.p); this.p += this.rate; this.rate = Math.max(0, this.rate - this.dec); const g = Math.min(1, this.rate * 4); wl *= g; wr *= g; }
+        else if (m === "scratch") {
+          const prev = this.sp; this.sp += (this.spT - this.sp) * .0025; const vel = this.sp - prev;
+          this.sg += (Math.min(1, Math.abs(vel) * 1.4) - this.sg) * .01;
+          wl = this.rd(0, this.sp) * this.sg; wr = this.rd(1, this.sp) * this.sg;
+        }
         else if (m === "rev") { const i = ((this.p | 0) % N + N) % N; wl = this.b[0][i]; wr = this.b[1][i]; this.p -= 1; }
       }
       this.wet += (this.tg - this.wet) * 0.004;
@@ -53,7 +60,7 @@ class Mangle extends AudioWorkletProcessor {
       }
       this.pw = (this.pw + 1) % this.PN;
       out[0][k] = l; if (out[1]) out[1][k] = r;
-      this.w = (this.w + 1) % N;
+      this.w = (this.w + 1) % N; this.wa++;
     }
     return true;
   }

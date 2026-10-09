@@ -3,7 +3,7 @@
 // snares flash it, and the held DJ controls stutter, double, reverse and freeze it. None of it makes a sound.
 const VS = "attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}";
 const COMP = `precision highp float;varying vec2 v;
-uniform sampler2D A,B,F;uniform vec4 ta,tb;uniform float hasA,hasB,mode,x,t,kick,snr,bass,hat,chaos,seed,crush,tiles,segs,bright,lo,mi,hi,react,trails,mirror,fspace,fpitch,fflange;uniform sampler2D FL;
+uniform sampler2D A,B,F;uniform vec4 ta,tb;uniform float hasA,hasB,mode,x,t,kick,snr,bass,hat,chaos,seed,crush,tiles,segs,bright,lo,mi,hi,react,trails,mirror,fspace,fpitch,fflange,spin;uniform sampler2D FL;
 float hs(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7))+seed*13.7)*43758.5453);}
 float lum(vec3 c){return dot(c,vec3(.299,.587,.114));}
 vec2 mir(vec2 u){return 1.-abs(1.-mod(u,2.));}
@@ -14,6 +14,7 @@ vec2 rot(vec2 u,float a){u-=.5;return vec2(u.x*cos(a)-u.y*sin(a),u.x*sin(a)+u.y*
 void main(){
   vec2 u=v;if(mirror>.5){u=.5-abs(v-.5);}
   if(tiles>1.)u=fract(u*tiles);
+  u=rot(u,spin);
   vec2 cc=u-.5;float rr=length(cc);
   u=cc/(1.+lo*.22*react+kick*.06)+.5;
   u=rot(u,sin(t*.7)*mi*.18*react);
@@ -153,7 +154,7 @@ export class Blender {
       gl.uniform1f(U.hasA, hA ? 1 : 0); gl.uniform1f(U.hasB, hB ? 1 : 0); gl.uniform1f(U.mode, this.mode); gl.uniform1f(U.x, this.x); gl.uniform1f(U.t, now / 1000);
       const lz = s.lfo * s.depth;
       gl.uniform1f(U.kick, f.kick); gl.uniform1f(U.snr, f.snr > .6 ? 1 : 0); gl.uniform1f(U.bass, Math.min(1, f.bass * (.4 + s.chaos) + (s.dest === 1 ? Math.abs(lz) * .6 : 0))); gl.uniform1f(U.hat, f.hat);
-      gl.uniform1f(U.chaos, this.react); gl.uniform1f(U.seed, f.seed); gl.uniform1f(U.crush, 0); const fx = s.fx || {}; gl.uniform1f(U.fspace, fx.space || 0); gl.uniform1f(U.fpitch, fx.pitch || 0); gl.uniform1f(U.fflange, fx.flange || 0);
+      gl.uniform1f(U.chaos, this.react); gl.uniform1f(U.seed, f.seed); gl.uniform1f(U.crush, 0); const fx = s.fx || {}; gl.uniform1f(U.fspace, fx.space || 0); gl.uniform1f(U.fpitch, fx.pitch || 0); gl.uniform1f(U.fflange, fx.flange || 0); gl.uniform1f(U.spin, this.spin || 0); if (!this.scratching) this.spin = (this.spin || 0) * .9;
       gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, this.flow[0].t); gl.uniform1i(U.FL, 3);
       gl.uniform1f(U.lo, s.lo || 0); gl.uniform1f(U.mi, s.mi || 0); gl.uniform1f(U.hi, s.hi || 0); gl.uniform1f(U.react, this.react); gl.uniform1f(U.trails, this.look.trails); gl.uniform1f(U.mirror, this.look.mirror);
       gl.uniform1f(U.tiles, hold === "x2" ? 2 : hold === "x4" ? 4 : 1); gl.uniform1f(U.segs, f.segs); gl.uniform1f(U.bright, tape ? Math.max(.2, 1 - (now - this.ht) / 900) : 1);

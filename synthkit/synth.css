@@ -176,3 +176,5 @@ a{color:inherit;text-decoration:none}
 .fd.live b{color:var(--hi)}
 .fd:hover .ftr{border-color:var(--mid)}
 .holds{grid-template-columns:repeat(4,1fr)}
+.platter.scr .ring{border-color:var(--hi)}
+.platter.scr .ring::before{border-color:var(--mid)}
