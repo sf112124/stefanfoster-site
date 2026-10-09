@@ -1,7 +1,7 @@
 // Synth-folio: the portfolio as a jungle sampler. You play the music; the music blends whatever you throw into the circle.
 import { PROJECTS } from "../projects.js";
 import MEDIA from "../media.js";
-import { Engine, PRESETS, FILMS, FX, LOOPS, LOOPROWS, BREAKS, BASSV, BARPADS, DRUMPADS, noteName } from "./engine.js";
+import { Engine, PRESETS, FILMS, FX, LOOPS, LOOPROWS, LGROUP, BREAKS, BASSV, BARPADS, DRUMPADS, noteName } from "./engine.js";
 import { Blender, MODES, scopes as mkScopes } from "./vdj.js";
 
 const $ = (id) => document.getElementById(id);
@@ -102,18 +102,20 @@ function setBank(b) { bank = (b + BANKS.length) % BANKS.length; $("banks").query
 const padId = (i) => ["l", "k", "d", "x", "f"][bank] + i;
 function padName(i) { return [LOOPS[i], BARPADS[i][0], DRUMPADS[i][0], FX[i], FILMS[i].n][bank]; }
 function renderPads() {
-  $("pads").innerHTML = Array.from({ length: 16 }, (_, i) => `<button class="pad${bank === LB ? " loop" : ""}${bank === 1 ? " bar" : ""}" type="button" data-i="${i}"><b>${esc(padName(i))}</b><i>${touch ? "" : KEYS[i].toUpperCase()}${bank === LB ? ` · ${LOOPROWS[i >> 2]}` : bank === 1 ? " · 1 BAR" : ""}</i></button>`).join("");
+  $("pads").innerHTML = Array.from({ length: 16 }, (_, i) => `<button class="pad${bank === LB ? " loop" : ""}${bank === 1 ? " bar" : ""}" type="button" data-i="${i}"><b>${esc(padName(i))}</b><i>${touch ? "" : KEYS[i].toUpperCase()}${bank === LB ? ` · ${LOOPROWS[LGROUP(i)]}` : bank === 1 ? " · 1 BAR" : ""}</i></button>`).join("");
   $("pads").querySelectorAll(".pad").forEach((b) => b.addEventListener("pointerdown", (e) => { e.preventDefault(); hitPad(+b.dataset.i); }));
   loopLights();
 }
 function lightPad(i) { const b = $("pads").querySelector(`[data-i="${i}"]`); if (!b) return; b.classList.add("lit"); clearTimeout(b._t); b._t = setTimeout(() => b.classList.remove("lit"), 110); }
 async function hitPad(i) {
   if (bank === LB) { await E.ensure(); E.toggleLoop(i); loopLights(); return; }
+  if (bank === 1 && !E.playing) { await E.ensure(); E.bq = i; lightPad(i); toggle(); return; }   // a break on its own starts the clock, and plays from the first bar
   E.pad(padId(i)); lightPad(i);
 }
 function loopLights() {
+  if (bank === 1) { $("pads").querySelectorAll(".pad").forEach((b) => { const i = +b.dataset.i; b.classList.toggle("on", E.bcur === i); b.classList.toggle("wait", E.bq === i); }); return; }
   if (bank !== LB) return;
-  $("pads").querySelectorAll(".pad").forEach((b) => { const i = +b.dataset.i, row = i >> 2, p = E.pend[row]; b.classList.toggle("on", E.loops[row] === i); b.classList.toggle("wait", p !== undefined && (p === i || (p === null && E.loops[row] === i))); });
+  $("pads").querySelectorAll(".pad").forEach((b) => { const i = +b.dataset.i, row = LGROUP(i), p = E.pend[row]; b.classList.toggle("on", E.loops[row] === i); b.classList.toggle("wait", p !== undefined && (p === i || (p === null && E.loops[row] === i))); });
 }
 renderPads();
 // ---------------- the DJ controls ----------------
@@ -299,7 +301,7 @@ function frame(now) {
     if (e.type === "step") markStep(e.d);
     else if (e.type === "tick") markTick(e.d);
     else if (e.type === "bass") R.note = noteName(e.d.d);
-    else if (e.type === "bar") loopLights();
+    else if (e.type === "bar" || e.type === "bq") loopLights();
     else if (e.type === "pad") { const id = e.d.id, b = "lkdxf".indexOf(id[0]); if (b === bank) lightPad(+id.slice(1)); }
     else if (e.type === "stop") { markStep(-1); markTick(-1); }
   }

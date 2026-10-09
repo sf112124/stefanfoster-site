@@ -100,9 +100,9 @@ a{color:inherit;text-decoration:none}
 .pad i{font-style:normal;font-size:9px;color:var(--dim)}
 .pad.lit,.pad:active{background:var(--hi);color:var(--bg);border-color:var(--hi)}
 .pad.lit i,.pad:active i{color:var(--bg)}
-.pad.loop.on{background:var(--on);color:var(--bg);border-color:var(--on)}
-.pad.loop.on i{color:var(--bg)}
-.pad.loop.wait{border-color:var(--hi);animation:wait .25s steps(2) infinite}
+.pad.loop.on,.pad.bar.on{background:var(--on);color:var(--bg);border-color:var(--on)}
+.pad.loop.on i,.pad.bar.on i{color:var(--bg)}
+.pad.loop.wait,.pad.bar.wait{border-color:var(--hi);animation:wait .25s steps(2) infinite}
 .pad.empty{opacity:.35}
 @keyframes wait{50%{background:#26331d}}
 .holds{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:8px}
@@ -156,7 +156,7 @@ a{color:inherit;text-decoration:none}
   #full{display:none}
 }
 .touch .kn,.touch .lane:not([data-l="brk"]) .c{touch-action:pan-y}
-@media (prefers-reduced-motion:reduce){.pad.loop.wait{animation:none}}
+@media (prefers-reduced-motion:reduce){.pad.loop.wait,.pad.bar.wait{animation:none}}
 .ln.lb{border:1px solid var(--ln2);padding:0 5px;height:15px;font-size:9px;color:var(--hi);background:none;cursor:pointer;justify-content:flex-start;margin-right:4px}
 .ln.lb:hover{border-color:var(--mid)}
 .lane.bass .ln.lb{height:12px}

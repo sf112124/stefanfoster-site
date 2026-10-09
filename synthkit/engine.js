@@ -27,8 +27,10 @@ export const BARPADS = [["AMEN 1", "AMEN 1"], ["AMEN 2", "AMEN 2"], ["AMEN 3", "
 // the DRUMS pads: hits that play the moment you touch them
 export const DRUMPADS = [["KICK", "hit", "kick"], ["AMEN KICK", "sl", "AMEN 1", 0], ["SNARE", "hit", "snare"], ["AMEN SNARE", "sl", "AMEN 1", 4], ["GHOST", "hit", "ghost", .7], ["AMEN GHOST", "sl", "AMEN 1", 7], ["HAT", "hit", "hat", .8], ["OPEN HAT", "hit", "ohat"],
   ["RAW KICK", "sl", "RAW", 0], ["RAW SNARE", "sl", "RAW", 4], ["PLEAD SNARE", "sl", "PLEAD", 4], ["STOMP KICK", "sl", "STOMP", 0], ["RIDE", "fx", "RIDE", .9], ["CRASH", "fx", "CRASH"], ["SUB DROP", "fx", "SUB DROP"], ["REV BASS", "fx", "REV BASS"]];
-export const LOOPS = ["AMEN", "AMEN CHOP", "RAW", "PLEAD", "STACK", "STOMP", "AMEN HALF", "RIDE", "808 A", "808 B", "DEEP", "WAH", "PAD", "STABS", "HOOVER", "CHOIR"];
-export const LOOPROWS = ["BREAKS", "BREAKS 2", "BASS", "MUSIC"];
+export const LOOPS = ["AMEN", "AMEN CHOP", "RAW", "PLEAD", "STACK", "STOMP", "AMEN HALF", "RIDE", "808 A", "808 B", "DEEP", "WAH", "PAD Fm", "PAD Db", "PAD Bbm", "PAD Cm"];
+// which loops share a slot: one drum loop at a time, the ride on its own, one bass line, one pad
+export const LGROUP = (i) => (i < 7 ? 0 : i === 7 ? 1 : i < 12 ? 2 : 3);
+export const LOOPROWS = ["DRUMS", "RIDE", "BASS", "PAD"];
 
 export const blank = () => ({ brkSel: 0, kick: Array(16).fill(0), snare: Array(16).fill(0), ghost: Array(16).fill(0), hat: Array(16).fill(0), ohat: Array(16).fill(0), brk: Array(16).fill(-1), rev: Array(16).fill(0), bass: Array(16).fill(-1), pads: Array.from({ length: 16 }, () => []) });
 const on = (arr, a) => { a.forEach((i) => (arr[i] = 1)); return arr; };
@@ -52,7 +54,7 @@ export class Engine {
   }
   ensure() { return this.ready || (this.ready = this.init()); }
   async init() {
-    const C = (this.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" }));
+    const C = (this.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 0 }));
     const G = (v = 1) => { const g = C.createGain(); g.gain.value = v; return g; };
     this.G = G;
     // buses: drums glued and a touch driven, like it's coming off a sampler
@@ -73,11 +75,11 @@ export class Engine {
     this.gateG = G(1); this.trem = G(1); this.post = G(1); this.master = G(this.k.vol);
     (this.mg ? (this.mix.connect(this.mg), this.mg) : this.mix).connect(this.hp); this.hp.connect(this.lp); this.lp.connect(this.gateG); this.gateG.connect(this.trem); this.trem.connect(this.post); this.post.connect(this.master);
     this.dsend = G(0); this.dl = C.createDelay(2); this.dfb = G(.45); const dclip = shaper(1.2); this.dlp = C.createBiquadFilter(); this.dlp.type = "lowpass"; this.dlp.frequency.value = 2600; this.dhp = C.createBiquadFilter(); this.dhp.type = "highpass"; this.dhp.frequency.value = 250;
-    this.post.connect(this.dsend); this.dsend.connect(this.dl); this.dl.connect(this.dlp); this.dlp.connect(this.dhp); this.dhp.connect(dclip); dclip.connect(this.dfb); this.dfb.connect(this.dl); const dret = G(.85); this.dhp.connect(dret); dret.connect(this.master);
+    this.post.connect(this.dsend); this.dsend.connect(this.dl); this.dl.connect(this.dlp); this.dlp.connect(this.dhp); this.dhp.connect(dclip); dclip.connect(this.dfb); this.dfb.connect(this.dl); this.dret = G(0); this.dhp.connect(this.dret); this.dret.connect(this.master);
     this.dwob = C.createOscillator(); this.dwob.frequency.value = .7; this.dwobG = G(0); this.dwob.connect(this.dwobG); this.dwobG.connect(this.dl.delayTime); this.dwob.start();
     // SPACE: a long dark hall, and near the top of the fader it feeds back into itself and keeps rising
     this.dry = G(1); this.post.disconnect(this.master); this.post.connect(this.dry); this.dry.connect(this.master); this.post.connect(this.dsend);
-    this.rv = C.createConvolver(); this.rv.buffer = hall(C, 6.5); this.rsend = G(0); this.rret = G(1.1); this.rfb = G(0); const rfd = C.createDelay(1), rvhp = C.createBiquadFilter(); rfd.delayTime.value = .19; rvhp.type = "highpass"; rvhp.frequency.value = 500;
+    this.rv = C.createConvolver(); this.rv.buffer = hall(C, 6.5); this.rsend = G(0); this.rret = G(0); this.rfb = G(0); const rfd = C.createDelay(1), rvhp = C.createBiquadFilter(); rfd.delayTime.value = .19; rvhp.type = "highpass"; rvhp.frequency.value = 500;
     this.post.connect(this.rsend); this.rsend.connect(this.rv); this.rv.connect(this.rret); this.rret.connect(this.master); this.rv.connect(rvhp); rvhp.connect(rfd); rfd.connect(this.rfb); this.rfb.connect(this.rv);
     // FLANGE: a few milliseconds of swept delay fed back on itself
     this.fl = C.createDelay(.05); this.fl.delayTime.value = .003; this.flfb = G(0); this.flw = G(0); this.flo = C.createOscillator(); this.flo.frequency.value = .25; this.flg = G(.0022); this.flo.connect(this.flg); this.flg.connect(this.fl.delayTime); this.flo.start();
@@ -124,20 +126,23 @@ export class Engine {
   }
   // ---------------- the six faders: they spring back when you let go ----------------
   setFx(n, v) {
-    this.fx[n] = v; if (!this.ctx) return; const C = this.ctx, now = C.currentTime, sm = (p, x, tc = .012) => p.setTargetAtTime(x, now, tc);
+    this.fx[n] = v; if (!this.ctx) return; const C = this.ctx, now = C.currentTime, sm = (p, x, tc = .005) => p.setTargetAtTime(x, now, tc);
     if (n === "filter") {
       const a = Math.abs(v), Q = .7 + Math.pow(a, 1.4) * 22;
       if (v < -.01) { sm(this.lp.frequency, 20000 * Math.pow(2, v * 9.6)); sm(this.hp.frequency, 10); sm(this.lp.Q, Q); sm(this.hp.Q, .7); }
       else if (v > .01) { sm(this.hp.frequency, 10 * Math.pow(2, v * 10.7)); sm(this.lp.frequency, 20000); sm(this.hp.Q, Q); sm(this.lp.Q, .7); }
       else { sm(this.lp.frequency, 20000); sm(this.hp.frequency, 10); sm(this.lp.Q, .7); sm(this.hp.Q, .7); }
     }
-    else if (n === "space") { sm(this.rsend.gain, Math.pow(v, 1.3) * 1.3, .03); sm(this.rfb.gain, Math.max(0, (v - .55) / .45) * .62, .05); sm(this.dry.gain, 1 - Math.max(0, v - .65) * 1.2, .05); }
+    else if (n === "space") {
+      if (v > .01) { sm(this.rret.gain, 1.1, .005); sm(this.rsend.gain, Math.pow(v, 1.3) * 1.3, .008); sm(this.rfb.gain, Math.max(0, (v - .55) / .45) * .62, .02); sm(this.dry.gain, 1 - Math.max(0, v - .65) * 1.2, .01); }
+      else { sm(this.rret.gain, 0, .02); sm(this.rsend.gain, 0, .005); sm(this.rfb.gain, 0, .005); sm(this.dry.gain, 1, .005); }   // back at zero: dry, now
+    }
     else if (n === "echo") {
-      if (v > .01) { sm(this.dsend.gain, Math.pow(v, 1.1), .02); sm(this.dfb.gain, .4 + v * .72, .03); sm(this.dwobG.gain, Math.max(0, v - .7) * .012, .05); }
-      else { sm(this.dsend.gain, 0, .02); sm(this.dfb.gain, .45, .5); sm(this.dwobG.gain, 0, .2); }
+      if (v > .01) { sm(this.dret.gain, .85, .005); sm(this.dsend.gain, Math.pow(v, 1.1), .008); sm(this.dfb.gain, .4 + v * .72, .015); sm(this.dwobG.gain, Math.max(0, v - .7) * .012, .05); }
+      else { sm(this.dret.gain, 0, .02); sm(this.dsend.gain, 0, .005); sm(this.dfb.gain, 0, .005); sm(this.dwobG.gain, 0, .05); }   // back at zero: the echoes stop
     }
     else if (n === "pitch") { this.mg && this.mg.port.postMessage({ pitch: Math.sign(v) * Math.pow(Math.abs(v), 1.3) * 24 }); }
-    else if (n === "flange") { sm(this.flw.gain, v * .95, .03); sm(this.flfb.gain, v * .88, .03); this.flo.frequency.setTargetAtTime(.15 + v * v * 7, now, .05); }
+    else if (n === "flange") { sm(this.flw.gain, v * .95, .006); sm(this.flfb.gain, v > .01 ? v * .88 : 0, .006); this.flo.frequency.setTargetAtTime(.15 + v * v * 7, now, .05); }
     else if (n === "roll") {
       const z = v < .12 ? 0 : v < .32 ? 4 : v < .5 ? 2 : v < .68 ? 1 : v < .85 ? .5 : .25;
       if (z === this.rollZ) return;
@@ -190,6 +195,8 @@ export class Engine {
   cutLoopBars() { const n = this.ctx ? this.ctx.currentTime : 0; (this.lbars || []).forEach((h) => { try { h.g.gain.cancelScheduledValues(n); h.g.gain.setTargetAtTime(0, n, .004); h.s.stop(n + .03); } catch (e) {} }); this.lbars = []; this.cov = [0, 0, 0, 0]; }
   setGate(on) { this.gate = on; if (!on && this.ctx) { const g = this.gateG.gain, n = this.ctx.currentTime; g.cancelScheduledValues(n); g.setTargetAtTime(1, n, .004); } }
   barStart(t) {
+    if (this.bq != null) { const i = this.bq; this.bq = null; this.playBar(i, t); }
+    else if (this.bcur != null && this.bEnd <= t + .01) { this.bcur = null; this.emit("bq", t, null); }
     this.cov = [0, 0, 0, 0]; this.lbars = (this.lbars || []).filter((h) => h.end > t - .01);
     this.loops = this.loops.map((l, i) => (this.pend[i] !== undefined ? this.pend[i] : l)); this.pend = [undefined, undefined, undefined, undefined];
     this.cur = this.mutate ? mutate(this.pat) : this.pat; this.emit("bar", t, { bar: this.bar, loops: [...this.loops] });
@@ -259,7 +266,7 @@ export class Engine {
     if (!this.B.drums) return this.ensure().then(() => this.pad(id, t));
     const C = this.ctx; if (C.state !== "running") C.resume();
     const now = C.currentTime, k = id[0], i = +id.slice(1);
-    if (k === "k") { t = this.breakBar(i); }
+    if (k === "k") { t = this.queueBar(i); if (t == null) return; }
     else {
       t = now;
       if (k === "d") this.drumPad(i, t);
@@ -268,15 +275,21 @@ export class Engine {
     }
     this.emit("pad", t, { id, p: k === "f" ? FILMS[i].p : null });
   }
-  // one bar of a break, lined up to the next beat, tuned to the tempo; a new one cuts the last
-  breakBar(i) {
-    const C = this.ctx, sd = this.sd(), [name, src, order, rev] = BARPADS[i], bk = BREAKS.indexOf(src);
-    let t = C.currentTime + .01;
-    if (this.playing) { let k = 0; while ((this.ms + k) % 4 !== 0) k++; t = Math.max(t, this.nextT + k * sd); }
-    (this.bars || []).forEach((h) => { try { h.g.gain.cancelScheduledValues(t); h.g.gain.setTargetAtTime(0, t, .004); h.s.stop(t + .03); } catch (e) {} });
-    this.bars = [];
-    for (let s = 0; s < 16; s++) { const sl = order ? order[s] : s; if (sl < 0) continue; const h = this.slice(bk, sl, t + s * sd, sd, rev ? rev[s] : 0, .95); if (h) this.bars.push(h); this.emit("brk", t + s * sd, { sl, s, rv: rev ? rev[s] : 0 }); if (s % 4 === 0) this.emit(s === 0 ? "kick" : "snare", t + s * sd, 1); }
-    return t;
+  // BREAKS: press one and it plays a whole bar from the next bar line, cutting whatever was playing there.
+  // Press the one that's already playing and it starts again on the next beat, so you can stutter it.
+  queueBar(i) {
+    const C = this.ctx, sd = this.sd();
+    if (!this.playing) { this.bq = i; this.play(); return C.currentTime; }
+    if (i === this.bcur && this.bq == null) { let k = 0; while ((this.ms + k) % 4 !== 0) k++; const t = this.nextT + k * sd; this.playBar(i, t); return t; }
+    this.bq = i; this.emit("bq", C.currentTime, i); return null;
+  }
+  playBar(i, t) {
+    const sd = this.sd(), [, src, order, rev] = BARPADS[i], bk = BREAKS.indexOf(src);
+    (this.bars || []).forEach((h) => { try { h.g.gain.cancelScheduledValues(t); h.g.gain.setTargetAtTime(0, t, .003); h.s.stop(t + .02); } catch (e) {} });
+    this.bars = []; this.bcur = i; this.bEnd = t + 16 * sd;
+    if (!order && !rev) { const h = this.barLoop(bk, t, .95); if (h) this.bars.push(h); }
+    for (let s = 0; s < 16; s++) { const sl = order ? order[s] : s; if (sl < 0) continue; if (order || rev) { const h = this.slice(bk, sl, t + s * sd, sd, rev ? rev[s] : 0, .95); if (h) this.bars.push(h); } this.emit("brk", t + s * sd, { sl, s, rv: rev ? rev[s] : 0 }); if (s % 4 === 0) this.emit(s === 0 ? "kick" : "snare", t + s * sd, 1); }
+    this.emit("bq", t, i);
   }
   drumPad(i, t) {
     const [, kind, a, b] = DRUMPADS[i];
@@ -293,9 +306,9 @@ export class Engine {
     else this.hit(lane, t, lane === "ghost" ? .45 : .9);
   }
   // ---------------- loops: they start on the next bar ----------------
-  toggleLoop(i) { const row = i >> 2, cur = this.pend[row] !== undefined ? this.pend[row] : this.loops[row]; const next = cur === i ? null : i; if (this.playing) this.pend[row] = next; else this.loops[row] = next; return next; }
+  toggleLoop(i) { const row = LGROUP(i), cur = this.pend[row] !== undefined ? this.pend[row] : this.loops[row]; const next = cur === i ? null : i; if (this.playing) this.pend[row] = next; else this.loops[row] = next; return next; }
   loopStep(id, s, t, sd) {
-    const n = LOOPS[id], b = this.bar, row = id >> 2;
+    const n = LOOPS[id], b = this.bar, row = LGROUP(id);
     // straight breaks: one clean bar at a time, unless the DJ controls are chopping it up
     const STRAIGHT = { AMEN: () => b % 2, RAW: () => 3, PLEAD: () => 4, STACK: () => 5, STOMP: () => 6 };
     if (STRAIGHT[n]) {
@@ -313,10 +326,18 @@ export class Engine {
       const d = line[s]; if (d < 0) return; let k = 1; while (s + k < 16 && line[s + k] < 0) k++;
       const keep = this.k.bassv; this.k.bassv = { "808 A": 0, "808 B": 0, DEEP: 1, WAH: 3 }[n]; this.bassNote(d, t, Math.min(k, 8) * sd, false); this.k.bassv = keep; this.emit("bass", t, { d, n: k }); return;
     }
-    if (n === "PAD") { if (s === 0 && b % 2 === 0) [0, 2, 4, 6, 8].forEach((d) => { this.tone(t, "sawtooth", hz(d, 2), sd * 30, .024, .9); this.tone(t, "triangle", hz(d, 2) * 1.004, sd * 30, .035, 1.2); }); }
-    else if (n === "STABS") { if (s === 3 || s === 11 || (s === 14 && b % 2)) this.fxs("STAB 3", t, .55, [1, 1, 1.189][b % 3]); }
-    else if (n === "HOOVER") { if (s === 0 && b % 2 === 0) this.fxs("HOOVER", t, .55); if (s === 10 && b % 2 === 1) this.fxs("HOOVER 2", t, .5); }
-    else if (n === "CHOIR") { if (s === 0) this.fxs("CHOIR", t, .5, [1, .891, 1.122, .944][b % 4]); }
+    const CH = { "PAD Fm": [0, 2, 4, 6, 8], "PAD Db": [5, 7, 9, 11], "PAD Bbm": [3, 5, 7, 9, 11], "PAD Cm": [4, 6, 8, 10] }[n];
+    if (CH && s === 0 && (b % 2 === 0 || this.padOn !== n)) this.padChord(n, CH, t, sd * 34);
+  }
+  // a soft chord: three detuned voices per note through one warm filter; a new chord fades the old one out
+  padChord(n, ch, t, len) {
+    const C = this.ctx;
+    (this.padV || []).forEach((h) => { try { h.g.gain.cancelScheduledValues(t); h.g.gain.setTargetAtTime(0, t, .35); h.o.forEach((o) => o.stop(t + 2.5)); } catch (e) {} });
+    if (!this.padF) { this.padF = C.createBiquadFilter(); this.padF.type = "lowpass"; this.padF.frequency.value = 1500; this.padF.Q.value = .5; this.padF.connect(this.padBus); const w = C.createOscillator(); w.frequency.value = .07; const wg = this.G(500); w.connect(wg); wg.connect(this.padF.frequency); w.start(); }
+    this.padOn = n; this.padV = ch.map((d) => {
+      const f = hz(d, 2), g = C.createGain(), o = [[-9, "sawtooth", .5], [8, "sawtooth", .5], [0, "triangle", .9]].map(([dt, ty, v]) => { const x = C.createOscillator(), xg = C.createGain(); x.type = ty; x.frequency.value = f; x.detune.value = dt; xg.gain.value = v; x.connect(xg); xg.connect(g); x.start(t); x.stop(t + len + 3); return x; });
+      g.connect(this.padF); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.05, t + .5); g.gain.setValueAtTime(.05, t + len - .4); g.gain.linearRampToValueAtTime(0, t + len + 1.6); return { g, o };
+    });
   }
   fxs(name, t, v, rate = 1) { const m = FXS[name]; this.sp(this.B.fx, m.o, m.d, t, this.padBus, v, rate, .03); }
   hitFx(name, t, v, len) { const m = FXS[name]; this.sp(this.B.fx, m.o, Math.min(m.d, len + .4), t, this.padBus, v, 1, .05); }
@@ -337,7 +358,7 @@ export class Engine {
     const s = this.pat.brkSel; this.pat = blank(); this.pat.brkSel = s; this.cur = this.pat;
     this.loops = [null, null, null, null]; this.pend = [undefined, undefined, undefined, undefined];
     if (this.ctx) { const n = this.ctx.currentTime; (this.bars || []).forEach((h) => { try { h.g.gain.cancelScheduledValues(n); h.g.gain.setTargetAtTime(0, n, .005); h.s.stop(n + .05); } catch (e) {} }); this.stopBass(n); this.reese.amp.gain.cancelScheduledValues(n); this.reese.amp.gain.setTargetAtTime(0, n, .01); }
-    this.bars = [];
+    this.bars = []; this.bq = null; this.bcur = null;
   }
 }
 
