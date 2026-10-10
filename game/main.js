@@ -5,6 +5,8 @@ import MEDIA from "../media.js";
 import { buildArt, C } from "./art.js";
 import { buildWorld, buildHouse, STARTERS, FOES, EXTRA, SAY, ZONES, TT, TNAME, eff } from "./data.js";
 
+// each patch of long grass belongs to one project, by name, so the site's order can change without moving them
+const GRASSOF = ["la-croisiere", "ai-commissions", "3d-explorations", "ai-experiments", "summer-of-sport", "relax", "coca-cola", "gumtree"];
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -199,7 +201,7 @@ function arrive() {
     if (zn && zn !== zoneNow) toast(zn.toUpperCase(), 1800); zoneNow = zn;
     const tg = map.tg[i];
     if (tg) {
-      const slug = PROJECTS[tg - 1].slug; P.grass++;
+      const slug = GRASSOF[tg - 1]; P.grass++;
       if (!S.won.includes(slug) && P.grass >= 2 && (P.grass >= 7 || Math.random() < .3)) { P.grass = 0; script(() => fight(FOES[slug], slug)); }
     } else P.grass = 0;
   }

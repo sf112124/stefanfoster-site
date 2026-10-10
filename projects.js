@@ -4,6 +4,29 @@
 
 export const PROJECTS = [
   {
+    slug: "ai-experiments", title: "Ai Experiments", client: "Personal", kind: "AI film",
+    blurb: "",
+    items: [
+      { head: "Anywhere" },
+      { file: "anywhere.mp4" },
+      { head: "Play", text: "Things I've built to play with. Click one to open it." },
+      { play: "synth", img: "play-synth.webp", sm: "play-synth-sm.webp", caption: "Synth-folio", note: "A jungle sampler" },
+      { play: "rpg", img: "play-rpg.webp", sm: "play-rpg-sm.webp", caption: "Poke-folio", note: "The portfolio as a game" },
+      { play: "crawl", img: "play-crawl.webp", sm: "play-crawl-sm.webp", caption: "Web Crawler", note: "Fight the spider" },
+      { head: "Grow" },
+      { file: "grow.mp4" },
+      { head: "Zombie Cowboys", text: "Trailers for a zombie cowboy movie that one day I’ll have enough AI credits to make." },
+      { file: "zombie-movie_compressed.mp4" },
+      { file: "Sequence-01_1.mp4" },
+      { head: "Samurai Barber" },
+      { file: "barbershop-chop--aigeneratedart--animefyp--nujabes--seedance--7630960936584498454.mp4" },
+      { head: "Samurai Bounty Hunter" },
+      { file: "samurai-bounty-hunter.mp4" },
+      { head: "100 million Goat", text: "Before AI video was everywhere, I faked a goat standing on a power line. A few weeks later the goat had 101M views on TikTok, I’d gained 160K followers, and the Daily Mail thought it was real." },
+      { file: "All-that-for-a-snack--7489488781532302614.mp4", caption: "Original video: All that for a snack?", stat: "101M views, 2.1M shares" },
+    ],
+  },
+  {
     slug: "la-croisiere", title: "La Croisière", client: "Jacquemus × Apple", kind: "Shot on iPhone",
     blurb: "A ‘Shot on iPhone’ Jacquemus campaign that redefined how Apple shows up on social.",
     items: [
@@ -42,27 +65,6 @@ export const PROJECTS = [
       { file: "stefanfosterr_1645100594_2775625522858837284_6859625992.gif" },
       { file: "ezgif-7-7be5b7b62341.gif" },
       { file: "stefanfosterr_1607333769_2458816284802886240_6859625992.gif" },
-    ],
-  },
-  {
-    slug: "ai-experiments", title: "Ai Experiments", client: "Personal", kind: "AI film",
-    blurb: "",
-    items: [
-      { head: "Play", text: "Things I've built to play with. Click one to open it." },
-      { play: "synth", img: "play-synth.webp", sm: "play-synth-sm.webp", caption: "Synth-folio", note: "A jungle sampler" },
-      { play: "rpg", img: "play-rpg.webp", sm: "play-rpg-sm.webp", caption: "Poke-folio", note: "The portfolio as a game" },
-      { play: "crawl", img: "play-crawl.webp", sm: "play-crawl-sm.webp", caption: "Web Crawler", note: "Fight the spider" },
-      { head: "Grow" },
-      { file: "grow.mp4" },
-      { head: "Zombie Cowboys", text: "Trailers for a zombie cowboy movie that one day I’ll have enough AI credits to make." },
-      { file: "zombie-movie_compressed.mp4" },
-      { file: "Sequence-01_1.mp4" },
-      { head: "Samurai Barber" },
-      { file: "barbershop-chop--aigeneratedart--animefyp--nujabes--seedance--7630960936584498454.mp4" },
-      { head: "Samurai Bounty Hunter" },
-      { file: "samurai-bounty-hunter.mp4" },
-      { head: "100 million Goat", text: "Before AI video was everywhere, I faked a goat standing on a power line. A few weeks later the goat had 101M views on TikTok, I’d gained 160K followers, and the Daily Mail thought it was real." },
-      { file: "All-that-for-a-snack--7489488781532302614.mp4", caption: "Original video: All that for a snack?", stat: "101M views, 2.1M shares" },
     ],
   },
   {
