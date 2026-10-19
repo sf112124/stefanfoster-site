@@ -27,6 +27,11 @@ export const PROJECTS = [
     ],
   },
   {
+    // its own page (benjamins.html), behind a password for now
+    slug: "les-benjamins", title: "From Earth to Sky", client: "Les Benjamins × Apple", kind: "Fashion show",
+    page: "benjamins", blurb: "", items: [],
+  },
+  {
     slug: "la-croisiere", title: "La Croisière", client: "Jacquemus × Apple", kind: "Shot on iPhone",
     blurb: "A ‘Shot on iPhone’ Jacquemus campaign that redefined how Apple shows up on social.",
     items: [

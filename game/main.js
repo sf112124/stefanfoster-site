@@ -1,6 +1,7 @@
 // Foster Valley. The same portfolio as the real site, as a small adventure: the projects are out in the long grass,
 // and you beat each one to see its work. Walk with the arrows or WASD, talk and confirm with Enter, Space or Z.
-import { PROJECTS, ABOUT } from "../projects.js";
+import { PROJECTS as ALLP, ABOUT } from "../projects.js";
+const PROJECTS = ALLP.filter((p) => !p.page); // pages of their own (and locked ones) stay out of the game
 import MEDIA from "../media.js";
 import { buildArt, C } from "./art.js";
 import { buildWorld, buildHouse, STARTERS, FOES, EXTRA, SAY, ZONES, TT, TNAME, eff } from "./data.js";

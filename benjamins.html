@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>From Earth to Sky · Les Benjamins × Apple · Stefan Foster</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#7fb3dc">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+:root{--sky:#7fb3dc;--sky2:#a9cde9;--lime:#c4ff3a;--deep:#14324d;--pink:#f0469c;--green:#7fd452;--yellow:#f5c826;--tint:var(--lime)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--sky);color:var(--deep);font-family:Jost,Futura,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{transition:background-color .8s}
+a{color:inherit}
+.mono{font-family:"Geist Mono",ui-monospace,monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+[hidden]{display:none!important}
+
+/* lock */
+#gate{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,var(--sky),var(--sky2));padding:16px}
+#gate form{display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center;width:min(360px,100%)}
+#gate .ttl{color:var(--lime);font-weight:800;letter-spacing:.06em;font-size:clamp(34px,8vw,64px);line-height:.95;text-transform:uppercase;text-shadow:0 2px 24px rgba(20,50,77,.2)}
+#gate input{width:100%;border:2px solid var(--lime);background:rgba(20,50,77,.18);color:#fff;border-radius:999px;padding:14px 20px;font:600 16px Jost,sans-serif;text-align:center;outline:none}
+#gate input::placeholder{color:rgba(255,255,255,.7)}
+#gate button{border:0;border-radius:999px;background:var(--lime);color:var(--deep);padding:13px 30px;font:700 14px Jost,sans-serif;letter-spacing:.14em;cursor:pointer}
+#gate .err{color:#fff;min-height:1em}
+#gate.shake form{animation:sh .4s}
+@keyframes sh{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.logo{width:64px;height:48px;color:var(--lime)}
+.back{position:fixed;top:14px;left:16px;z-index:60;text-decoration:none;color:#fff}
+
+/* page */
+header.top{position:sticky;top:0;z-index:10;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;color:var(--deep)}
+header.top a{text-decoration:none}
+.hero{min-height:92svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:18px;padding:40px 16px;position:relative}
+.hero h1{margin:0;color:var(--lime);font-weight:800;text-transform:uppercase;letter-spacing:.04em;line-height:.9;font-size:clamp(56px,13vw,200px);text-shadow:0 4px 40px rgba(20,50,77,.18)}
+.hero .coords{position:absolute;top:50%;width:100%;display:flex;justify-content:space-between;padding:0 4vw;color:var(--lime);font-weight:500;font-size:clamp(12px,1.4vw,18px);pointer-events:none}
+.bands{display:flex;gap:6px}.bands i{width:46px;height:6px;border-radius:6px}
+.bands i:nth-child(1){background:var(--pink)}.bands i:nth-child(2){background:var(--green)}.bands i:nth-child(3){background:var(--yellow)}
+.lead{max-width:640px;margin:0 auto;padding:0 16px 80px;font-size:clamp(20px,2.4vw,28px);line-height:1.3;text-align:center;color:var(--deep)}
+section.s{padding:70px 16px;max-width:1400px;margin:0 auto}
+section.s>h2{margin:0 0 6px;font-size:clamp(30px,5vw,64px);font-weight:800;text-transform:uppercase;letter-spacing:.02em;color:var(--deep)}
+section.s>p{margin:0 0 26px;max-width:620px;font-size:18px;line-height:1.4}
+
+/* placeholders */
+.ph{position:relative;border:2px dashed rgba(20,50,77,.45);border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;color:var(--deep)}
+.ph b{display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.ph span{display:block;margin-top:6px;opacity:.75}
+.wide{aspect-ratio:16/9;width:100%}
+.tall{aspect-ratio:9/16}
+.sq{aspect-ratio:4/5}
+
+/* carousels */
+.carousels{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.car{border-radius:18px;padding:12px;background:var(--c)}
+.car .track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:8px;scrollbar-width:none;border-radius:10px}
+.car .track::-webkit-scrollbar{display:none}
+.car .ph{flex:0 0 100%;scroll-snap-align:center;border-color:rgba(20,50,77,.4)}
+.car .meta{display:flex;justify-content:space-between;align-items:center;padding:10px 4px 2px}
+.car .dots{display:flex;gap:5px}.car .dots i{width:6px;height:6px;border-radius:50%;background:rgba(20,50,77,.3)}.car .dots i.on{background:var(--deep)}
+.row{display:grid;gap:18px}
+.r3{grid-template-columns:repeat(3,1fr)}
+.r2{grid-template-columns:2fr 1fr}
+.play{display:block;text-decoration:none;border-radius:18px;overflow:hidden;background:var(--deep);color:var(--lime);aspect-ratio:16/8;position:relative}
+.play .in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.play b{font-size:clamp(28px,5vw,60px);font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.play:hover b{text-decoration:underline}
+footer{padding:80px 16px 60px;text-align:center}
+@media (max-width:800px){.carousels,.r3,.r2{grid-template-columns:1fr}.hero .coords{top:auto;bottom:24px}}
+</style>
+</head>
+<body>
+<a class="back mono" href="./#">← Index</a>
+<div id="gate">
+  <form id="gf" autocomplete="off">
+    <svg class="logo" viewBox="0 0 64 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="5"><polyline points="4,6 18,17 32,6 46,17 60,6"/><polyline points="4,22 18,11 32,22 46,11 60,22"/><polyline points="4,26 18,37 32,26 46,37 60,26"/><polyline points="4,42 18,31 32,42 46,31 60,42"/></g></svg>
+    <div class="ttl">From Earth<br>to Sky</div>
+    <input id="pw" type="password" placeholder="Password" aria-label="Password" autofocus>
+    <button type="submit">ENTER</button>
+    <div class="err mono" id="err"></div>
+  </form>
+</div>
+
+<main id="page" hidden>
+  <header class="top"><span></span><span class="mono">Les Benjamins × Apple</span></header>
+
+  <div class="hero">
+    <svg class="logo" viewBox="0 0 64 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="5"><polyline points="4,6 18,17 32,6 46,17 60,6"/><polyline points="4,22 18,11 32,22 46,11 60,22"/><polyline points="4,26 18,37 32,26 46,37 60,26"/><polyline points="4,42 18,31 32,42 46,31 60,42"/></g></svg>
+    <h1>From Earth<br>to Sky</h1>
+    <div class="bands"><i></i><i></i><i></i></div>
+    <div class="coords"><span>38°40′15″N</span><span>38°50′50″E</span></div>
+  </div>
+
+  <p class="lead">Les Benjamins showed Silk Canvas in Cappadocia, under hot air balloons shaped like the valley’s wild flowers. We told it on Apple’s channels, from the first sketch to the sky.</p>
+
+  <section class="s" data-tint="lime">
+    <h2>Design system</h2>
+    <p>Type, shapes and emblems built from the balloons and their three colours.</p>
+    <div class="ph wide"><div><b>Design system hero</b><span class="mono">folder 08-design-system</span></div></div>
+  </section>
+
+  <section class="s" data-tint="lime">
+    <h2>Sketch to Sky</h2>
+    <p>From the first sketch to the final look and balloon.</p>
+    <div class="ph wide"><div><b>Sketch to Sky film</b><span class="mono">folder 04-sketch-to-sky</span></div></div>
+  </section>
+
+  <section class="s" data-tint="pink">
+    <h2>On the day</h2>
+    <p>Three carousels for @apple. Swipe through.</p>
+    <div class="carousels">
+      <div class="car" style="--c:var(--pink)"><div class="track"><div class="ph sq"><div><b>Carousel 1</b><span class="mono">folder 01-carousel-1</span></div></div><div class="ph sq"><div><b>Slide 2</b></div></div><div class="ph sq"><div><b>Slide 3</b></div></div></div><div class="meta"><span class="mono">01</span><span class="dots"><i class="on"></i><i></i><i></i></span></div></div>
+      <div class="car" style="--c:var(--green)"><div class="track"><div class="ph sq"><div><b>Carousel 2</b><span class="mono">folder 02-carousel-2</span></div></div><div class="ph sq"><div><b>Slide 2</b></div></div><div class="ph sq"><div><b>Slide 3</b></div></div></div><div class="meta"><span class="mono">02</span><span class="dots"><i class="on"></i><i></i><i></i></span></div></div>
+      <div class="car" style="--c:var(--yellow)"><div class="track"><div class="ph sq"><div><b>Carousel 3</b><span class="mono">folder 03-carousel-3</span></div></div><div class="ph sq"><div><b>Slide 2</b></div></div><div class="ph sq"><div><b>Slide 3</b></div></div></div><div class="meta"><span class="mono">03</span><span class="dots"><i class="on"></i><i></i><i></i></span></div></div>
+    </div>
+  </section>
+
+  <section class="s" data-tint="green">
+    <h2>The fashion film</h2>
+    <div class="ph wide"><div><b>Fashion film</b><span class="mono">folder 05-fashion-film</span></div></div>
+  </section>
+
+  <section class="s" data-tint="yellow">
+    <h2>@helloapple</h2>
+    <div class="row r3"><div class="ph tall"><div><b>Post</b><span class="mono">folder 06-helloapple</span></div></div><div class="ph tall"><div><b>Post</b></div></div><div class="ph tall"><div><b>Post</b></div></div></div>
+  </section>
+
+  <section class="s" data-tint="pink">
+    <h2>Paid</h2>
+    <p>The three looks as one match cut, plus the rest of the paid media.</p>
+    <div class="row r2"><div class="ph wide" style="aspect-ratio:auto;min-height:420px"><div><b>Match-cut dark post</b><span class="mono">folder 07-paid</span></div></div><div class="ph tall"><div><b>Ad</b></div></div></div>
+  </section>
+
+  <section class="s" id="play" data-tint="lime">
+    <h2>Walk the show</h2>
+    <p>The show in 3D. Fly the balloons, run the real show, take the cameras.</p>
+    <a class="play" href="show3d"><div class="in"><svg class="logo" viewBox="0 0 64 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="5"><polyline points="4,6 18,17 32,6 46,17 60,6"/><polyline points="4,22 18,11 32,22 46,11 60,22"/><polyline points="4,26 18,37 32,26 46,37 60,26"/><polyline points="4,42 18,31 32,42 46,31 60,42"/></g></svg><b>Play the show →</b></div></a>
+  </section>
+
+  <footer><div class="ph" style="max-width:640px;margin:0 auto"><div><b>Credits</b><span class="mono">credits.txt</span></div></div></footer>
+</main>
+
+<script>
+const H = "f5903f51e341a783e69ffc2d9b335048716f5f040a782a2764cd4e728b0f74d9";
+const ok = () => { document.getElementById("gate").hidden = true; document.getElementById("page").hidden = false; document.querySelector(".back").style.color = "var(--deep)"; };
+try { if (sessionStorage.getItem("sf-lb") === "1") ok(); } catch (e) {}
+async function sha(s) { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)); return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join(""); }
+document.getElementById("gf").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const v = document.getElementById("pw").value.trim().toLowerCase();
+  if ((await sha(v)) === H) { try { sessionStorage.setItem("sf-lb", "1"); } catch (e) {} ok(); if (location.hash) document.querySelector(location.hash)?.scrollIntoView(); }
+  else { const g = document.getElementById("gate"); g.classList.remove("shake"); void g.offsetWidth; g.classList.add("shake"); document.getElementById("err").textContent = "Not quite"; }
+});
+// the page takes the colour of the section you're in
+const T = { lime: "#7fb3dc", pink: "#f6b6d6", green: "#bfe8a6", yellow: "#f8e49a" };
+const io = new IntersectionObserver((es) => es.forEach((x) => { if (x.isIntersecting) document.body.style.backgroundColor = T[x.target.dataset.tint] || T.lime; }), { rootMargin: "-45% 0px -45% 0px" });
+document.querySelectorAll("[data-tint]").forEach((s) => io.observe(s));
+// carousel dots follow the swipe
+document.querySelectorAll(".car").forEach((c) => { const t = c.querySelector(".track"), d = [...c.querySelectorAll(".dots i")];
+  t.addEventListener("scroll", () => { const k = Math.round(t.scrollLeft / t.clientWidth); d.forEach((x, i) => x.classList.toggle("on", i === k)); }, { passive: true }); });
+</script>
+</body>
+</html>

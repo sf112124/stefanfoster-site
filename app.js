@@ -576,6 +576,8 @@ function route() {
   else if (history.state?.d == null) { depth += 1; history.replaceState({ d: depth }, ""); }
   else depth = history.state.d;
   const i = PROJECTS.findIndex((p) => p.slug === h);
+  // a project with its own page: go there (and leave the index behind us, so back comes home)
+  if (i >= 0 && PROJECTS[i].page) { history.replaceState({ d: 0 }, "", location.pathname + location.search); location.href = PROJECTS[i].page; return; }
   if (i >= 0 || h === "about") enter(true);
   if (i >= 0) { renderProject(i); open(); }
   else if (h === "about") { renderAbout(); open(); }
