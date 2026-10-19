@@ -541,9 +541,6 @@ function renderAbout() {
 // the experiments: Synth-folio and Poke-folio are their own pages; Web Crawler lets the spider out onto this one
 function launch(k) {
   if (k === "synth" || k === "rpg") { location.href = k; return; }
-  if (k !== "crawl" || touch) return;
-  document.body.classList.add("crawl"); goHome();
-  setTimeout(() => { if (!$("hole").classList.contains("open")) $("hole").click(); setTimeout(() => { if (!$("pad").classList.contains("open")) $("pad").click(); }, 900); }, 700);
 }
 function countUp(el) {
   if (reduce) return;
