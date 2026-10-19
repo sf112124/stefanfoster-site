@@ -280,8 +280,7 @@ h1,h2,h3,p{margin:0}
       <h1 class="t-hero">From Earth to Sky</h1>
       <p class="t-sub center">Les Benjamins × Apple. A fashion show in Cappadocia, and three hot air balloons designed as part of the collection.</p>
     </div>
-    <figure class="flower" data-par><div class="m"><img src="media/les-benjamins/flower.jpg" srcset="media/les-benjamins/flower-sm.jpg 1600w, media/les-benjamins/flower.jpg 3840w" sizes="100vw" alt="A spiky echinops flower against a clear blue sky in Cappadocia"></div>
-      <figcaption>Echinops, Cappadocia. 38°40′15″N 38°50′50″E</figcaption></figure>
+    <figure class="flower" data-par><div class="m"><video src="media/les-benjamins/banner.mp4" poster="media/les-benjamins/banner-poster.jpg" muted autoplay loop playsinline preload="auto" aria-label="Models from the collection gathered in the valley under the green balloon"></video></div></figure>
   </section>
   <section class="story">
     <div class="col">
@@ -379,6 +378,12 @@ const GALLERY = Array.from({ length: 8 }, (_, i) => ({ caption: "Press and stori
 // ---------- one sound at a time ----------
 const players = [];
 const hushOthers = (me) => players.forEach((p) => p !== me && p.mute(true));
+// sound plays automatically; if the browser hasn't been touched yet it starts muted and the sound comes in on the first tap or key
+let soundOn = true, owner = null;
+const playWithSound = (me) => { const v = me.v; v.preload = "auto";
+  if (soundOn) { hushOthers(me); owner = me; v.muted = false; v.play().catch(() => { v.muted = true; v.play().catch(() => {}); }); } else v.play().catch(() => {}); };
+const wakeSound = (e) => { if (e.target.closest?.(".snd")) return; if (soundOn && owner && owner.v.muted && !owner.v.paused) owner.v.muted = false; };
+["pointerdown", "keydown", "touchend"].forEach((e) => addEventListener(e, wakeSound, { capture: true }));
 
 // ---------- big film player ----------
 class Film {
@@ -398,7 +403,7 @@ class Film {
     const toggle = () => { if (v.paused) { this.held = false; v.play(); } else { this.held = true; v.pause(); } };
     pp.onclick = toggle; $(".big", box).onclick = () => { this.held = false; v.play(); };
     v.addEventListener("click", toggle);
-    snd.onclick = () => { if (v.muted) { hushOthers(this); v.muted = false; if (v.paused) { this.held = false; v.play(); } } else v.muted = true; };
+    snd.onclick = () => { if (v.muted) { soundOn = true; owner = this; hushOthers(this); v.muted = false; if (v.paused) { this.held = false; v.play(); } } else { soundOn = false; v.muted = true; } };
     $(".fs", box).onclick = () => { const el = v; (el.requestFullscreen || el.webkitEnterFullscreen || el.webkitRequestFullscreen)?.call(el); };
     const seek = (e) => { const r = bar.getBoundingClientRect(); v.currentTime = clamp((e.clientX - r.left) / r.width) * (v.duration || 0); };
     bar.addEventListener("pointerdown", (e) => { bar.setPointerCapture(e.pointerId); seek(e); bar.onpointermove = seek; });
@@ -410,7 +415,7 @@ class Film {
   }
   mute(on) { this.v.muted = on; }
   // plays only once it has grown to fill the screen, and stops when it leaves
-  want(on) { const v = this.v; if (on && !this.held && v.paused) { v.preload = "auto"; v.play().catch(() => {}); } else if (!on && !v.paused) v.pause(); }
+  want(on) { const v = this.v; if (on && !this.held && v.paused) playWithSound(this); else if (!on && !v.paused) v.pause(); }
 }
 
 // ---------- carousels ----------
@@ -426,10 +431,10 @@ $$(".clip").forEach((box) => {
   const sync = () => { pp.innerHTML = v.paused ? icon.play : icon.pause; pp.setAttribute("aria-label", v.paused ? "Play" : "Pause"); snd.innerHTML = v.muted ? icon.mute : icon.sound; };
   ["play", "pause", "volumechange"].forEach((e) => v.addEventListener(e, sync)); sync();
   pp.onclick = (e) => { e.stopPropagation(); if (v.paused) { me.held = false; v.play(); } else { me.held = true; v.pause(); } };
-  snd.onclick = (e) => { e.stopPropagation(); if (v.muted) { hushOthers(me); v.muted = false; if (v.paused) v.play(); } else v.muted = true; };
+  snd.onclick = (e) => { e.stopPropagation(); if (v.muted) { soundOn = true; owner = me; hushOthers(me); v.muted = false; if (v.paused) v.play(); } else { soundOn = false; v.muted = true; } };
   players.push(me);
   // play only when the whole clip is on screen
-  new IntersectionObserver(([e]) => { if (e.intersectionRatio > .92 && !me.held) { v.preload = "auto"; v.play().catch(() => {}); } else if (e.intersectionRatio < .92) v.pause(); }, { threshold: [0, .5, .92, 1] }).observe(box);
+  new IntersectionObserver(([e]) => { if (e.intersectionRatio > .92 && !me.held && v.paused) playWithSound(me); else if (e.intersectionRatio < .92) v.pause(); }, { threshold: [0, .5, .92, 1] }).observe(box);
 });
 
 $$(".car").forEach((c) => {
@@ -464,7 +469,7 @@ $("#start").onclick = () => { const f = $("#frame"); f.innerHTML = `<iframe src=
 
 // ---------- motion: smooth scrolling, with every movement tied to it ----------
 let lenis = null, inlines = [];
-const flower = $(".flower"), flowerM = $(".flower .m"), flowerI = $(".flower img");
+const flower = $(".flower"), flowerM = $(".flower .m"), flowerI = $(".flower video");
 const open = $("#open"), row = $(".row", open), kvs = $$(".kv", open), kvImgs = kvs.map((k) => $("img", k));
 const scrubs = $$("[data-s]").map((el) => ({ el, m: $(".m", el), tall: !!el.closest(".tall"), film: null }));
 const storyW = $$(".story p").map((p) => { p.innerHTML = p.textContent.split(" ").map((w) => `<span class="w">${w}</span>`).join(" "); return { p, ws: $$(".w", p) }; });
