@@ -247,9 +247,9 @@ h1,h2,h3,p{margin:0}
         <p class="t-sub">A fashion show in Cappadocia, under three hot air balloons designed as part of the collection. Les Benjamins × Apple.</p>
       </div>
       <div class="row">
-        <div class="kv m"><img src="media/les-benjamins/kv-pink-c.jpg" srcset="media/les-benjamins/kv-pink-c-sm.jpg 1200w, media/les-benjamins/kv-pink-c.jpg 3024w" sizes="(max-width:820px) 100vw, 34vw" alt="Pink key visual: a model walks the runway under the pink balloon"></div>
-        <div class="kv m"><img src="media/les-benjamins/kv-green-c.jpg" srcset="media/les-benjamins/kv-green-c-sm.jpg 1200w, media/les-benjamins/kv-green-c.jpg 3024w" sizes="(max-width:820px) 100vw, 34vw" alt="Green key visual: a model walks the runway under the spiky green balloon"></div>
-        <div class="kv m"><img src="media/les-benjamins/kv-yellow-c.jpg" srcset="media/les-benjamins/kv-yellow-c-sm.jpg 1200w, media/les-benjamins/kv-yellow-c.jpg 3024w" sizes="(max-width:820px) 100vw, 34vw" alt="Yellow key visual: a model walks the runway under the yellow tulip balloon"></div>
+        <div class="kv m"><img src="media/les-benjamins/kv-pink-s.jpg" srcset="media/les-benjamins/kv-pink-s-sm.jpg 1200w, media/les-benjamins/kv-pink-s.jpg 3024w" sizes="(max-width:820px) 100vw, 34vw" alt="Pink key visual: a model walks the runway under the pink balloon"></div>
+        <div class="kv m"><img src="media/les-benjamins/kv-green-s.jpg" srcset="media/les-benjamins/kv-green-s-sm.jpg 1200w, media/les-benjamins/kv-green-s.jpg 3024w" sizes="(max-width:820px) 100vw, 34vw" alt="Green key visual: a model walks the runway under the spiky green balloon"></div>
+        <div class="kv m"><img src="media/les-benjamins/kv-yellow-s.jpg" srcset="media/les-benjamins/kv-yellow-s-sm.jpg 1200w, media/les-benjamins/kv-yellow-s.jpg 3024w" sizes="(max-width:820px) 100vw, 34vw" alt="Yellow key visual: a model walks the runway under the yellow tulip balloon"></div>
       </div>
     </div>
   </section>
@@ -466,7 +466,8 @@ function update() {
       kv.style.transform = `translate3d(0, ${(arc * H * [.045, 0, .07][i] / sc).toFixed(1)}px, 0)`;
       kv.style.borderRadius = `${((1 - a) * 14 / sc).toFixed(1)}px`;
       // the pictures slide inside their frames, so they keep moving after the frames have landed
-      kvImgs[i].style.transform = `translate3d(0, ${(lerp(4, -1.5, a) + arc * [0, 1, -1][i] - drift * 2.5).toFixed(2)}%, 0) scale(1.12)`;
+      // the pictures slide inside their frames on the way, and settle exactly whole once landed
+      kvImgs[i].style.transform = `translate3d(0, ${((1 - a) * 4 + arc * [0, 1, -1][i]).toFixed(2)}%, 0) scale(${lerp(1.14, 1, a).toFixed(4)})`;
     });
   } else if (phone && !reduce) {
     const t = prog(open), a = easeIO(clamp((t - .06) / .88));
@@ -475,7 +476,7 @@ function update() {
     words.style.transform = `translate3d(0, ${(-a * 16).toFixed(1)}px, 0)`; words.style.opacity = (1 - a * .35).toFixed(3);
     kvs.forEach((kv, i) => { const r = kv.getBoundingClientRect(), c = (r.left + r.width / 2 - innerWidth / 2) / innerWidth;
       kv.style.transform = `scale(${(1 - Math.min(.06, Math.abs(c) * .08)).toFixed(4)})`;
-      kvImgs[i].style.transform = `translate3d(${(c * -8).toFixed(2)}%, 0, 0) scale(1.14)`; });
+      const k = Math.min(1, Math.abs(c) * 1.4); kvImgs[i].style.transform = `translate3d(${(c * -7).toFixed(2)}%, 0, 0) scale(${(1 + k * .14).toFixed(4)})`; });
   }
 
   // films grow until they fill the screen; corners go square at full size; they play only then
