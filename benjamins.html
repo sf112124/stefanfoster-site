@@ -133,6 +133,17 @@ h1,h2,h3,p{margin:0}
 .credits .end{max-width:var(--wide);margin:48px auto 0;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:14px;color:var(--mute)}
 .credits .end a{color:var(--ink);text-decoration:none}
 
+
+/* real media */
+.open .kv img{object-position:50% 40%}
+.car .m:first-child{background:#fff}
+.v .snd,.film .watch{position:absolute;z-index:2}
+.v .snd{right:12px;bottom:12px;width:36px;height:36px;border-radius:50%;border:0;cursor:pointer;background:rgba(0,0,0,.35) center/16px no-repeat;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 6h3l4-3v10l-4-3H2z' fill='white'/%3E%3Cpath d='M11 6l4 4M15 6l-4 4' stroke='white' stroke-width='1.4'/%3E%3C/svg%3E")}
+.v .snd[aria-pressed="true"]{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 6h3l4-3v10l-4-3H2z' fill='white'/%3E%3Cpath d='M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.8a6 6 0 0 1 0 8.4' fill='none' stroke='white' stroke-width='1.4'/%3E%3C/svg%3E")}
+.film .watch{left:clamp(14px,2vw,24px);top:clamp(14px,2vw,24px);font-size:15px;padding:10px 18px}
+.film video{cursor:pointer}
+
 @media (max-width:820px){
   .nav a:not(.cta){display:none}
   .credits .grid{grid-template-columns:1fr 1fr}
@@ -172,9 +183,9 @@ h1,h2,h3,p{margin:0}
   <section class="open" id="open">
     <div class="pin">
       <div class="kvs">
-        <div class="kv m"><span>Pink key visual</span></div>
-        <div class="kv m"><span>Green key visual</span></div>
-        <div class="kv m"><span>Yellow key visual</span></div>
+        <div class="kv m"><img src="media/les-benjamins/kv-pink.webp" srcset="media/les-benjamins/kv-pink-sm.webp 750w, media/les-benjamins/kv-pink.webp 1500w" sizes="34vw" alt="Pink key visual: a model on the runway under the pink balloon"></div>
+        <div class="kv m"><img src="media/les-benjamins/kv-green.webp" srcset="media/les-benjamins/kv-green-sm.webp 750w, media/les-benjamins/kv-green.webp 1500w" sizes="34vw" alt="Green key visual: a model on the runway under the green balloon"></div>
+        <div class="kv m"><img src="media/les-benjamins/kv-yellow.webp" srcset="media/les-benjamins/kv-yellow-sm.webp 750w, media/les-benjamins/kv-yellow.webp 1500w" sizes="34vw" alt="Yellow key visual: a model on the runway under the yellow balloon"></div>
       </div>
       <div class="words">
         <h1 class="t-hero">From Earth to Sky</h1>
@@ -199,22 +210,22 @@ h1,h2,h3,p{margin:0}
 
   <section class="sec alt" id="carousels">
     <div class="intro center"><h2 class="t-head">@apple carousels</h2><p class="t-sub center">One for each balloon.</p></div>
-    <div class="car" style="--c:var(--pink)" data-n="7"><div class="bar"><i></i><h3>Pink</h3><span class="n"></span></div><div class="track"></div>
+    <div class="car" style="--c:var(--pink)" data-n="7"><div class="bar"><i></i><h3>Pink</h3><span class="n"></span></div><div class="track"><div class="m v"><video muted loop playsinline preload="none" poster="media/les-benjamins/car-pink-1.webp" src="media/les-benjamins/car-pink-1.mp4"></video><button class="snd" aria-label="Sound on" aria-pressed="false"></button></div><div class="m"><img src="media/les-benjamins/car-pink-2.webp" alt="" loading="lazy"></div><div class="m v"><video muted loop playsinline preload="none" poster="media/les-benjamins/car-pink-3.webp" src="media/les-benjamins/car-pink-3.mp4"></video><button class="snd" aria-label="Sound on" aria-pressed="false"></button></div><div class="m"><img src="media/les-benjamins/car-pink-4.webp" alt="" loading="lazy"></div><div class="m v"><video muted loop playsinline preload="none" poster="media/les-benjamins/car-pink-5.webp" src="media/les-benjamins/car-pink-5.mp4"></video><button class="snd" aria-label="Sound on" aria-pressed="false"></button></div><div class="m v"><video muted loop playsinline preload="none" poster="media/les-benjamins/car-pink-6.webp" src="media/les-benjamins/car-pink-6.mp4"></video><button class="snd" aria-label="Sound on" aria-pressed="false"></button></div><div class="m v"><video muted loop playsinline preload="none" poster="media/les-benjamins/car-pink-7.webp" src="media/les-benjamins/car-pink-7.mp4"></video><button class="snd" aria-label="Sound on" aria-pressed="false"></button></div></div>
       <div class="ctl"><button class="pv" aria-label="Previous"><svg viewBox="0 0 14 14"><path d="M9 2 4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="nx" aria-label="Next"><svg viewBox="0 0 14 14"><path d="m5 2 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>
-    <div class="car" style="--c:var(--green)" data-n="7"><div class="bar"><i></i><h3>Green</h3><span class="n"></span></div><div class="track"></div>
+    <div class="car" style="--c:var(--green)" data-n="7"><div class="bar"><i></i><h3>Green</h3><span class="n"></span></div><div class="track"><div class="m"><img src="media/les-benjamins/car-green-1.webp" alt="" loading="lazy"></div><div class="m"><img src="media/les-benjamins/car-green-2.webp" alt="" loading="lazy"></div><div class="m"><img src="media/les-benjamins/car-green-3.webp" alt="" loading="lazy"></div><div class="m"><img src="media/les-benjamins/car-green-4.webp" alt="" loading="lazy"></div><div class="m"><img src="media/les-benjamins/car-green-5.webp" alt="" loading="lazy"></div><div class="m v"><video muted loop playsinline preload="none" poster="media/les-benjamins/car-green-6.webp" src="media/les-benjamins/car-green-6.mp4"></video><button class="snd" aria-label="Sound on" aria-pressed="false"></button></div><div class="m v"><video muted loop playsinline preload="none" poster="media/les-benjamins/car-green-7.webp" src="media/les-benjamins/car-green-7.mp4"></video><button class="snd" aria-label="Sound on" aria-pressed="false"></button></div></div>
       <div class="ctl"><button class="pv" aria-label="Previous"><svg viewBox="0 0 14 14"><path d="M9 2 4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="nx" aria-label="Next"><svg viewBox="0 0 14 14"><path d="m5 2 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>
-    <div class="car" style="--c:var(--yellow)" data-n="7"><div class="bar"><i></i><h3>Yellow</h3><span class="n"></span></div><div class="track"></div>
+    <div class="car" style="--c:var(--yellow)" data-n="6"><div class="bar"><i></i><h3>Yellow</h3><span class="n"></span></div><div class="track"><div class="m v"><video muted loop playsinline preload="none" poster="media/les-benjamins/car-yellow-1.webp" src="media/les-benjamins/car-yellow-1.mp4"></video><button class="snd" aria-label="Sound on" aria-pressed="false"></button></div><div class="m v"><video muted loop playsinline preload="none" poster="media/les-benjamins/car-yellow-2.webp" src="media/les-benjamins/car-yellow-2.mp4"></video><button class="snd" aria-label="Sound on" aria-pressed="false"></button></div><div class="m v"><video muted loop playsinline preload="none" poster="media/les-benjamins/car-yellow-3.webp" src="media/les-benjamins/car-yellow-3.mp4"></video><button class="snd" aria-label="Sound on" aria-pressed="false"></button></div><div class="m v"><video muted loop playsinline preload="none" poster="media/les-benjamins/car-yellow-4.webp" src="media/les-benjamins/car-yellow-4.mp4"></video><button class="snd" aria-label="Sound on" aria-pressed="false"></button></div><div class="m"><img src="media/les-benjamins/car-yellow-5.webp" alt="" loading="lazy"></div><div class="m v"><video muted loop playsinline preload="none" poster="media/les-benjamins/car-yellow-6.webp" src="media/les-benjamins/car-yellow-6.mp4"></video><button class="snd" aria-label="Sound on" aria-pressed="false"></button></div></div>
       <div class="ctl"><button class="pv" aria-label="Previous"><svg viewBox="0 0 14 14"><path d="M9 2 4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="nx" aria-label="Next"><svg viewBox="0 0 14 14"><path d="m5 2 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>
   </section>
 
   <section class="sec wide" id="sketch">
     <div class="intro center"><h2 class="t-head">From Sketch to Sky</h2><p class="t-sub center">From the first sketch to the final look, and the balloon it became.</p></div>
-    <div class="scrub" data-s><div class="pin"><div class="m"><span>From Sketch to Sky</span></div></div></div>
+    <div class="scrub" data-s><div class="pin"><div class="m film"><video muted loop playsinline preload="none" poster="media/les-benjamins/sketch-to-sky.webp" src="media/les-benjamins/sketch-to-sky.mp4"></video><button class="pill w watch">Watch with sound</button></div></div></div>
   </section>
 
   <section class="sec dark tall" id="benji">
     <div class="intro center"><h2 class="t-head">Benji’s story</h2><p class="t-sub center">In his own words. Growing up Turkish in Germany, East meeting West, and the flowers of Cappadocia that became the balloons.</p></div>
-    <div class="scrub" data-s><div class="pin"><div class="m"><span>Benji’s story</span></div></div></div>
+    <div class="scrub" data-s><div class="pin"><div class="m film"><video muted loop playsinline preload="none" poster="media/les-benjamins/benji.webp" src="media/les-benjamins/benji.mp4"></video><button class="pill w watch">Watch with sound</button></div></div></div>
   </section>
 
   <section class="sec" id="play">
@@ -306,6 +317,17 @@ $$(".car").forEach((c) => {
   addEventListener("pointerup", () => { if (!down) return; const { moved, v } = down; down = null; t.classList.remove("drag"); if (moved) go(v < -3 ? 1 : v > 3 ? -1 : 0); });
   t.addEventListener("click", (e) => { if (t.classList.contains("drag")) e.preventDefault(); }, true);
 });
+
+
+// ---------- videos: play while on screen, sound when you ask ----------
+const vids = $$("video");
+const vio = new IntersectionObserver((es) => es.forEach((e) => { const v = e.target; if (e.isIntersecting) { v.preload = "auto"; v.play().catch(() => {}); } else if (!v.dataset.keep) v.pause(); }), { threshold: .35 });
+vids.forEach((v) => vio.observe(v));
+const hush = (except) => vids.forEach((v) => { if (v !== except && !v.muted) { v.muted = true; v.dataset.keep = ""; const b = v.parentNode.querySelector(".snd"); if (b) b.setAttribute("aria-pressed", "false"); const w = v.parentNode.querySelector(".watch"); if (w) w.hidden = false; } });
+$$(".v .snd").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); const v = b.parentNode.querySelector("video"); const on = v.muted; hush(v); v.muted = !on; b.setAttribute("aria-pressed", String(on)); b.setAttribute("aria-label", on ? "Sound off" : "Sound on"); if (on) v.play(); }));
+$$(".film").forEach((f) => { const v = $("video", f), w = $(".watch", f);
+  w.addEventListener("click", () => { hush(v); v.currentTime = 0; v.muted = false; v.dataset.keep = ""; w.hidden = true; v.play(); });
+  v.addEventListener("click", () => { if (v.muted) return w.click(); v.paused ? v.play() : v.pause(); }); });
 
 // ---------- the show, played right here ----------
 $("#start").onclick = () => { const f = $("#frame"); f.innerHTML = `<iframe src="show3d" title="The show in 3D" allow="fullscreen; autoplay" allowfullscreen></iframe>`; $("iframe", f).focus(); };
