@@ -187,7 +187,7 @@ h1,h2,h3,p{margin:0}
 .grid3{max-width:var(--wide);margin:0 auto;padding:0 var(--gut);display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .grid3 .m{aspect-ratio:4/5;--r:20px}
 /* carousels: each colour its own room */
-#balloons{padding-bottom:0}
+#balloons{padding-bottom:clamp(60px,10vh,120px)}
 #carousels{padding-top:clamp(56px,9vh,96px);padding-bottom:clamp(60px,10vh,120px)}
 .car{padding:clamp(28px,5vh,56px) 0}
 .car + .car{margin-top:0}
@@ -271,8 +271,8 @@ h1,h2,h3,p{margin:0}
     <a class="home" href="./"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M9 2 4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Stefan Foster</span></a>
     <b>From Earth to Sky</b>
     <a href="#balloons">Balloons</a>
-    <a href="#carousels">Carousels</a>
     <a href="#collection">Show film</a>
+    <a href="#carousels">Carousels</a>
     <a href="#benji">Benji</a>
     <a href="#live">Live show</a>
     <a class="cta" href="#play">Play the show</a>
@@ -304,14 +304,15 @@ h1,h2,h3,p{margin:0}
     </div>
   </div>
   </section>
-  <section class="sec" id="carousels">
-    <div class="intro center"><h2 class="t-head">On @apple</h2><p class="t-sub center">Three carousels from the shoot, one for each balloon.</p></div>
-    <div id="cars"></div>
-  </section>
   <section class="sec dark tall" id="collection">
     <div class="intro center"><h2 class="t-hero">The Show Film</h2></div>
     <div class="scrub" data-s><div class="pin"><div class="m"></div></div></div>
   </section>
+  <section class="sec" id="carousels">
+    <div class="intro center"><h2 class="t-head">On @apple</h2><p class="t-sub center">Three carousels from the shoot, one for each balloon.</p></div>
+    <div id="cars"></div>
+  </section>
+  
   <section class="sec" id="matchcut">
     <div class="intro center"><h2 class="t-head">Key look in motion</h2></div>
     <div class="inline"><div class="m player" data-src="matchcut" data-poster="matchcut-poster.jpg"></div></div>
