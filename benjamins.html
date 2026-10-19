@@ -119,7 +119,7 @@ h1,h2,h3,p{margin:0}
 
 /* ---------- carousels ---------- */
 .car + .car{margin-top:clamp(56px,9vh,96px)}
-.car .bar{max-width:var(--wide);margin:0 auto 18px;padding:0 var(--gut);display:flex;align-items:center;gap:10px}
+.car .bar{margin:0 0 14px;padding:0 var(--gut);display:flex;align-items:center;gap:10px}
 .car .bar i{width:9px;height:9px;border-radius:50%;background:var(--c)}
 .car .bar h3{font-size:21px;font-weight:600;letter-spacing:-.02em}
 .car .bar .n{margin-left:8px;color:var(--mute);font-size:15px;font-variant-numeric:tabular-nums}
@@ -127,7 +127,7 @@ h1,h2,h3,p{margin:0}
 .car .track.drag{cursor:grabbing;scroll-snap-type:none;scroll-behavior:auto}
 .car .track::-webkit-scrollbar{display:none}
 .car .m{flex:0 0 auto;height:min(68svh,118vw);aspect-ratio:4/5;scroll-snap-align:start;--r:20px;background:#fff}
-.car .ctl{max-width:var(--wide);margin:18px auto 0;padding:0 var(--gut);display:flex;justify-content:flex-end;gap:12px}
+.car .ctl{margin:16px 0 0;padding:0 var(--gut);display:flex;justify-content:flex-end;gap:12px}
 .car .ctl button{width:44px;height:44px;border-radius:50%;border:0;background:var(--ph);cursor:pointer;display:grid;place-items:center;transition:background .2s,opacity .2s}
 .car .ctl button:hover:not(:disabled){background:#dcdce1}
 .car .ctl button:disabled{opacity:.4;cursor:default}
@@ -187,11 +187,12 @@ h1,h2,h3,p{margin:0}
 .grid3{max-width:var(--wide);margin:0 auto;padding:0 var(--gut);display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .grid3 .m{aspect-ratio:4/5;--r:20px}
 /* carousels: each colour its own room */
-#carousels{padding-bottom:0}
+#balloons{padding-bottom:0}
+#carousels{padding-top:clamp(56px,9vh,96px);padding-bottom:clamp(60px,10vh,120px)}
 .car{padding:clamp(28px,5vh,56px) 0}
 .car + .car{margin-top:0}
-.car .bar h3{font-size:clamp(28px,3vw,40px);letter-spacing:-.03em}
-.car .bar i{width:12px;height:12px}
+.car .bar h3{font-size:21px;letter-spacing:-.02em}
+.car .bar i{width:9px;height:9px}
 .car .m{height:min(76svh,118vw)}
 
 /* the paid match cut: one phone-shaped film, plays once it's fully on screen */
@@ -303,7 +304,7 @@ h1,h2,h3,p{margin:0}
     </div>
   </div>
   </section>
-  <section class="sec alt" id="carousels">
+  <section class="sec" id="carousels">
     <div class="intro center"><h2 class="t-head">On @apple</h2><p class="t-sub center">Three carousels from the shoot, one for each balloon.</p></div>
     <div id="cars"></div>
   </section>
@@ -489,11 +490,13 @@ let phone = innerWidth <= 820;
 
 function layout() {
   phone = innerWidth <= 820;
-  row.style.transform = ""; kvs.forEach((k) => { k.style.transform = ""; k.style.borderRadius = ""; });
+  row.style.transform = ""; kvs.forEach((k) => { k.style.transform = ""; k.style.borderRadius = ""; }); open.style.marginBottom = "";
   if (phone) return;
   // the three key visuals at their own 3:4, filling the screen edge to edge once grown
   const gap = 6, cw = Math.floor(Math.min((innerWidth - 2 * gap) / 3, innerHeight * .75));
   row.style.setProperty("--cw", `${cw}px`); row.style.setProperty("--gap", `${gap}px`);
+  // the pinned stage is a full screen tall but the row is shorter: pull what follows up so there is no dead space under it
+  open.style.marginBottom = `${-Math.max(0, (innerHeight - cw * 4 / 3) / 2)}px`;
 }
 
 function update() {
