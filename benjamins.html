@@ -148,6 +148,7 @@ h1,h2,h3,p{margin:0}
 .gal{max-width:var(--wide);margin:0 auto;padding:0 var(--gut);columns:4 240px;column-gap:14px}
 .gal button{display:block;width:100%;margin:0 0 14px;padding:0;border:0;background:none;cursor:zoom-in;break-inside:avoid}
 .gal .m{--r:14px;width:100%}
+.gal .pub{display:block;text-align:left;font-size:13px;color:var(--mute);margin-top:8px}
 .gal .m img{transition:transform .8s var(--ease)}
 .gal button:hover .m img{transform:scale(1.04)}
 .lb{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .35s var(--ease)}
@@ -329,7 +330,7 @@ h1,h2,h3,p{margin:0}
     </div>
   </section>
   <section class="sec alt" id="live">
-    <div class="intro center"><h2 class="t-head">The live show</h2><p class="t-sub center">The show also happened live in the valley, in front of guests and press. Here’s the coverage.</p></div>
+    <div class="intro center"><h2 class="t-head">The live show + press</h2><p class="t-sub center">The show also happened live in the valley, in front of guests and press. From WIRED to GQ, here’s how it travelled.</p></div>
     <div class="gal" id="gal"></div>
   </section>
   <footer class="credits">
@@ -373,7 +374,16 @@ const CARS = {
   yellow: ["1.mp4", "2.mp4", "3.mp4", "4.mp4", "5.jpg", "6.mp4"],
 };
 // press, stories and photos from the live show: { src, caption, video? } (placeholders until they arrive)
-const GALLERY = Array.from({ length: 8 }, (_, i) => ({ caption: "Press and stories", ratio: [4 / 5, 9 / 16, 1, 3 / 4][i % 4] }));
+const GALLERY = [
+  { src: "press-wired.jpg", caption: "WIRED", ratio: .7875 },
+  { src: "press-complex.jpg", caption: "Complex MENA", ratio: .8 },
+  { src: "press-gq.jpg", caption: "GQ Türkiye", ratio: .5875 },
+  { src: "press-geccegusto.jpg", caption: "GecceGusto", ratio: .7507 },
+  { src: "press-hypebeast.jpg", caption: "Hypebeast", ratio: .5726 },
+  { src: "press-culture-archives.jpg", caption: "Culture Archives", ratio: .75 },
+  { src: "press-9to5mac.jpg", caption: "9to5Mac", ratio: .5468 },
+  { src: "press-common.jpg", caption: "Common Essence", ratio: .7984 },
+];
 
 // ---------- one sound at a time ----------
 const players = [];
@@ -452,7 +462,7 @@ $$(".car").forEach((c) => {
 
 // ---------- gallery with a pop-out viewer ----------
 const gal = $("#gal"), lb = $("#lb"), lbs = $("#lbs"); let gi = 0;
-gal.innerHTML = GALLERY.map((g, i) => `<button data-i="${i}" aria-label="Open ${g.caption}"><div class="m" style="aspect-ratio:${g.ratio || (4 / 5)}">${g.src ? (g.video ? `<video muted loop playsinline autoplay src="${M + g.src}"></video>` : `<img src="${M + g.src}" alt="" loading="lazy">`) : "<span>Press or story</span>"}</div></button>`).join("");
+gal.innerHTML = GALLERY.map((g, i) => `<button data-i="${i}" aria-label="Open ${g.caption}"><div class="m" style="aspect-ratio:${g.ratio || (4 / 5)}">${g.src ? (g.video ? `<video muted loop playsinline autoplay src="${M + g.src}"></video>` : `<img src="${M + g.src}" alt="${g.caption} coverage of the show" loading="lazy">`) : "<span>Press or story</span>"}</div><span class="pub">${g.caption}</span></button>`).join("");
 const show = (i) => { gi = (i + GALLERY.length) % GALLERY.length; const g = GALLERY[gi];
   lbs.innerHTML = g.src ? (g.video ? `<video controls autoplay playsinline src="${M + g.src}"></video>` : `<img src="${M + g.src}" alt="">`) : `<div class="m"><span>Press or story</span></div>`;
   $("#lbc").textContent = `${g.caption || ""}  ${gi + 1} of ${GALLERY.length}`.trim(); };
