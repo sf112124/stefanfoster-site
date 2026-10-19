@@ -66,12 +66,10 @@ h1,h2,h3,p{margin:0}
 .dots i:nth-child(1){background:var(--pink)}.dots i:nth-child(2){background:var(--green)}.dots i:nth-child(3){background:var(--yellow)}
 
 /* ---------- opening: the three key visuals rise into place ---------- */
-.open{height:280vh;position:relative}
+.open{height:250vh;position:relative;margin-top:-14vh}
 .open .pin{position:sticky;top:0;height:100svh;overflow:hidden}
-.open .words{position:absolute;left:0;right:0;top:calc(var(--nav) + clamp(40px,9vh,110px));padding:0 var(--gut);text-align:center;z-index:2;will-change:transform,opacity}
-.open .words .t-sub{max-width:30em;margin:18px auto 0}
-.open .row{position:absolute;left:50%;top:calc(50% + var(--nav) / 2);display:flex;gap:var(--gap,14px);transform:translate(-50%,-50%);transform-origin:50% 50%;will-change:transform}
-.open .kv{width:var(--cw);aspect-ratio:3/4;will-change:transform;flex:0 0 auto}
+.open .row{position:absolute;left:50%;top:50%;display:flex;gap:var(--gap,6px);transform:translate(-50%,-50%) scale(.66);transform-origin:50% 50%;will-change:transform}
+.open .kv{width:var(--cw);aspect-ratio:3/4;flex:0 0 auto;border-radius:28px}
 .open .kv img{will-change:transform;transform-origin:50% 50%}
 
 /* ---------- story ---------- */
@@ -181,7 +179,6 @@ h1,h2,h3,p{margin:0}
 .flower .m{aspect-ratio:16/9;border-radius:22px;will-change:transform}
 .flower img{will-change:transform}
 .flower figcaption{margin-top:14px;font-size:14px;color:var(--mute);text-align:center}
-.open{margin-top:clamp(60px,10vh,120px)}
 /* the collection: the centrepiece */
 #collection{padding-top:clamp(120px,20vh,220px)}
 #collection .t-hero{color:#f5f5f7}
@@ -218,12 +215,10 @@ h1,h2,h3,p{margin:0}
   .story{padding:88px var(--gut)}
   .story p{font-size:25px;line-height:1.2}
   /* key visuals: the page scrolls sideways through them */
-  .open{height:240vh}
-  .open .pin{display:flex;flex-direction:column;padding:calc(var(--nav) + 28px) 0 max(24px,env(safe-area-inset-bottom))}
-  .open .words{position:relative;top:auto}
-  .open .words .t-sub{margin-top:12px}
-  .open .row{position:relative;left:auto;top:auto;margin:auto 0;transform:none;padding:0 var(--gut);gap:10px;align-self:flex-start}
-  .open .kv{width:min(74vw,calc((100svh - 300px) * .75));border-radius:14px}
+  .open{height:240vh;margin-top:0}
+  .open .pin{display:flex;align-items:center}
+  .open .row{position:relative;left:auto;top:auto;transform:none;padding:0 var(--gut);gap:10px}
+  .open .kv{width:min(78vw,calc(100svh * .62));border-radius:14px}
   /* phone films: tall ones still grow into the screen, wide ones sit in the flow */
   .scrub{height:190vh;margin-top:-12vh}
   .wide .scrub{height:auto;margin:0}
@@ -274,7 +269,7 @@ h1,h2,h3,p{margin:0}
     <a class="home" href="./"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M9 2 4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Stefan Foster</span></a>
     <b>From Earth to Sky</b>
     <a href="#benji">Story</a>
-    <a href="#open">Balloons</a>
+    <a href="#balloons">Balloons</a>
     <a href="#collection">Collection</a>
     <a href="#carousels">Carousels</a>
     <a href="#live">Live show</a>
@@ -310,18 +305,17 @@ h1,h2,h3,p{margin:0}
       <div class="go"><button class="pill w" id="start"><svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z" fill="currentColor"/></svg>Try it yourself</button><a class="pill g" href="show3d">Full screen</a></div>
     </div>
   </section>
-  <section class="open" id="open" aria-label="Key visuals">
+  <section class="sec" id="balloons">
+    <div class="intro center"><h2 class="t-head">Three balloons</h2><p class="t-sub center">The trumpet, the echinops and the wild tulip, drawn from the valley’s flowers and flown above the runway.</p></div>
+  <div class="open" id="open">
     <div class="pin">
-      <div class="words">
-        <h2 class="t-head">Three balloons</h2>
-        <p class="t-sub">The trumpet, the echinops and the wild tulip, drawn from the valley’s flowers and flown above the runway.</p>
-      </div>
       <div class="row">
         <div class="kv m"><img src="media/les-benjamins/kv-pink-s.jpg" srcset="media/les-benjamins/kv-pink-s-sm.jpg 1200w, media/les-benjamins/kv-pink-s.jpg 3024w" sizes="(max-width:820px) 100vw, 34vw" alt="Pink key visual: a model walks the runway under the pink balloon"></div>
         <div class="kv m"><img src="media/les-benjamins/kv-green-s.jpg" srcset="media/les-benjamins/kv-green-s-sm.jpg 1200w, media/les-benjamins/kv-green-s.jpg 3024w" sizes="(max-width:820px) 100vw, 34vw" alt="Green key visual: a model walks the runway under the spiky green balloon"></div>
         <div class="kv m"><img src="media/les-benjamins/kv-yellow-s.jpg" srcset="media/les-benjamins/kv-yellow-s-sm.jpg 1200w, media/les-benjamins/kv-yellow-s.jpg 3024w" sizes="(max-width:820px) 100vw, 34vw" alt="Yellow key visual: a model walks the runway under the yellow tulip balloon"></div>
       </div>
     </div>
+  </div>
   </section>
   <section class="sec dark tall" id="collection">
     <div class="intro center"><h2 class="t-hero">The collection</h2><p class="t-sub center">Shot by Neels Castillon</p></div>
@@ -471,57 +465,33 @@ $("#start").onclick = () => { const f = $("#frame"); f.innerHTML = `<iframe src=
 // ---------- motion: smooth scrolling, with every movement tied to it ----------
 let lenis = null, inlines = [];
 const flower = $(".flower"), flowerM = $(".flower .m"), flowerI = $(".flower img");
-const open = $("#open"), words = $(".words", open), row = $(".row", open), kvs = $$(".kv", open), kvImgs = kvs.map((k) => $("img", k));
+const open = $("#open"), row = $(".row", open), kvs = $$(".kv", open), kvImgs = kvs.map((k) => $("img", k));
 const scrubs = $$("[data-s]").map((el) => ({ el, m: $(".m", el), tall: !!el.closest(".tall"), film: null }));
 const storyW = $$(".story p").map((p) => { p.innerHTML = p.textContent.split(" ").map((w) => `<span class="w">${w}</span>`).join(" "); return { p, ws: $$(".w", p) }; });
 const prog = (el) => { const r = el.getBoundingClientRect(); return clamp(-r.top / Math.max(1, r.height - innerHeight)); };
 let phone = innerWidth <= 820;
 
-let rowH = 0, s0 = .6, y0 = 0;
 function layout() {
   phone = innerWidth <= 820;
-  // the key visuals at their own shape (3:4), as big as fits three across
-  const gap = Math.round(clamp(innerWidth * .012, 10, 18));
-  const byW = (innerWidth - 2 * parseFloat(getComputedStyle(words).paddingLeft) - 2 * gap) / 3;
-  const byH = (innerHeight - 52 - 48) * 3 / 4;
-  const cw = Math.floor(Math.min(byW, byH));
   row.style.transform = ""; kvs.forEach((k) => { k.style.transform = ""; k.style.borderRadius = ""; });
   if (phone) return;
+  // the three key visuals at their own 3:4, filling the screen edge to edge once grown
+  const gap = 6, cw = Math.floor(Math.min((innerWidth - 2 * gap) / 3, innerHeight * .75));
   row.style.setProperty("--cw", `${cw}px`); row.style.setProperty("--gap", `${gap}px`);
-  // where the row starts: smaller, sitting neatly under the title
-  rowH = cw * 4 / 3;
-  const H = innerHeight, centre = H / 2 + 26, top = words.offsetTop + words.offsetHeight + 48;
-  s0 = clamp((H - top - 40) / rowH, .3, .62);
-  y0 = top - (centre - rowH * s0 / 2);
 }
 
 function update() {
   const H = innerHeight;
   // opening: the title lifts away as the three key visuals rise into a row, each at its own pace, the pictures drifting inside their frames
-  if (!phone && !reduce) {
-    const t = prog(open);
-    // the title lifts away while the row of key visuals grows from under it to fill the screen
-    const a = easeIO(clamp(t / .6)), drift = clamp((t - .6) / .4), arc = Math.sin(Math.PI * a);
-    words.style.transform = `translate3d(0, ${(-a * 70).toFixed(1)}px, 0)`;
-    words.style.opacity = (1 - clamp(t / .28)).toFixed(3);
-    const sc = lerp(s0, 1, a);
-    row.style.transform = `translate(-50%, -50%) translate3d(0, ${(y0 * (1 - a) - drift * H * .025).toFixed(1)}px, 0) scale(${sc.toFixed(4)})`;
-    kvs.forEach((kv, i) => {
-      // on the way up the outer two trail the middle a little; at rest they line up again
-      kv.style.transform = `translate3d(0, ${(arc * H * [.045, 0, .07][i] / sc).toFixed(1)}px, 0)`;
-      kv.style.borderRadius = `${((1 - a) * 14 / sc).toFixed(1)}px`;
-      // the pictures slide inside their frames, so they keep moving after the frames have landed
-      // the pictures slide inside their frames on the way, and settle exactly whole once landed
-      kvImgs[i].style.transform = `translate3d(0, ${((1 - a) * 4 + arc * [0, 1, -1][i]).toFixed(2)}%, 0) scale(${lerp(1.14, 1, a).toFixed(4)})`;
-    });
-  } else if (phone && !reduce) {
-    const t = prog(open), a = easeIO(clamp((t - .06) / .88));
-    const travel = Math.max(0, row.scrollWidth - innerWidth);
+  // key visuals: grow into the screen like the films do, corners going square at full size
+  if (!phone) {
+    const e = reduce ? 1 : ease(clamp(prog(open) / .38)), sc = lerp(.66, 1, e);
+    row.style.transform = `translate(-50%, -50%) scale(${sc.toFixed(4)})`;
+    kvs.forEach((kv) => (kv.style.borderRadius = `${((1 - e) * 28 / sc).toFixed(1)}px`));
+  } else if (!reduce) {
+    // phones: scroll sideways through them
+    const t = prog(open), a = easeIO(clamp((t - .06) / .88)), travel = Math.max(0, row.scrollWidth - innerWidth);
     row.style.transform = `translate3d(${(-a * travel).toFixed(1)}px, 0, 0)`;
-    words.style.transform = `translate3d(0, ${(-a * 16).toFixed(1)}px, 0)`; words.style.opacity = (1 - a * .35).toFixed(3);
-    kvs.forEach((kv, i) => { const r = kv.getBoundingClientRect(), c = (r.left + r.width / 2 - innerWidth / 2) / innerWidth;
-      kv.style.transform = `scale(${(1 - Math.min(.06, Math.abs(c) * .08)).toFixed(4)})`;
-      const k = Math.min(1, Math.abs(c) * 1.4); kvImgs[i].style.transform = `translate3d(${(c * -7).toFixed(2)}%, 0, 0) scale(${(1 + k * .14).toFixed(4)})`; });
   }
 
   // films grow until they fill the screen; corners go square at full size; they play only then
