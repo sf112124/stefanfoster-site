@@ -62,11 +62,11 @@ h1,h2,h3,p{margin:0}
 .dots i:nth-child(1){background:var(--pink)}.dots i:nth-child(2){background:var(--green)}.dots i:nth-child(3){background:var(--yellow)}
 
 /* ---------- opening: the three key visuals rise into place ---------- */
-.open{height:300vh;position:relative}
+.open{height:280vh;position:relative}
 .open .pin{position:sticky;top:0;height:100svh;overflow:hidden}
 .open .words{position:absolute;left:0;right:0;top:calc(var(--nav) + clamp(40px,9vh,110px));padding:0 var(--gut);text-align:center;z-index:2;will-change:transform,opacity}
 .open .words .t-sub{max-width:30em;margin:18px auto 0}
-.open .row{position:absolute;left:50%;top:calc(50% + var(--nav) / 2);display:flex;gap:var(--gap,14px);transform:translate(-50%,-50%)}
+.open .row{position:absolute;left:50%;top:calc(50% + var(--nav) / 2);display:flex;gap:var(--gap,14px);transform:translate(-50%,-50%);transform-origin:50% 50%;will-change:transform}
 .open .kv{width:var(--cw);aspect-ratio:3/4;will-change:transform;flex:0 0 auto}
 .open .kv img{will-change:transform;transform-origin:50% 50%}
 
@@ -86,7 +86,7 @@ h1,h2,h3,p{margin:0}
 .intro .t-sub{max-width:34em;margin-top:14px}
 
 /* films that grow until they fill the screen, then play */
-.scrub{position:relative;height:190vh;margin-top:-14vh}
+.scrub{position:relative;height:250vh;margin-top:-14vh}
 .scrub .pin{position:sticky;top:0;height:100svh;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .scrub .m{will-change:transform}
 .tall .m{height:100svh;aspect-ratio:9/16;max-width:100vw}
@@ -176,7 +176,7 @@ h1,h2,h3,p{margin:0}
   .open .words{position:relative;top:auto;margin-bottom:40px}
   .open .row{position:relative;left:auto;top:auto;transform:none;flex-direction:column;padding:0 var(--gut);gap:14px}
   .open .kv{width:100%}
-  .scrub{height:150vh;margin-top:-20vh}
+  .scrub{height:200vh;margin-top:-20vh}
   .lb .stage,.lb .stage img,.lb .stage video{max-width:100vw}
   .lb .p,.lb .n{top:auto;bottom:16px;margin:0}
 }
@@ -255,7 +255,7 @@ h1,h2,h3,p{margin:0}
     <div class="intro center"><h2 class="t-head">The show, before the show</h2><p class="t-sub center">I designed an interactive version of the show so our director could explore all of it, and work out how to film it, before we shot a frame. Fly the balloons, run the show, try every camera.</p></div>
     <div class="frame" id="frame">
       <img src="media/les-benjamins/show3d-poster.webp" alt="The interactive show: a spiky green balloon above a model on the runway" loading="lazy">
-      <div class="go"><button class="pill w" id="start"><svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z" fill="currentColor"/></svg>Start the show</button><a class="pill g" href="show3d">Open full screen</a></div>
+      <div class="go"><button class="pill w" id="start"><svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z" fill="currentColor"/></svg>Try it yourself</button><a class="pill g" href="show3d">Full screen</a></div>
     </div>
   </section>
 
@@ -401,13 +401,21 @@ const storyW = $$(".story p").map((p) => { p.innerHTML = p.textContent.split(" "
 const prog = (el) => { const r = el.getBoundingClientRect(); return clamp(-r.top / Math.max(1, r.height - innerHeight)); };
 let phone = innerWidth <= 820;
 
+let rowH = 0, s0 = .6, y0 = 0;
 function layout() {
   phone = innerWidth <= 820;
   // the key visuals at their own shape (3:4), as big as fits three across
   const gap = Math.round(clamp(innerWidth * .012, 10, 18));
   const byW = (innerWidth - 2 * parseFloat(getComputedStyle(words).paddingLeft) - 2 * gap) / 3;
-  const byH = (innerHeight - 52 - 56) * 3 / 4;
-  row.style.setProperty("--cw", `${Math.floor(Math.min(byW, byH))}px`); row.style.setProperty("--gap", `${gap}px`);
+  const byH = (innerHeight - 52 - 48) * 3 / 4;
+  const cw = Math.floor(Math.min(byW, byH));
+  if (phone) { row.style.transform = ""; kvs.forEach((k) => (k.style.transform = k.style.borderRadius = "")); }
+  row.style.setProperty("--cw", `${cw}px`); row.style.setProperty("--gap", `${gap}px`);
+  // where the row starts: smaller, sitting neatly under the title
+  rowH = cw * 4 / 3;
+  const H = innerHeight, centre = H / 2 + 26, top = words.offsetTop + words.offsetHeight + 48;
+  s0 = clamp((H - top - 40) / rowH, .3, .62);
+  y0 = top - (centre - rowH * s0 / 2);
 }
 
 function update() {
@@ -415,18 +423,18 @@ function update() {
   // opening: the title lifts away as the three key visuals rise into a row, each at its own pace, the pictures drifting inside their frames
   if (!phone && !reduce) {
     const t = prog(open);
-    const a = easeIO(clamp(t / .38));
-    words.style.transform = `translate3d(0, ${-a * 90}px, 0) scale(${1 - a * .05})`;
-    words.style.opacity = (1 - clamp(t / .26)).toFixed(3);
-    const lag = [.07, 0, .14];
+    // the title lifts away while the row of key visuals grows from under it to fill the screen
+    const a = easeIO(clamp(t / .6)), drift = clamp((t - .6) / .4), arc = Math.sin(Math.PI * a);
+    words.style.transform = `translate3d(0, ${(-a * 70).toFixed(1)}px, 0)`;
+    words.style.opacity = (1 - clamp(t / .28)).toFixed(3);
+    const sc = lerp(s0, 1, a);
+    row.style.transform = `translate(-50%, -50%) translate3d(0, ${(y0 * (1 - a) - drift * H * .025).toFixed(1)}px, 0) scale(${sc.toFixed(4)})`;
     kvs.forEach((kv, i) => {
-      const r = ease(clamp((t - lag[i]) / .55));            // arriving
-      const drift = clamp((t - .55) / .45);                    // after they land they keep moving, gently
-      const y = (1 - r) * H * (.62 + i * .05) - drift * H * .04;
-      const s = lerp(.84, 1, r);
-      kv.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0) scale(${s.toFixed(4)})`;
-      kv.style.borderRadius = `${((1 - r) * 18).toFixed(1)}px`;
-      kvImgs[i].style.transform = `translate3d(0, ${((1 - r) * -6 + drift * [-3, -5, -2][i]).toFixed(2)}%, 0) scale(${(1.24 - r * .18 - drift * .06).toFixed(4)})`;
+      // on the way up the outer two trail the middle a little; at rest they line up again
+      kv.style.transform = `translate3d(0, ${(arc * H * [.045, 0, .07][i] / sc).toFixed(1)}px, 0)`;
+      kv.style.borderRadius = `${((1 - a) * 14 / sc).toFixed(1)}px`;
+      // the pictures slide inside their frames, so they keep moving after the frames have landed
+      kvImgs[i].style.transform = `translate3d(0, ${(lerp(4, -1.5, a) + arc * [0, 1, -1][i] - drift * 2.5).toFixed(2)}%, 0) scale(1.12)`;
     });
   } else if (phone && !reduce) {
     kvs.forEach((kv, i) => { const r = kv.getBoundingClientRect(), p = clamp((H - r.top) / (H + r.height)); kvImgs[i].style.transform = `translate3d(0, ${((p - .5) * -10).toFixed(2)}%, 0) scale(1.14)`; });
@@ -434,7 +442,7 @@ function update() {
 
   // films grow until they fill the screen; corners go square at full size; they play only then
   scrubs.forEach((s) => {
-    const t = prog(s.el), e = reduce ? 1 : ease(clamp(t / .55));
+    const t = prog(s.el), e = reduce ? 1 : ease(clamp(t / .38));
     s.m.style.transform = `scale(${(lerp(.66, 1, e)).toFixed(4)})`;
     s.m.style.borderRadius = `${((1 - e) * 28).toFixed(1)}px`;
     const r = s.el.getBoundingClientRect();
@@ -452,7 +460,7 @@ function startMotion() {
   scrubs.forEach((s) => { if (s.m.classList.contains("player")) s.film = new Film(s.m); });
   layout(); addEventListener("resize", () => { layout(); update(); });
   if (!reduce) {
-    lenis = new Lenis({ lerp: .085, wheelMultiplier: 1, smoothWheel: true });
+    lenis = new Lenis({ lerp: .16, wheelMultiplier: 1.1, smoothWheel: true });
     lenis.on("scroll", update);
     const raf = (time) => { lenis.raf(time); requestAnimationFrame(raf); }; requestAnimationFrame(raf);
   } else addEventListener("scroll", update, { passive: true });
