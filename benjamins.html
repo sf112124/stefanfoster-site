@@ -3,163 +3,259 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>From Earth to Sky · Les Benjamins × Apple · Stefan Foster</title>
+<title>From Earth to Sky, Les Benjamins × Apple, Stefan Foster</title>
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#7fb3dc">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap">
+<meta name="theme-color" content="#ffffff">
 <style>
-:root{--sky:#7fb3dc;--sky2:#a9cde9;--lime:#c4ff3a;--deep:#14324d;--pink:#f0469c;--green:#7fd452;--yellow:#f5c826;--tint:var(--lime)}
+@font-face{font-family:"Geist";src:url(vendor/fonts/geist.woff2) format("woff2");font-weight:100 900;font-display:swap}
+:root{
+  --bg:#ffffff; --ink:#000000; --mute:#8c8c8c; --line:#e6e6e6; --ph:#f2f2f2;
+  --pink:#f0469c; --green:#7fd452; --yellow:#f5c826;
+  --gut:clamp(16px,3vw,44px);
+}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--sky);color:var(--deep);font-family:Jost,Futura,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-body{transition:background-color .8s}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Geist",system-ui,sans-serif;font-size:17px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow-x:clip}
 a{color:inherit}
-.mono{font-family:"Geist Mono",ui-monospace,monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
 [hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+h1,h2,h3,p{margin:0}
+.big{font-weight:600;letter-spacing:-.055em;line-height:.88}
+.mute{color:var(--mute)}
+.back{position:fixed;top:16px;left:var(--gut);z-index:60;text-decoration:none;font-size:15px;mix-blend-mode:difference;color:#fff}
+.tag{position:fixed;top:16px;right:var(--gut);z-index:60;font-size:15px;mix-blend-mode:difference;color:#fff}
 
-/* lock */
-#gate{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,var(--sky),var(--sky2));padding:16px}
-#gate form{display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center;width:min(360px,100%)}
-#gate .ttl{color:var(--lime);font-weight:800;letter-spacing:.06em;font-size:clamp(34px,8vw,64px);line-height:.95;text-transform:uppercase;text-shadow:0 2px 24px rgba(20,50,77,.2)}
-#gate input{width:100%;border:2px solid var(--lime);background:rgba(20,50,77,.18);color:#fff;border-radius:999px;padding:14px 20px;font:600 16px Jost,sans-serif;text-align:center;outline:none}
-#gate input::placeholder{color:rgba(255,255,255,.7)}
-#gate button{border:0;border-radius:999px;background:var(--lime);color:var(--deep);padding:13px 30px;font:700 14px Jost,sans-serif;letter-spacing:.14em;cursor:pointer}
-#gate .err{color:#fff;min-height:1em}
-#gate.shake form{animation:sh .4s}
-@keyframes sh{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
-.logo{width:64px;height:48px;color:var(--lime)}
-.back{position:fixed;top:14px;left:16px;z-index:60;text-decoration:none;color:#fff}
+/* placeholder for media that hasn't arrived yet */
+.m{position:relative;overflow:hidden;background:var(--ph)}
+.m > span{position:absolute;left:14px;bottom:12px;font-size:14px;color:var(--mute)}
+.m img,.m video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 
-/* page */
-header.top{position:sticky;top:0;z-index:10;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;color:var(--deep)}
-header.top a{text-decoration:none}
-.hero{min-height:92svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:18px;padding:40px 16px;position:relative}
-.hero h1{margin:0;color:var(--lime);font-weight:800;text-transform:uppercase;letter-spacing:.04em;line-height:.9;font-size:clamp(56px,13vw,200px);text-shadow:0 4px 40px rgba(20,50,77,.18)}
-.hero .coords{position:absolute;top:50%;width:100%;display:flex;justify-content:space-between;padding:0 4vw;color:var(--lime);font-weight:500;font-size:clamp(12px,1.4vw,18px);pointer-events:none}
-.bands{display:flex;gap:6px}.bands i{width:46px;height:6px;border-radius:6px}
-.bands i:nth-child(1){background:var(--pink)}.bands i:nth-child(2){background:var(--green)}.bands i:nth-child(3){background:var(--yellow)}
-.lead{max-width:640px;margin:0 auto;padding:0 16px 80px;font-size:clamp(20px,2.4vw,28px);line-height:1.3;text-align:center;color:var(--deep)}
-section.s{padding:70px 16px;max-width:1400px;margin:0 auto}
-section.s>h2{margin:0 0 6px;font-size:clamp(30px,5vw,64px);font-weight:800;text-transform:uppercase;letter-spacing:.02em;color:var(--deep)}
-section.s>p{margin:0 0 26px;max-width:620px;font-size:18px;line-height:1.4}
+/* ---------- lock ---------- */
+#gate{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;justify-content:space-between;padding:calc(var(--gut) + 40px) var(--gut) var(--gut)}
+#gate h1{font-size:clamp(64px,13.5vw,240px)}
+#gate form{display:flex;align-items:center;gap:16px;border-bottom:1.5px solid var(--ink);max-width:520px;padding:6px 0}
+#gate input{flex:1;min-width:0;border:0;background:none;font:400 22px "Geist",sans-serif;padding:10px 0;outline:none;color:var(--ink)}
+#gate input::placeholder{color:var(--mute)}
+#gate button{border:0;background:none;font:500 22px "Geist",sans-serif;cursor:pointer;padding:10px 0}
+#gate .dots{display:flex;gap:8px;margin-bottom:22px}
+#gate .dots i{width:10px;height:10px;border-radius:50%}
+#gate .err{height:1.4em;margin-top:12px;color:var(--mute)}
+#gate.shake form{animation:sh .38s}
+@keyframes sh{25%,75%{transform:translateX(-8px)}50%{transform:translateX(8px)}}
+.dots i:nth-child(1){background:var(--pink)}.dots i:nth-child(2){background:var(--green)}.dots i:nth-child(3){background:var(--yellow)}
 
-/* placeholders */
-.ph{position:relative;border:2px dashed rgba(20,50,77,.45);border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;color:var(--deep)}
-.ph b{display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-.ph span{display:block;margin-top:6px;opacity:.75}
-.wide{aspect-ratio:16/9;width:100%}
-.tall{aspect-ratio:9/16}
-.sq{aspect-ratio:4/5}
+/* ---------- opening: three lines of colour open into the three key visuals ---------- */
+.open{height:320vh;position:relative}
+.open .pin{position:sticky;top:0;height:100svh;overflow:hidden}
+.open .top{position:absolute;left:var(--gut);right:var(--gut);top:calc(var(--gut) + 44px);z-index:2;transform:translateY(calc(var(--t) * -40px));opacity:calc(1 - var(--t) * 1.6)}
+.open h1{font-size:clamp(64px,13.5vw,240px)}
+.open .sub{display:flex;justify-content:space-between;gap:8px 20px;margin-top:28px;max-width:1100px}
+.open .sub span:first-child{max-width:24em}
+.open .kvs{position:absolute;left:0;right:0;bottom:0;height:calc(28vh + var(--t) * 72vh);display:flex;justify-content:center;gap:calc(14vw - var(--t) * 13.6vw)}
+.open .kv{width:calc(3px + var(--t) * (33.333vw - 3px));height:100%}
+.open .kv:nth-child(1){--c:var(--pink)} .open .kv:nth-child(2){--c:var(--green)} .open .kv:nth-child(3){--c:var(--yellow)}
+.open .kv.m{background:var(--c)}
+.open .kv > span{color:#000;opacity:calc(var(--t) * 1.4 - .4);white-space:nowrap}
+.open .cap{position:absolute;left:var(--gut);top:calc(var(--gut) + 44px);z-index:2;opacity:calc(var(--t) * 2 - 1.2);color:#000;font-size:15px}
 
-/* carousels */
-.carousels{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-.car{border-radius:18px;padding:12px;background:var(--c)}
-.car .track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:8px;scrollbar-width:none;border-radius:10px}
+/* ---------- the story: words come up as you read ---------- */
+.story{padding:22vh var(--gut) 24vh;max-width:1300px}
+.story p{font-size:clamp(28px,3.6vw,54px);font-weight:500;letter-spacing:-.035em;line-height:1.08;margin-bottom:.9em}
+.story p:last-child{margin-bottom:0}
+.story .w{color:#d4d4d4;transition:color .35s}
+.story .w.on{color:var(--ink)}
+
+/* ---------- section heads ---------- */
+.hd{display:grid;grid-template-columns:1fr minmax(0,26em);gap:24px;align-items:end;padding:0 var(--gut);margin-bottom:32px}
+.hd h2{font-size:clamp(44px,7.5vw,128px)}
+.hd p{color:var(--mute);font-size:17px}
+
+/* ---------- fashion film: grows to fill the height as you arrive ---------- */
+.film{padding:18vh 0 10vh}
+.film .wrap{height:180vh;position:relative}
+.film .pin{position:sticky;top:0;height:100svh;display:flex;align-items:center;justify-content:center}
+.film .m{height:92svh;aspect-ratio:9/16;max-width:calc(100vw - var(--gut)*2);border-radius:calc(28px - var(--t)*18px);transform:scale(calc(.62 + var(--t)*.38))}
+
+/* ---------- carousels ---------- */
+.cars{padding:16vh 0 8vh}
+.car{padding:0 0 9vh}
+.car .bar{display:flex;align-items:center;gap:14px;padding:0 var(--gut);margin-bottom:16px}
+.car .bar i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.car .bar h3{font-size:22px;font-weight:500;letter-spacing:-.02em}
+.car .bar .n{margin-left:auto;color:var(--mute);font-variant-numeric:tabular-nums}
+.car .bar button{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:none;cursor:pointer;display:grid;place-items:center;color:var(--ink)}
+.car .bar button:hover:not(:disabled){border-color:var(--ink)}
+.car .bar button:disabled{opacity:.35;cursor:default}
+.car .bar svg{width:14px;height:14px}
+.car .track{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding:0 var(--gut);scroll-padding:0 var(--gut);scrollbar-width:none;cursor:grab}
+.car .track.drag{cursor:grabbing;scroll-snap-type:none}
 .car .track::-webkit-scrollbar{display:none}
-.car .ph{flex:0 0 100%;scroll-snap-align:center;border-color:rgba(20,50,77,.4)}
-.car .meta{display:flex;justify-content:space-between;align-items:center;padding:10px 4px 2px}
-.car .dots{display:flex;gap:5px}.car .dots i{width:6px;height:6px;border-radius:50%;background:rgba(20,50,77,.3)}.car .dots i.on{background:var(--deep)}
-.row{display:grid;gap:18px}
-.r3{grid-template-columns:repeat(3,1fr)}
-.r2{grid-template-columns:2fr 1fr}
-.play{display:block;text-decoration:none;border-radius:18px;overflow:hidden;background:var(--deep);color:var(--lime);aspect-ratio:16/8;position:relative}
-.play .in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
-.play b{font-size:clamp(28px,5vw,60px);font-weight:800;text-transform:uppercase;letter-spacing:.04em}
-.play:hover b{text-decoration:underline}
-footer{padding:80px 16px 60px;text-align:center}
-@media (max-width:800px){.carousels,.r3,.r2{grid-template-columns:1fr}.hero .coords{top:auto;bottom:24px}}
+.car .m{flex:0 0 auto;height:min(68svh,118vw);aspect-ratio:4/5;scroll-snap-align:start;border-radius:6px}
+.car .m:first-child{background:color-mix(in srgb,var(--c) 22%,var(--ph))}
+
+/* ---------- sketch to sky: from inset to edge to edge ---------- */
+.sketch{padding:16vh 0 0}
+.sketch .wrap{height:200vh;position:relative;margin-top:-4vh}
+.sketch .pin{position:sticky;top:0;height:100svh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.sketch .m{width:100vw;aspect-ratio:16/9;max-height:100svh;transform:scale(calc(.72 + var(--t)*.28));border-radius:calc(22px - var(--t)*22px)}
+
+/* ---------- benji ---------- */
+.benji{padding:20vh var(--gut);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--gut);align-items:end}
+.benji .m{aspect-ratio:9/16;width:min(100%,46svh*1.06);justify-self:start;border-radius:6px}
+.benji h2{font-size:clamp(44px,7.5vw,128px);margin-bottom:28px}
+.benji p{font-size:clamp(20px,1.8vw,26px);letter-spacing:-.02em;line-height:1.3;max-width:20em}
+
+/* ---------- the show ---------- */
+.show{padding:8vh 0 18vh}
+.frame{position:relative;margin:0 var(--gut);aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#000}
+.frame img,.frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;object-fit:cover}
+.frame .go{position:absolute;left:0;right:0;bottom:0;display:flex;gap:10px;padding:clamp(14px,2.4vw,32px)}
+.pill{border:0;border-radius:999px;padding:14px 24px;font:500 17px "Geist",sans-serif;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:10px}
+.pill.w{background:#fff;color:#000}
+.pill.g{background:rgba(255,255,255,.18);color:#fff;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.pill svg{width:12px;height:12px}
+.pill{white-space:nowrap}
+@media (max-width:600px){.pill{padding:11px 16px;font-size:15px}.frame{aspect-ratio:4/5}}
+
+/* ---------- credits ---------- */
+.credits{border-top:1px solid var(--line);margin:0 var(--gut);padding:28px 0 40px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}
+.credits div{font-size:15px}.credits b{display:block;font-weight:400;color:var(--mute)}
+.next{display:block;margin:0 var(--gut) var(--gut);padding:6vh 0 0;border-top:1px solid var(--line);text-decoration:none}
+.next span{color:var(--mute);font-size:15px}
+.next b{display:block;font-size:clamp(44px,7.5vw,128px)}
+.next:hover b{color:var(--mute)}
+
+@media (max-width:820px){
+  .hd,.benji{grid-template-columns:1fr}
+  .benji .m{width:100%;justify-self:stretch}
+  .credits{grid-template-columns:1fr 1fr}
+  .open .sub{flex-direction:column}
+}
+@media (prefers-reduced-motion:reduce){ .story .w{transition:none} }
 </style>
 </head>
 <body>
-<a class="back mono" href="./#">← Index</a>
+<a class="back" href="./#">← Index</a>
+<span class="tag">Les Benjamins × Apple</span>
+
 <div id="gate">
-  <form id="gf" autocomplete="off">
-    <svg class="logo" viewBox="0 0 64 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="5"><polyline points="4,6 18,17 32,6 46,17 60,6"/><polyline points="4,22 18,11 32,22 46,11 60,22"/><polyline points="4,26 18,37 32,26 46,37 60,26"/><polyline points="4,42 18,31 32,42 46,31 60,42"/></g></svg>
-    <div class="ttl">From Earth<br>to Sky</div>
-    <input id="pw" type="password" placeholder="Password" aria-label="Password" autofocus>
-    <button type="submit">ENTER</button>
-    <div class="err mono" id="err"></div>
-  </form>
+  <h1 class="big">From Earth<br>to Sky</h1>
+  <div>
+    <div class="dots"><i></i><i></i><i></i></div>
+    <form id="gf" autocomplete="off"><input id="pw" type="password" placeholder="Password" aria-label="Password" autofocus><button type="submit">Enter</button></form>
+    <div class="err" id="err" role="status"></div>
+  </div>
 </div>
 
 <main id="page" hidden>
-  <header class="top"><span></span><span class="mono">Les Benjamins × Apple</span></header>
-
-  <div class="hero">
-    <svg class="logo" viewBox="0 0 64 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="5"><polyline points="4,6 18,17 32,6 46,17 60,6"/><polyline points="4,22 18,11 32,22 46,11 60,22"/><polyline points="4,26 18,37 32,26 46,37 60,26"/><polyline points="4,42 18,31 32,42 46,31 60,42"/></g></svg>
-    <h1>From Earth<br>to Sky</h1>
-    <div class="bands"><i></i><i></i><i></i></div>
-    <div class="coords"><span>38°40′15″N</span><span>38°50′50″E</span></div>
-  </div>
-
-  <p class="lead">Les Benjamins showed Silk Canvas in Cappadocia, under hot air balloons shaped like the valley’s wild flowers. We told it on Apple’s channels, from the first sketch to the sky.</p>
-
-  <section class="s" data-tint="lime">
-    <h2>Design system</h2>
-    <p>Type, shapes and emblems built from the balloons and their three colours.</p>
-    <div class="ph wide"><div><b>Design system hero</b><span class="mono">folder 08-design-system</span></div></div>
-  </section>
-
-  <section class="s" data-tint="lime">
-    <h2>Sketch to Sky</h2>
-    <p>From the first sketch to the final look and balloon.</p>
-    <div class="ph wide"><div><b>Sketch to Sky film</b><span class="mono">folder 04-sketch-to-sky</span></div></div>
-  </section>
-
-  <section class="s" data-tint="pink">
-    <h2>On the day</h2>
-    <p>Three carousels for @apple. Swipe through.</p>
-    <div class="carousels">
-      <div class="car" style="--c:var(--pink)"><div class="track"><div class="ph sq"><div><b>Carousel 1</b><span class="mono">folder 01-carousel-1</span></div></div><div class="ph sq"><div><b>Slide 2</b></div></div><div class="ph sq"><div><b>Slide 3</b></div></div></div><div class="meta"><span class="mono">01</span><span class="dots"><i class="on"></i><i></i><i></i></span></div></div>
-      <div class="car" style="--c:var(--green)"><div class="track"><div class="ph sq"><div><b>Carousel 2</b><span class="mono">folder 02-carousel-2</span></div></div><div class="ph sq"><div><b>Slide 2</b></div></div><div class="ph sq"><div><b>Slide 3</b></div></div></div><div class="meta"><span class="mono">02</span><span class="dots"><i class="on"></i><i></i><i></i></span></div></div>
-      <div class="car" style="--c:var(--yellow)"><div class="track"><div class="ph sq"><div><b>Carousel 3</b><span class="mono">folder 03-carousel-3</span></div></div><div class="ph sq"><div><b>Slide 2</b></div></div><div class="ph sq"><div><b>Slide 3</b></div></div></div><div class="meta"><span class="mono">03</span><span class="dots"><i class="on"></i><i></i><i></i></span></div></div>
+  <section class="open" data-s style="--t:0">
+    <div class="pin">
+      <div class="top"><h1 class="big">From Earth<br>to Sky</h1>
+      <div class="sub"><span>A fashion show in Cappadocia, under three balloons designed as part of the collection.</span><span class="mute">38°40′15″N 38°50′50″E</span></div></div>
+      <div class="cap">Key visuals</div>
+      <div class="kvs">
+        <div class="kv m"><span>Pink key visual</span></div>
+        <div class="kv m"><span>Green key visual</span></div>
+        <div class="kv m"><span>Yellow key visual</span></div>
+      </div>
     </div>
   </section>
 
-  <section class="s" data-tint="green">
-    <h2>The fashion film</h2>
-    <div class="ph wide"><div><b>Fashion film</b><span class="mono">folder 05-fashion-film</span></div></div>
+  <section class="story" id="story">
+    <p>Two years ago we were briefed to make something for Les Benjamins and iPad. We thought Turkey. Then Cappadocia. Then, what if Benji designed three hot air balloons as part of his next collection?</p>
+    <p>We went to Cappadocia together, and he found his shapes in the valley’s wild flowers. From there we planned the show, the balloons and the collection as one thing.</p>
+    <p>The balloons were a feat of engineering and design. Nothing like them had been made before.</p>
   </section>
 
-  <section class="s" data-tint="yellow">
-    <h2>@helloapple</h2>
-    <div class="row r3"><div class="ph tall"><div><b>Post</b><span class="mono">folder 06-helloapple</span></div></div><div class="ph tall"><div><b>Post</b></div></div><div class="ph tall"><div><b>Post</b></div></div></div>
+  <section class="film">
+    <div class="hd"><h2 class="big">The fashion film</h2><p>Silk Canvas, on a runway in the valley, under the balloons.</p></div>
+    <div class="wrap" data-s style="--t:0"><div class="pin"><div class="m"><span>Fashion film, 9:16</span></div></div></div>
   </section>
 
-  <section class="s" data-tint="pink">
-    <h2>Paid</h2>
-    <p>The three looks as one match cut, plus the rest of the paid media.</p>
-    <div class="row r2"><div class="ph wide" style="aspect-ratio:auto;min-height:420px"><div><b>Match-cut dark post</b><span class="mono">folder 07-paid</span></div></div><div class="ph tall"><div><b>Ad</b></div></div></div>
+  <section class="cars">
+    <div class="hd"><h2 class="big">@apple</h2><p>Three carousels, one for each balloon.</p></div>
+    <div class="car" style="--c:var(--pink)" data-n="7"><div class="bar"><i></i><h3>Pink</h3><span class="n"></span><button class="pv" aria-label="Previous"><svg viewBox="0 0 14 14"><path d="M9 2 4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button><button class="nx" aria-label="Next"><svg viewBox="0 0 14 14"><path d="m5 2 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button></div><div class="track"></div></div>
+    <div class="car" style="--c:var(--green)" data-n="7"><div class="bar"><i></i><h3>Green</h3><span class="n"></span><button class="pv" aria-label="Previous"><svg viewBox="0 0 14 14"><path d="M9 2 4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button><button class="nx" aria-label="Next"><svg viewBox="0 0 14 14"><path d="m5 2 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button></div><div class="track"></div></div>
+    <div class="car" style="--c:var(--yellow)" data-n="7"><div class="bar"><i></i><h3>Yellow</h3><span class="n"></span><button class="pv" aria-label="Previous"><svg viewBox="0 0 14 14"><path d="M9 2 4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button><button class="nx" aria-label="Next"><svg viewBox="0 0 14 14"><path d="m5 2 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button></div><div class="track"></div></div>
   </section>
 
-  <section class="s" id="play" data-tint="lime">
-    <h2>Walk the show</h2>
-    <p>The show in 3D. Fly the balloons, run the real show, take the cameras.</p>
-    <a class="play" href="show3d"><div class="in"><svg class="logo" viewBox="0 0 64 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="5"><polyline points="4,6 18,17 32,6 46,17 60,6"/><polyline points="4,22 18,11 32,22 46,11 60,22"/><polyline points="4,26 18,37 32,26 46,37 60,26"/><polyline points="4,42 18,31 32,42 46,31 60,42"/></g></svg><b>Play the show →</b></div></a>
+  <section class="sketch">
+    <div class="hd"><h2 class="big">From Sketch to Sky</h2><p>From the first sketch to the final look, and the balloon it became.</p></div>
+    <div class="wrap" data-s style="--t:0"><div class="pin"><div class="m"><span>From Sketch to Sky, 16:9</span></div></div></div>
   </section>
 
-  <footer><div class="ph" style="max-width:640px;margin:0 auto"><div><b>Credits</b><span class="mono">credits.txt</span></div></div></footer>
+  <section class="benji">
+    <div class="m"><span>Benji’s story, 9:16</span></div>
+    <div><h2 class="big">Benji’s story</h2><p>In his own words. Growing up Turkish in Germany, East meeting West, and the flowers of Cappadocia that became the balloons.</p></div>
+  </section>
+
+  <section class="show" id="play">
+    <div class="hd"><h2 class="big">The show, before the show</h2><p>I designed an interactive version of the show so our director could explore all of it, and work out how to film it, before we shot a frame. Fly the balloons, run the show, try every camera.</p></div>
+    <div class="frame" id="frame">
+      <img src="media/les-benjamins/show3d-poster.webp" alt="The interactive show: a spiky green balloon above a model on the runway" loading="lazy">
+      <div class="go"><button class="pill w" id="start"><svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z" fill="currentColor"/></svg>Start the show</button><a class="pill g" href="show3d">Open full screen</a></div>
+    </div>
+  </section>
+
+  <section class="credits">
+    <div><b>Client</b>Les Benjamins and Apple</div>
+    <div><b>Director</b>Neels Castillon</div>
+    <div><b>Production</b>AZ</div>
+    <div><b>Balloons</b>Pacha</div>
+  </section>
+  <a class="next" href="./#"><span>Back to</span><b class="big">Index</b></a>
 </main>
 
 <script>
-const H = "f5903f51e341a783e69ffc2d9b335048716f5f040a782a2764cd4e728b0f74d9";
-const ok = () => { document.getElementById("gate").hidden = true; document.getElementById("page").hidden = false; document.querySelector(".back").style.color = "var(--deep)"; };
+const $ = (s, el = document) => el.querySelector(s), $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// the story's words, one span each, so they can come up as you read
+$$(".story p").forEach((p) => { p.innerHTML = p.textContent.split(" ").map((w) => `<span class="w">${w}</span>`).join(" "); });
+const words = $$(".story .w");
+
+// scroll-driven pieces: each [data-s] gets --t, 0 when it arrives, 1 when its pinned stretch is used up
+const scrubs = $$("[data-s]");
+function tick() {
+  const H = innerHeight;
+  scrubs.forEach((el) => { const r = el.getBoundingClientRect(), span = Math.max(1, r.height - H), t = reduce ? 1 : Math.max(0, Math.min(1, -r.top / span));
+    const e = t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; // ease in and out
+    el.style.setProperty("--t", e.toFixed(4)); });
+  const line = H * .72; words.forEach((w) => w.classList.toggle("on", reduce || w.getBoundingClientRect().top < line));
+}
+let queued = false;
+const onScroll = () => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; tick(); }); };
+addEventListener("scroll", onScroll, { passive: true }); addEventListener("resize", onScroll);
+
+// carousels: swipe, drag with the mouse, or use the arrows
+$$(".car").forEach((c) => {
+  const t = $(".track", c), n = +c.dataset.n, cnt = $(".n", c), pv = $(".pv", c), nx = $(".nx", c);
+  if (!t.children.length) t.innerHTML = Array.from({ length: n }, (_, i) => `<div class="m"><span>Slide ${i + 1}</span></div>`).join("");
+  const S = [...t.children], x0 = () => S[0].offsetLeft;
+  const at = () => { let k = 0, b = 1e9; S.forEach((s, i) => { const d = Math.abs(s.offsetLeft - x0() - t.scrollLeft); if (d < b) { b = d; k = i; } }); return k; };
+  const upd = () => { const k = at(); cnt.textContent = `${k + 1}/${S.length}`; pv.disabled = t.scrollLeft < 4; nx.disabled = t.scrollLeft + t.clientWidth >= t.scrollWidth - 4; };
+  const go = (d) => { const s = S[Math.max(0, Math.min(S.length - 1, at() + d))]; t.scrollTo({ left: s.offsetLeft - x0(), behavior: reduce ? "auto" : "smooth" }); };
+  pv.onclick = () => go(-1); nx.onclick = () => go(1);
+  t.addEventListener("scroll", upd, { passive: true }); addEventListener("resize", upd); c.upd = upd;
+  let down = null;
+  t.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse") return; down = { x: e.clientX, s: t.scrollLeft, moved: false }; });
+  addEventListener("pointermove", (e) => { if (!down) return; const dx = e.clientX - down.x; if (Math.abs(dx) > 4) { down.moved = true; t.classList.add("drag"); } t.scrollLeft = down.s - dx; });
+  addEventListener("pointerup", () => { if (!down) return; const m = down.moved; down = null; t.classList.remove("drag"); if (m) go(0); });
+});
+
+// the show, played right here
+$("#start").onclick = () => { const f = $("#frame"); f.innerHTML = `<iframe src="show3d" title="The show in 3D" allow="fullscreen; autoplay" allowfullscreen></iframe>`; $("iframe", f).focus(); };
+
+// the lock
+const HASH = "f5903f51e341a783e69ffc2d9b335048716f5f040a782a2764cd4e728b0f74d9";
+const ok = () => { $("#gate").hidden = true; $("#page").hidden = false; $$(".car").forEach((c) => c.upd()); tick(); if (location.hash) $(location.hash)?.scrollIntoView(); };
 try { if (sessionStorage.getItem("sf-lb") === "1") ok(); } catch (e) {}
 async function sha(s) { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)); return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join(""); }
-document.getElementById("gf").addEventListener("submit", async (e) => {
+$("#gf").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const v = document.getElementById("pw").value.trim().toLowerCase();
-  if ((await sha(v)) === H) { try { sessionStorage.setItem("sf-lb", "1"); } catch (e) {} ok(); if (location.hash) document.querySelector(location.hash)?.scrollIntoView(); }
-  else { const g = document.getElementById("gate"); g.classList.remove("shake"); void g.offsetWidth; g.classList.add("shake"); document.getElementById("err").textContent = "Not quite"; }
+  if ((await sha($("#pw").value.trim().toLowerCase())) === HASH) { try { sessionStorage.setItem("sf-lb", "1"); } catch (e) {} ok(); }
+  else { const g = $("#gate"); g.classList.remove("shake"); void g.offsetWidth; g.classList.add("shake"); $("#err").textContent = "Wrong password, try again"; }
 });
-// the page takes the colour of the section you're in
-const T = { lime: "#7fb3dc", pink: "#f6b6d6", green: "#bfe8a6", yellow: "#f8e49a" };
-const io = new IntersectionObserver((es) => es.forEach((x) => { if (x.isIntersecting) document.body.style.backgroundColor = T[x.target.dataset.tint] || T.lime; }), { rootMargin: "-45% 0px -45% 0px" });
-document.querySelectorAll("[data-tint]").forEach((s) => io.observe(s));
-// carousel dots follow the swipe
-document.querySelectorAll(".car").forEach((c) => { const t = c.querySelector(".track"), d = [...c.querySelectorAll(".dots i")];
-  t.addEventListener("scroll", () => { const k = Math.round(t.scrollLeft / t.clientWidth); d.forEach((x, i) => x.classList.toggle("on", i === k)); }, { passive: true }); });
 </script>
 </body>
 </html>
