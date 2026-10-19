@@ -430,19 +430,17 @@ class Film {
 const arrow = (d) => `<svg viewBox="0 0 14 14"><path d="${d}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 $("#cars").innerHTML = Object.entries(CARS).map(([c, files]) => `<div class="car" style="--c:var(--${c})"><div class="bar"><i></i><h3>${c[0].toUpperCase() + c.slice(1)}</h3><span class="n"></span></div>
   <div class="track">${files.map((f) => { const n = f.split(".")[0];
-    return f.endsWith(".mp4") ? `<div class="m clip"><video muted loop playsinline preload="none" poster="${M}car-${c}-${n}-poster.jpg" src="${M}car-${c}-${f}"></video><div class="mini"><button class="pp" aria-label="Pause">${icon.pause}</button><button class="snd" aria-label="Sound on">${icon.mute}</button></div></div>`
+    return f.endsWith(".mp4") ? `<div class="m clip"><video muted loop playsinline preload="none" poster="${M}car-${c}-${n}-poster.jpg" src="${M}car-${c}-${f}"></video><div class="mini"><button class="pp" aria-label="Pause">${icon.pause}</button></div></div>`
       : `<div class="m"><img src="${M}car-${c}-${f}" alt="" loading="lazy" draggable="false"></div>`; }).join("")}</div>
   <div class="ctl"><button class="pv" aria-label="Previous">${arrow("M9 2 4 7l5 5")}</button><button class="nx" aria-label="Next">${arrow("m5 2 5 5-5 5")}</button></div></div>`).join("");
 
 $$(".clip").forEach((box) => {
-  const v = $("video", box), pp = $(".pp", box), snd = $(".snd", box), me = { v, held: false, mute: (on) => (v.muted = on) };
-  const sync = () => { pp.innerHTML = v.paused ? icon.play : icon.pause; pp.setAttribute("aria-label", v.paused ? "Play" : "Pause"); snd.innerHTML = v.muted ? icon.mute : icon.sound; };
-  ["play", "pause", "volumechange"].forEach((e) => v.addEventListener(e, sync)); sync();
+  const v = $("video", box), pp = $(".pp", box), me = { v, held: false };
+  const sync = () => { pp.innerHTML = v.paused ? icon.play : icon.pause; pp.setAttribute("aria-label", v.paused ? "Play" : "Pause"); };
+  ["play", "pause"].forEach((e) => v.addEventListener(e, sync)); sync();
   pp.onclick = (e) => { e.stopPropagation(); if (v.paused) { me.held = false; v.play(); } else { me.held = true; v.pause(); } };
-  snd.onclick = (e) => { e.stopPropagation(); if (v.muted) { soundOn = true; owner = me; hushOthers(me); v.muted = false; if (v.paused) v.play(); } else { soundOn = false; v.muted = true; } };
-  players.push(me);
   // play only when the whole clip is on screen
-  new IntersectionObserver(([e]) => { if (e.intersectionRatio > .92 && !me.held && v.paused) playWithSound(me); else if (e.intersectionRatio < .92) v.pause(); }, { threshold: [0, .5, .92, 1] }).observe(box);
+  new IntersectionObserver(([e]) => { if (e.intersectionRatio > .92 && !me.held && v.paused) { v.muted = true; v.play().catch(() => {}); } else if (e.intersectionRatio < .92) v.pause(); }, { threshold: [0, .5, .92, 1] }).observe(box);
 });
 
 $$(".car").forEach((c) => {
