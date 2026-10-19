@@ -38,7 +38,8 @@ h1,h2,h3,p{margin:0}
 
 /* local nav */
 .nav{position:fixed;top:0;left:0;right:0;z-index:40;height:var(--nav);display:flex;align-items:center;gap:20px;padding:0 var(--gut);
-  background:rgba(255,255,255,.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(0,0,0,.08)}
+  background:rgba(255,255,255,.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(0,0,0,.08);transition:transform .45s cubic-bezier(.2,.7,.2,1)}
+.nav.away{transform:translateY(-101%)}
 .nav b{font-weight:600;font-size:19px;letter-spacing:-.02em;margin-right:auto}
 .nav a{text-decoration:none;font-size:13px;color:var(--ink);opacity:.8}
 .nav a:hover{opacity:1}
@@ -489,8 +490,12 @@ function layout() {
   open.style.marginBottom = `${-Math.max(0, (innerHeight - cw * 4 / 3) / 2)}px`;
 }
 
+let lastY = 0, navEl = null;
 function update() {
   const H = innerHeight;
+  // top bar slides away while you scroll down into the work, comes back when you scroll up
+  navEl = navEl || $(".nav"); const y = scrollY;
+  if (Math.abs(y - lastY) > 4) { navEl.classList.toggle("away", y > lastY && y > H * .5); lastY = y; }
   // opening: the title lifts away as the three key visuals rise into a row, each at its own pace, the pictures drifting inside their frames
   // key visuals: grow into the screen like the films do, corners going square at full size
   if (!open) {}
