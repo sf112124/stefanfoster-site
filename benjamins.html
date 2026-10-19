@@ -90,11 +90,11 @@ h1,h2,h3,p{margin:0}
 
 /* films that grow until they fill the screen, then play */
 .scrub{position:relative;height:250vh;margin-top:-14vh}
-.scrub .pin{position:sticky;top:0;height:100svh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.scrub .pin{position:sticky;top:var(--nav);height:calc(100svh - var(--nav));display:flex;align-items:center;justify-content:center;overflow:hidden}
 .scrub .m{will-change:transform}
-.tall .m{height:100svh;aspect-ratio:9/16;max-width:100vw}
+.tall .m{height:calc(100svh - var(--nav));aspect-ratio:9/16;max-width:100vw}
 .sec.dark .m{background:#1d1d1f}
-.wide .m{width:100vw;aspect-ratio:16/9;max-height:100svh}
+.wide .m{width:100vw;aspect-ratio:16/9;max-height:calc(100svh - var(--nav))}
 
 /* ---------- player controls ---------- */
 .ui{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;align-items:center;gap:12px;padding:40px clamp(14px,2vw,24px) clamp(14px,2vw,22px);
@@ -495,7 +495,7 @@ function update() {
   const H = innerHeight;
   // top bar slides away while you scroll down into the work, comes back when you scroll up
   navEl = navEl || $(".nav"); const y = scrollY;
-  if (Math.abs(y - lastY) > 4) { navEl.classList.toggle("away", y > lastY && y > H * .5); lastY = y; }
+
   // opening: the title lifts away as the three key visuals rise into a row, each at its own pace, the pictures drifting inside their frames
   // key visuals: grow into the screen like the films do, corners going square at full size
   if (!open) {}
