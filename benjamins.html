@@ -76,15 +76,13 @@ h1,h2,h3,p{margin:0}
 /* ---------- story ---------- */
 .story{padding:clamp(120px,22vh,240px) var(--gut)}
 .story .col{max-width:980px;margin:0 auto}
-.duo{max-width:1320px;margin:clamp(72px,12vh,140px) auto;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,1.6vw,24px);align-items:start}
+.duo{max-width:1320px;margin:0 auto clamp(24px,4vh,48px);padding:0 var(--gut);display:grid;grid-template-columns:1fr .86fr 1fr;gap:clamp(12px,1.4vw,20px);align-items:start}
 .duo figure{margin:0;will-change:transform}
-.duo .d2{margin-top:clamp(80px,14vh,180px)}
-.duo .m{aspect-ratio:4/3;border-radius:20px;overflow:hidden;position:relative}
-.duo img{transform:scale(1.08);will-change:transform}
-@media (max-width:820px){ .duo{grid-template-columns:1fr;gap:12px;margin:56px auto} .duo .d2{margin-top:0;width:86%;margin-left:auto} .duo .d1{width:86%} .duo .m{border-radius:14px} }
-.story{padding-bottom:clamp(64px,10vh,120px)}
-#balloons .duo{padding:0 var(--gut);margin-top:0;margin-bottom:clamp(40px,8vh,96px)}
-#balloons .duo .m{height:auto;max-width:none;aspect-ratio:4/3}
+.duo .d1{align-self:start} .duo .d2{align-self:end}
+.duo .m{aspect-ratio:4/3;border-radius:20px;overflow:hidden;position:relative;height:auto;max-width:none}
+.duo .d1 img,.duo .d2 img{transform:scale(1.08);will-change:transform}
+.duo .mid .m{aspect-ratio:9/16;--r:20px}
+@media (max-width:820px){ .duo{grid-template-columns:1fr;gap:12px} .duo .d1{width:86%} .duo .d2{width:86%;margin-left:auto} .duo .mid{order:1} .duo .d1{order:0} .duo .d2{order:2} .duo .m{border-radius:14px} }
 .story p{font-size:clamp(26px,3.1vw,44px);font-weight:600;letter-spacing:-.028em;line-height:1.16;margin-bottom:1em}
 .story p:last-child{margin-bottom:0}
 .story .w{opacity:.16}
@@ -284,7 +282,7 @@ h1,h2,h3,p{margin:0}
   <nav class="nav" aria-label="Project">
     <a class="home" href="./"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M9 2 4 7l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Stefan Foster</span></a>
     <b>From Earth to Sky</b>
-    <a href="#collection">Show film</a>
+    <a href="#collection">Film</a>
     <a href="#balloons">Balloons</a>
     <a href="#carousels">Carousels</a>
     <a href="#benji">Benji</a>
@@ -307,16 +305,16 @@ h1,h2,h3,p{margin:0}
     </div>
   </section>
   <section class="sec dark tall" id="collection">
-    <div class="intro center"><h2 class="t-hero">The Show Film</h2></div>
+    <div class="intro center"><h2 class="t-hero">The collection, on film</h2></div>
     <div class="scrub" data-s><div class="pin"><div class="m player" data-src="showfilm" data-poster="showfilm-poster.jpg"></div></div></div>
   </section>
-  <section class="sec tall" id="balloons">
+  <section class="sec" id="balloons">
     <div class="intro center"><h2 class="t-head">Three balloons + 33 looks</h2><p class="t-sub center">Inspired by the flora and fauna of Cappadocia.</p></div>
     <div class="duo">
-      <figure class="d1"><div class="m"><img src="media/les-benjamins/duo-green-1.jpg" srcset="media/les-benjamins/duo-green-1-sm.jpg 1400w, media/les-benjamins/duo-green-1.jpg 2576w" sizes="(max-width:820px) 92vw, 46vw" alt="A model in the spiked green look, looking up into the open mouth of the green balloon" loading="lazy"></div></figure>
-      <figure class="d2"><div class="m"><img src="media/les-benjamins/duo-green-2.jpg" srcset="media/les-benjamins/duo-green-2-sm.jpg 1400w, media/les-benjamins/duo-green-2.jpg 2576w" sizes="(max-width:820px) 92vw, 46vw" alt="Four models in green lean on each other under the spiky green balloon" loading="lazy"></div></figure>
+      <figure class="d1"><div class="m"><img src="media/les-benjamins/duo-green-1.jpg" srcset="media/les-benjamins/duo-green-1-sm.jpg 1400w, media/les-benjamins/duo-green-1.jpg 2576w" sizes="(max-width:820px) 92vw, 36vw" alt="A model in the spiked green look, looking up into the open mouth of the green balloon" loading="lazy"></div></figure>
+      <figure class="mid"><div class="m player" data-src="matchcut2" data-poster="matchcut2-poster.jpg"></div></figure>
+      <figure class="d2"><div class="m"><img src="media/les-benjamins/duo-green-2.jpg" srcset="media/les-benjamins/duo-green-2-sm.jpg 1400w, media/les-benjamins/duo-green-2.jpg 2576w" sizes="(max-width:820px) 92vw, 36vw" alt="Four models in green lean on each other under the spiky green balloon" loading="lazy"></div></figure>
     </div>
-    <div class="scrub" data-s><div class="pin"><div class="m player" data-src="matchcut2" data-poster="matchcut2-poster.jpg"></div></div></div>
   </section>
   <section class="sec" id="carousels">
     <div class="intro center"><h2 class="t-head">On @apple</h2><p class="t-sub center">Three carousels from the shoot, one for each balloon.</p></div>
@@ -488,7 +486,7 @@ let lenis = null, inlines = [];
 const flower = $(".flower"), flowerM = $(".flower .m"), flowerI = $(".flower video");
 const open = $("#open"), row = open && $(".row", open), kvs = open ? $$(".kv", open) : [];
 const scrubs = $$("[data-s]").map((el) => ({ el, m: $(".m", el), tall: !!el.closest(".tall"), film: null }));
-const duo = $$(".duo figure");
+const duo = $$(".duo .d1, .duo .d2");
 const storyW = $$(".story p").map((p) => { p.innerHTML = p.textContent.split(" ").map((w) => `<span class="w">${w}</span>`).join(" "); return { p, ws: $$(".w", p) }; });
 const prog = (el) => { const r = el.getBoundingClientRect(); return clamp(-r.top / Math.max(1, r.height - innerHeight)); };
 let phone = innerWidth <= 820;
@@ -559,7 +557,7 @@ function update() {
 
 function startMotion() {
   scrubs.forEach((s) => { if (s.m.classList.contains("player")) s.film = new Film(s.m); });
-  inlines = $$(".inline .player").map((m) => ({ m, film: new Film(m) }));
+  inlines = $$(".inline .player, .duo .player").map((m) => ({ m, film: new Film(m) }));
   layout(); addEventListener("resize", () => { layout(); update(); });
   if (!reduce) {
     lenis = new Lenis({ lerp: .16, wheelMultiplier: 1.1, smoothWheel: true });
