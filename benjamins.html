@@ -268,18 +268,6 @@ h1,h2,h3,p{margin:0}
 </head>
 <body>
 
-<div id="gate">
-  <div class="in">
-    <div class="dots"><i></i><i></i><i></i></div>
-    <h1 class="t-head">From Earth to Sky</h1>
-    <p class="t-sub">Les Benjamins × Apple</p>
-    <form id="gf" autocomplete="off">
-      <input id="pw" type="password" placeholder="Password" aria-label="Password" autofocus>
-      <button type="submit" aria-label="Enter"><svg viewBox="0 0 14 14"><path d="M2 7h10M8 3l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    </form>
-    <div class="err" id="err" role="status"></div>
-  </div>
-</div>
 
 <main id="page" hidden>
   <nav class="nav" aria-label="Project">
@@ -570,17 +558,9 @@ function startMotion() {
   $$('.nav a[href^="#"]').forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); const el = $(a.getAttribute("href")); lenis ? lenis.scrollTo(el, { offset: -52, duration: 1.6 }) : el.scrollIntoView(); }));
 }
 
-// ---------- the lock ----------
-const HASH = "f5903f51e341a783e69ffc2d9b335048716f5f040a782a2764cd4e728b0f74d9";
-let started = false;
-const ok = () => { $("#gate").hidden = true; $("#page").hidden = false; $$(".car").forEach((c) => c.upd()); if (!started) { started = true; startMotion(); } if (location.hash && $(location.hash)) $(location.hash).scrollIntoView(); };
-try { if (sessionStorage.getItem("sf-lb") === "1") ok(); } catch (e) {}
-async function sha(s) { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)); return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join(""); }
-$("#gf").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if ((await sha($("#pw").value.trim().toLowerCase())) === HASH) { try { sessionStorage.setItem("sf-lb", "1"); } catch (e) {} ok(); }
-  else { const g = $("#gate"); g.classList.remove("shake"); void g.offsetWidth; g.classList.add("shake"); $("#err").textContent = "That password isn’t right. Try again."; }
-});
+// ---------- start ----------
+$("#page").hidden = false; $$(".car").forEach((c) => c.upd()); startMotion();
+if (location.hash && $(location.hash)) $(location.hash).scrollIntoView();
 </script>
 </body>
 </html>
