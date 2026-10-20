@@ -104,7 +104,9 @@ h1,h2,h3,p{margin:0}
 .scrub{position:relative;height:250vh;margin-top:-14vh}
 .scrub .pin{position:sticky;top:var(--nav);height:calc(100svh - var(--nav));display:flex;align-items:center;justify-content:center;overflow:hidden}
 .scrub .m{will-change:transform}
-.tall .m{height:calc(100svh - var(--nav));aspect-ratio:9/16;max-width:100vw}
+.tall .m{height:calc(100svh - var(--nav));aspect-ratio:auto;width:calc((100svh - var(--nav)) * 9 / 16);max-width:100vw}
+.tall .player video{object-fit:cover}
+.tall .scrub{margin-top:0}
 .sec.dark .m{background:#1d1d1f}
 .wide .m{width:min(100vw, calc((100svh - var(--nav)) * 16 / 9));aspect-ratio:16/9}
 .player video{object-fit:contain;background:#000}
@@ -533,6 +535,12 @@ function update() {
       return;
     }
     const t = prog(s.el), e = reduce ? 1 : ease(clamp(t / .38));
+    if (s.tall) {   // portrait films: arrive full bleed, then the frame closes in to 9:16
+      const fw = s.m.offsetHeight * 9 / 16;
+      s.m.style.width = `${Math.min(innerWidth, lerp(innerWidth, fw, e)).toFixed(1)}px`; s.m.style.borderRadius = "0px";
+      if (s.film) s.film.want(e > .995 && r.top < H * .5 && r.bottom > H * .5);
+      return;
+    }
     s.m.style.transform = `scale(${(lerp(.66, 1, e)).toFixed(4)})`;
     s.m.style.borderRadius = `${((1 - e) * 28).toFixed(1)}px`;
     if (s.film) s.film.want(e > .995 && r.top < H * .5 && r.bottom > H * .5);
