@@ -76,10 +76,10 @@ PROJECTS.forEach((p, i) => {
 
 // the names fill the screen top to bottom, as big as they can be without running off the sides
 const nms = $$(".nm"), fitIdx = () => {
-  const VW = document.documentElement.clientWidth;
+  const VW = document.documentElement.clientWidth; if ($("#home").hidden || !VW) return;
   const ts = nms.map((n) => $(".t", n)); ts.forEach((t) => (t.style.fontSize = "100px"));
   const wide = Math.max(...nms.map((n) => (VW < 820 ? 0 : n.firstElementChild.offsetWidth) + $(".t", n).offsetWidth));
-  const byW = 100 * VW * (VW < 820 ? .92 : .9) / wide, byH = (innerHeight - (VW < 820 ? 70 : 32)) / (nms.length * (VW < 820 ? 1.3 : .74));
+  const byW = 100 * VW * (VW < 820 ? .92 : .9) / wide, byH = VW < 820 ? 999 : (innerHeight - 32) / (nms.length * .74);
   const fs = Math.min(byW, byH), k = VW < 820 ? 1 : Math.min(1.45, byH / fs);
   // when the screen is wider than the list wants, the letters stretch taller so the names still run top to bottom
   ts.forEach((t) => { t.style.fontSize = `${fs.toFixed(1)}px`; t.style.transform = k > 1.01 ? `scaleY(${k.toFixed(3)})` : ""; t.style.transformOrigin = "50% 0"; });
@@ -133,7 +133,7 @@ function route() {
     renderProject(PROJECTS.indexOf(p));
     scrollTo(0, 0);
   } else {
-    view.hidden = true; view.innerHTML = ""; home.hidden = false; document.body.classList.remove("viewing");
+    view.hidden = true; view.innerHTML = ""; home.hidden = false; document.body.classList.remove("viewing"); fitIdx();
     if (h === "work" || h === "contact") $("#" + h).scrollIntoView({ behavior: "smooth" });
     else scrollTo(0, homeY);
   }
@@ -272,5 +272,22 @@ function tilt() {
   card.style.setProperty("--sx", `${(50 + tx * 90).toFixed(1)}%`); card.style.setProperty("--sy", `${(50 + ty * 90).toFixed(1)}%`);
   requestAnimationFrame(tilt);
 }
+
+// the logo: the spinning chrome drawn with its white background lifted out, so it sits on any colour
+{ const v = $("#logoV"), c = $("#logoC"), g = c.getContext("2d", { willReadFrequently: true });
+  const W = 128; let H = 64;
+  const still = new Image(); still.src = "media/reel-poster.webp";
+  const draw = () => {
+    const live = v.readyState >= 2 && v.videoWidth, src = live ? v : still.complete && still.naturalWidth ? still : null;
+    if (src) {
+      const sw = live ? v.videoWidth : still.naturalWidth, sh = live ? v.videoHeight : still.naturalHeight;
+      H = Math.round(W * sh / sw); if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+      g.drawImage(src, 0, 0, W, H); const d = g.getImageData(0, 0, W, H), p = d.data;
+      for (let i = 0; i < p.length; i += 4) { const m = Math.min(p[i], p[i + 1], p[i + 2]); if (m > 200) p[i + 3] = Math.max(0, 255 - (m - 200) * 4.7); }
+      g.putImageData(d, 0, 0);
+    }
+    requestAnimationFrame(draw);
+  };
+  v.play().catch(() => {}); draw(); }
 
 route();
