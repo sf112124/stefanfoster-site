@@ -117,7 +117,7 @@ function frame(now) {
       const w = Math.round(720 - e * 520); if (el._w !== w) { el._w = w; el.style.fontVariationSettings = `"wght" ${w}`; } });
   }
   // phones: whichever name sits in the middle of the screen gets the band
-  if (!home.hidden && touch) { let best = null, bd = 1e9; nms.forEach((n) => { const r = n.getBoundingClientRect(), d = Math.abs(r.top + r.height / 2 - innerHeight * .5); if (d < bd) { bd = d; best = n; } }); nms.forEach((n) => n.classList.toggle("on", n === best)); }
+  if (!home.hidden && touch && scrollY > 4) { let best = null, bd = 1e9; nms.forEach((n) => { const r = n.getBoundingClientRect(), d = Math.abs(r.top + r.height / 2 - innerHeight * .5); if (d < bd) { bd = d; best = n; } }); nms.forEach((n) => n.classList.toggle("on", n === best)); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -292,5 +292,9 @@ function tilt() {
     requestAnimationFrame(draw);
   };
   v.play().catch(() => {}); draw(); }
+
+// the centre is lit when you arrive: AI Experiments, with its pictures, until the mouse picks another
+{ const mid = $$(".nm")[4]; if (mid) { mid.classList.add("on"); $$("video", mid).forEach((v) => { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); });
+  if (touch && !location.hash) requestAnimationFrame(() => { const r = mid.getBoundingClientRect(); scrollTo(0, scrollY + r.top + r.height / 2 - innerHeight / 2); }); } }
 
 route();

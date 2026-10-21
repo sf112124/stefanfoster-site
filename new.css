@@ -290,7 +290,10 @@ html.crawling .row .tt,html.flying .row .tt,html.crawling .row .c2,html.flying .
 .nm .pa *,.nm .pb *{width:100%;height:100%;object-fit:cover;display:block}
 .nm:hover::before,.nm.on::before{transform:scaleY(1)}
 .nm:hover .t,.nm:hover .k,.nm.on .t,.nm.on .k{color:var(--bg)}
-.nm:hover .pa,.nm:hover .pb{opacity:1;transform:translateY(-50%) scale(1)}
+.nm:hover .pa,.nm:hover .pb,.nm.on .pa,.nm.on .pb{opacity:1;transform:translateY(-50%) scale(1)}
+.idx:hover .nm.on:not(:hover)::before{transform:scaleY(0)}
+.idx:hover .nm.on:not(:hover) .t,.idx:hover .nm.on:not(:hover) .k{color:var(--ink)}
+.idx:hover .nm.on:not(:hover) .pa,.idx:hover .nm.on:not(:hover) .pb{opacity:0}
 .pv{display:none!important}
 @media (max-width:820px){ .nm{flex-direction:column;align-items:center;padding-top:10px;padding-bottom:6px} .nm::before{top:0;bottom:0} .nm .k{margin:0 0 4px} .nm .t{white-space:nowrap;text-align:center} .nm .pa,.nm .pb{display:none} }
 
