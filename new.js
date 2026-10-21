@@ -126,10 +126,11 @@ function route() {
   const h = decodeURIComponent(location.hash.slice(1));
   const p = PROJECTS.find((q) => q.slug === h);
   if (p && p.page) { location.href = p.page; return; }
-  if (p || h === "about") {
+  if (h === "about") { history.replaceState(null, "", location.pathname); ctOpen(); return; }
+  if (p) {
     if (home.hidden === false) homeY = scrollY;
     home.hidden = true; view.hidden = false; document.body.classList.add("viewing");
-    p ? renderProject(PROJECTS.indexOf(p)) : renderAbout();
+    renderProject(PROJECTS.indexOf(p));
     scrollTo(0, 0);
   } else {
     view.hidden = true; view.innerHTML = ""; home.hidden = false; document.body.classList.remove("viewing");
@@ -165,7 +166,7 @@ function renderProject(i) {
       <div class="gm${p.layout ? " big" : solo ? " solo" : ""}${!p.layout && cols ? " cols" : ""}" style="--n:${Math.min(g.items.length, 4)}">${g.items.map((it) => tileHTML(it, n++)).join("")}</div></section>`;
   }).join("");
   view.innerHTML = `<article class="pj" id="pj">
-    <div class="pj-meta mono"><span>${esc(p.client)}</span><a href="#" data-home>← Index</a></div>
+    <div class="pj-meta mono"><span>${esc(p.client)}</span></div>
     <h1 class="pj-t">${letters(p.title).replace(/<span class="c" (style="--k:\d+")>(.*?)<\/span>/g, `<span class="clip"><span class="c" $1>$2</span></span>`)}</h1>
     ${p.blurb ? `<div class="pj-lead"><p data-r>${esc(p.blurb)}</p></div>` : `<div class="pj-lead"></div>`}
     ${body}
@@ -254,5 +255,22 @@ const crawler = new Crawler({
 let jumping = false;
 const leapIn = () => { jumping = true; setTimeout(() => { jumping = false; crawler.leap("bottom"); }, 60); };
 addEventListener("hashchange", leapIn);
+
+// contact: a card that pops out over the page and tilts towards your hand
+const ct = $("#ct"), card = $("#ctCard");
+let ctOn = false, tx = 0, ty = 0, rx = 0, ry = 0;
+function ctOpen() { ct.hidden = false; requestAnimationFrame(() => ct.classList.add("on")); ctOn = true; tilt(); }
+function ctClose() { ct.classList.remove("on"); ctOn = false; setTimeout(() => { if (!ctOn) ct.hidden = true; }, 450); }
+$("#ctBtn").onclick = ctOpen; $("#ctX").onclick = ctClose;
+ct.addEventListener("click", (e) => { if (e.target === ct) ctClose(); });
+addEventListener("keydown", (e) => { if (e.key === "Escape" && ctOn) ctClose(); });
+addEventListener("pointermove", (e) => { tx = e.clientX / innerWidth - .5; ty = e.clientY / innerHeight - .5; }, { passive: true });
+function tilt() {
+  if (!ctOn) return;
+  rx += (ty * -14 - rx) * .08; ry += (tx * 18 - ry) * .08;
+  card.style.transform = `perspective(1100px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`;
+  card.style.setProperty("--sx", `${(50 + tx * 90).toFixed(1)}%`); card.style.setProperty("--sy", `${(50 + ty * 90).toFixed(1)}%`);
+  requestAnimationFrame(tilt);
+}
 
 route();
