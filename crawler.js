@@ -50,8 +50,8 @@ function type(g, txt, x, y, size, col, align = "center") {
 }
 
 export class Crawler {
-  constructor({ holes, holeEl, pads = [], padEl, sfx, nodeHit, nodeReset, anchors, reduce = false }) {
-    Object.assign(this, { holes, holeEl, pads, padEl, sfx: sfx || (() => {}), nodeHit, nodeReset, anchors, reduce });
+  constructor({ holes, holeEl, pads = [], padEl, sfx, nodeHit, nodeReset, anchors, reduce = false, sel = SEL, letter = LETTER, loose = ",.node,.tile figcaption,.wi .wn" }) {
+    Object.assign(this, { holes, holeEl, pads, padEl, sfx: sfx || (() => {}), nodeHit, nodeReset, anchors, reduce, SEL: sel, LETTER: letter, LOOSE: loose });
     this.on = false; this.state = "home"; this.saved = new Map(); this.dmg = new Map();
     this.bolts = []; this.sparks = []; this.fall = []; this.rage = 0; this.hp = HP; this.sc = 1;
     this.ship = { on: false, alive: false, x: 0, y: 0, vx: 0, vy: 0, a: 0, spin: 0, hull: HULL, safe: 0, trail: [] };
@@ -217,7 +217,7 @@ export class Crawler {
     const c = pick(this.colors()), bounce = "transform .3s cubic-bezier(.2,1.8,.4,1),background-color .2s,color .2s,filter .3s,outline-color .2s,letter-spacing .3s";
     if (el.matches(".node")) { this.nodeHit?.(el, dx, dy, c, power); return c; }
     if (el.matches(".tile")) { this.shootTile(el, dx, dy, power, x, y); return c; }
-    if (el.matches(LETTER)) {
+    if (el.matches(this.LETTER)) {
       if (this.fall.some((f) => f.el === el)) return c;
       const kind = Math.floor(Math.random() * 4);
       if (kind === 0) { this.set(el, "backgroundColor", c); this.set(el, "color", "#fff"); }
@@ -240,13 +240,13 @@ export class Crawler {
   }
   // every hit is a small explosion: whatever is nearby is thrown outwards too
   blast(x, y, R, main) {
-    document.querySelectorAll(LETTER + ",.node,.tile figcaption,.wi .wn").forEach((el) => {
+    document.querySelectorAll(this.LETTER + this.LOOSE).forEach((el) => {
       if (el === main || this.fall.some((f) => f.el === el)) return;
       const r = el.getBoundingClientRect(); if (!r.width || r.bottom < 0 || r.top > innerHeight) return;
       const dx = r.left + r.width / 2 - x, dy = r.top + r.height / 2 - y, d = Math.hypot(dx, dy); if (d > R || d < 1) return;
       const k = 1 - d / R, ux = dx / d, uy = dy / d;
       if (el.matches(".node")) { this.nodeHit?.(el, ux, uy, null, k * .8); return; }
-      if (k > .55 && Math.random() < .5 && el.matches(LETTER)) { this.drop(el, ux, uy); return; }
+      if (k > .55 && Math.random() < .5 && el.matches(this.LETTER)) { this.drop(el, ux, uy); return; }
       this.set(el, "transition", "transform .35s cubic-bezier(.2,1.8,.4,1)"); this.set(el, "position", "relative");
       if (getComputedStyle(el).display === "inline") this.set(el, "display", "inline-block");
       this.set(el, "transform", `translate(${(ux * k * 34).toFixed(1)}px,${(uy * k * 34).toFixed(1)}px) rotate(${(rnd(-40, 40) * k).toFixed(1)}deg) scale(${(1 + k * .5).toFixed(2)})`);
@@ -429,7 +429,7 @@ export class Crawler {
       g.beginPath(); ARROW.forEach((q, i) => (i ? g.lineTo(q[0] - 3, q[1] - 2) : g.moveTo(q[0] - 3, q[1] - 2))); g.closePath(); g.fillStyle = "#000"; g.fill(); g.strokeStyle = "#fff"; g.lineWidth = 1.2; g.stroke(); g.restore();
       if (now - (this.smashAt || 0) > 150) {
         this.smashAt = now;
-        const el = document.elementFromPoint(mouthX, mouthY), t = el && !el.closest(SAFE) ? el.closest(SEL) : null;
+        const el = document.elementFromPoint(mouthX, mouthY), t = el && !el.closest(SAFE) ? el.closest(this.SEL) : null;
         if (t && now - (t._shot || 0) > 700) { t._shot = now; this.impact(mouthX, mouthY, ch, sh, t, pick(cols), 1.3); }
       }
       if (Math.random() < dt * 3) this.sfx("chitter", p.x / W);
@@ -535,7 +535,7 @@ export class Crawler {
         if (mine && open && Math.hypot(b.x - p.x, b.y - p.y) < 25 * this.sc) { this.hurt(b); spent = true; break; }
         if (!mine && S.on && S.alive && !S.docking && now > S.safe && Math.hypot(b.x - S.x, b.y - S.y) < 17) { this.shipHit(b.ux, b.uy); spent = true; break; }
         if (b.d < (mine ? 24 : 40)) continue;
-        const el = document.elementFromPoint(b.x, b.y), t = el && !el.closest(SAFE) ? el.closest(SEL) : null;
+        const el = document.elementFromPoint(b.x, b.y), t = el && !el.closest(SAFE) ? el.closest(this.SEL) : null;
         if (t && now - (t._shot || 0) > (mine ? 250 : 400)) { t._shot = now; hit = t; }
       }
       const tail = mine ? 13 : 34;
