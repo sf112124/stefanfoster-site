@@ -113,7 +113,7 @@ export const PROJECTS = [
 export const ABOUT = {
   name: "Stefan Foster",
   role: "Creative art director. 3D, AI.",
-  line: "One half of a creative duo with Katia Schutz.",
+  line: "",
   email: "stefanmarkfoster@gmail.com",
   socials: [
     { label: "@stefanfosterr", url: "https://instagram.com/stefanfosterr" },

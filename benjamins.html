@@ -166,7 +166,10 @@ h1,h2,h3,p{margin:0}
 /* along the way: two rows of photos drifting past each other, faster as you scroll */
 #memories{overflow:hidden}
 .strip{display:flex;flex-direction:column;gap:14px}
-.sr{display:flex;gap:14px;width:max-content;will-change:transform}
+.sr{display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;cursor:grab;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.sr::-webkit-scrollbar{display:none}
+.sr.drag{cursor:grabbing}
+.sr.drag button{pointer-events:none}
 .sr button{flex:0 0 auto;height:clamp(180px,30vh,340px);aspect-ratio:3/2;padding:0;border:0;background:#ddd;cursor:zoom-in;border-radius:10px;overflow:hidden;position:relative}
 .sr img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .9s var(--ease),filter .5s}
 .sr button:hover img{transform:scale(1.05)}
@@ -298,7 +301,6 @@ html:not(.dotc) .cur{display:none}
 .hero .t-hero{font-size:clamp(56px,11vw,210px);line-height:.84;letter-spacing:-.07em;text-align:left}
 .hero .t-sub{text-align:left;margin:clamp(18px,3vh,32px) 0 0;max-width:30em;color:var(--ink);font-size:clamp(17px,1.5vw,22px)}
 .flower figcaption{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.03em;text-align:left}
-.flower .m{border-radius:0}
 body{counter-reset:sec}
 .sec>.intro.center{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:clamp(10px,1.2vw,18px);text-align:left;max-width:none;align-items:end;padding-bottom:14px;border-bottom:1px solid var(--line);margin-left:var(--gut);margin-right:var(--gut);padding-left:0;padding-right:0}
 .sec.dark>.intro.center{border-color:rgba(255,255,255,.18)}
@@ -531,14 +533,26 @@ const rows = $$(".sr");
 const half = [FILM.slice(0, 8), FILM.slice(8)];
 rows.forEach((r, k) => { const set = half[k].map((g) => `<button data-i="${FILM.indexOf(g)}" aria-label="Open photo"><img src="${M + g.sm}" alt="" loading="lazy"></button>`).join(""); r.innerHTML = set + set; });
 $("#strip").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { LIST = FILM; lbOpen(+b.dataset.i); } });
-{ const st = rows.map((r) => ({ r, x: 0, hover: false })); st.forEach((o) => { o.r.addEventListener("pointerenter", () => (o.hover = true)); o.r.addEventListener("pointerleave", () => (o.hover = false)); });
+// each row drifts on its own; swipe or drag to scroll through, and it carries on drifting from wherever you leave it
+{ const st = rows.map((r, k) => ({ r, k, x: 0, hold: 0 }));
+  st.forEach((o) => {
+    const r = o.r; o.x = r.scrollLeft = o.k ? r.scrollWidth / 4 : 0;
+    r.addEventListener("pointerenter", () => (o.hover = true)); r.addEventListener("pointerleave", () => (o.hover = false));
+    r.addEventListener("touchstart", () => (o.hold = performance.now() + 2500), { passive: true });
+    r.addEventListener("wheel", () => (o.hold = performance.now() + 1500), { passive: true });
+    let d = null;
+    r.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse") return; d = { x: e.clientX, s: r.scrollLeft, moved: false }; });
+    addEventListener("pointermove", (e) => { if (!d) return; const dx = e.clientX - d.x; if (Math.abs(dx) > 4) { d.moved = true; r.classList.add("drag"); } r.scrollLeft = d.s - dx; o.hold = performance.now() + 1500; });
+    addEventListener("pointerup", () => { if (!d) return; setTimeout(() => r.classList.remove("drag"), 0); d = null; });
+  });
   let ly = scrollY, v = 0;
-  const run = () => { const dy = scrollY - ly; ly = scrollY; v += (dy - v) * .1;
-    st.forEach((o, k) => { const dir = k ? 1 : -1, w = o.r.scrollWidth / 2; if (!w) return;
-      o.x += (o.hover ? .15 : .6 + Math.abs(v) * .5) * dir * (reduce ? 0 : 1); if (o.x < -w) o.x += w; if (o.x > 0) o.x -= w;
-      o.r.style.transform = `translate3d(${o.x.toFixed(1)}px,0,0)`; });
+  const run = (now) => { const dy = scrollY - ly; ly = scrollY; v += (dy - v) * .1;
+    st.forEach((o) => { const r = o.r, half = r.scrollWidth / 2; if (!half) return;
+      if (now < o.hold || r.classList.contains("drag")) { o.x = r.scrollLeft; }
+      else if (!reduce) { o.x += (o.hover ? .15 : .5 + Math.abs(v) * .4) * (o.k ? -1 : 1); r.scrollLeft = o.x; }
+      if (r.scrollLeft >= half) { r.scrollLeft -= half; o.x = r.scrollLeft; } else if (r.scrollLeft <= 0 && o.k) { r.scrollLeft += half; o.x = r.scrollLeft; } });
     requestAnimationFrame(run); };
-  st[1].x = -200; requestAnimationFrame(run); }
+  requestAnimationFrame(run); }
 $(".x", lb).onclick = lbClose; $(".p", lb).onclick = () => show(gi - 1); $(".n", lb).onclick = () => show(gi + 1);
 lb.addEventListener("click", (e) => { if (e.target === lb) lbClose(); });
 addEventListener("keydown", (e) => { if (!lb.classList.contains("on")) return; if (e.key === "Escape") lbClose(); if (e.key === "ArrowLeft") show(gi - 1); if (e.key === "ArrowRight") show(gi + 1); });

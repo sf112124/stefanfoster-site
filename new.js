@@ -43,7 +43,7 @@ const letters = (t, wrap = (c) => c) => { let k = 0; return t.split(" ").map((w)
 const cur = $("#cur"), curl = $("#curl");
 let mx = innerWidth / 2, my = innerHeight / 2, cx = mx, cy = my;
 if (!touch) {
-  document.documentElement.classList.add("dot");
+  document.documentElement.classList.add("dotc");
   addEventListener("pointermove", (e) => { mx = e.clientX; my = e.clientY; }, { passive: true });
   addEventListener("pointerdown", () => cur.classList.add("down")); addEventListener("pointerup", () => cur.classList.remove("down"));
   document.addEventListener("pointerover", (e) => {
@@ -54,31 +54,17 @@ if (!touch) {
 }
 
 // ---------- home ----------
-// the index
-const idx = $("#idx"), fr = $("#fr"), pv = $("#pv");
-$("#count").textContent = `(${pad(PROJECTS.length)})`;
+// the index: the work as a grid of moving pictures, alternating big and small
+const idx = $("#idx");
+const SPAN = [7, 5, 5, 7, 7, 5, 4, 4, 4];
+const cio = new IntersectionObserver((es) => es.forEach((e) => { const v = $("video", e.target); if (!v) return; if (e.isIntersecting) { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); } else v.pause(); }), { rootMargin: "120px 0px" });
 PROJECTS.forEach((p, i) => {
-  const a = document.createElement("a");
-  a.className = "row"; a.href = p.page ? p.page : `#${p.slug}`; a.dataset.cur = "View";
-  a.innerHTML = `<span class="n mono">${pad(i + 1)}</span><span class="tt">${letters(p.title, (c) => `<b>${c}</b>`)}</span>
-    <span class="c2 mono">${esc(p.client)}</span><span class="k mono">${esc(p.kind || "")}</span>
-    ${p.cover ? `<img class="thumb" src="${p.cover.i}" alt="" loading="lazy">` : ""}<i class="bar"></i>`;
-  idx.appendChild(a);
-  if (p.cover) {
-    const el = p.cover.v ? Object.assign(document.createElement("video"), { muted: true, loop: true, playsInline: true, preload: "none", poster: p.cover.i }) : document.createElement("img");
-    el.dataset.src = p.cover.v || p.cover.i; fr.appendChild(el); p.cover.el = el;
-  }
-  a.addEventListener("mouseenter", () => {
-    if (touch) return;
-    idx.classList.add("on"); a.classList.add("hot");
-    sound.tick?.(.4 + i * .05, .02);
-    const c = p.cover; if (!c) return;
-    if (!c.el.src) c.el.src = c.el.dataset.src;
-    $$("video,img", fr).forEach((v) => v !== c.el && (v.classList.remove("cur2"), v.pause?.()));
-    c.el.classList.add("cur2"); c.el.play?.().catch(() => {});
-    fr.style.setProperty("--ar", c.ar); pv.classList.add("show");
-  });
-  a.addEventListener("mouseleave", () => { a.classList.remove("hot"); idx.classList.remove("on"); pv.classList.remove("show"); });
+  const a = document.createElement("a"), c = p.cover;
+  a.className = "card"; a.href = p.page ? p.page : `#${p.slug}`; a.style.setProperty("--span", SPAN[i] || 6);
+  a.innerHTML = `<div class="cm">${c ? (c.v ? `<video muted loop playsinline preload="none" poster="${c.i}" data-src="${c.v}"></video>` : `<img src="${c.i}" alt="" loading="lazy">`) : ""}</div>
+    <div class="cc"><span class="tt">${letters(p.title, (ch) => `<b>${ch}</b>`)}</span><span class="c2 mono">${esc(p.client)}</span></div>`;
+  idx.appendChild(a); cio.observe(a);
+  a.addEventListener("mouseenter", () => sound.tick?.(.4 + i * .05, .02));
 });
 
 // arrivals
@@ -145,15 +131,15 @@ function renderProject(i) {
   const body = groups.map((g, gi) => {
     const solo = g.items.length === 1, even = !solo && p.layout === "gallery-2", cols = !solo && g.items.every((x) => x.w / x.h < .8);
     return `<section class="grp">
-      ${g.sec ? `<div class="gh"><span class="lbl mono">(${pad(gi + 1)})</span><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p>${esc(g.sec.text)}</p>` : ""}</div>` : ""}
+      ${g.sec ? `<div class="gh"><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p>${esc(g.sec.text)}</p>` : ""}</div>` : ""}
       <div class="gm${p.layout ? " big" : solo ? " solo" : ""}${!p.layout && cols ? " cols" : ""}" style="--n:${Math.min(g.items.length, 4)}">${g.items.map((it) => tileHTML(it, n++)).join("")}</div></section>`;
   }).join("");
   view.innerHTML = `<article class="pj" id="pj">
-    <div class="pj-meta mono"><span>(${pad(i + 1)}/${pad(PROJECTS.length)})</span><span>${esc(p.client)}</span><span>${esc(p.kind || "")}</span><a href="#" data-home><span class="roll" data-t="← Index">← Index</span></a></div>
+    <div class="pj-meta mono"><span>${esc(p.client)}</span><a href="#" data-home>← Index</a></div>
     <h1 class="pj-t">${letters(p.title).replace(/<span class="c" (style="--k:\d+")>(.*?)<\/span>/g, `<span class="clip"><span class="c" $1>$2</span></span>`)}</h1>
-    ${p.blurb ? `<div class="pj-lead"><span class="lbl mono" data-r>(Brief)</span><p data-r>${esc(p.blurb)}</p></div>` : `<div class="pj-lead"></div>`}
+    ${p.blurb ? `<div class="pj-lead"><p data-r>${esc(p.blurb)}</p></div>` : `<div class="pj-lead"></div>`}
     ${body}
-    <a class="nxp" href="${nx.page || "#" + nx.slug}" data-cur="Next"><span class="lbl mono">(Next project)</span><span class="t">${esc(nx.title)} <i>→</i></span></a>
+    <a class="nxp" href="${nx.page || "#" + nx.slug}" data-cur="Next"><span class="t"><small>Next</small> ${esc(nx.title)} <i>→</i></span></a>
   </article>`;
   requestAnimationFrame(() => requestAnimationFrame(() => $("#pj").classList.add("in")));
   watch(view); wireTiles(p); justify();
@@ -172,9 +158,9 @@ function wireTiles(p) {
 function renderAbout() {
   const a = ABOUT;
   view.innerHTML = `<article class="ab pj" id="pj">
-    <div class="pj-meta mono"><span>(About)</span><span>${esc(a.role)}</span><span>London</span><a href="#" data-home><span class="roll" data-t="← Index">← Index</span></a></div>
+    <div class="pj-meta mono"><span></span><a href="#" data-home>← Index</a></div>
     <h1 class="pj-t">${letters(a.name).replace(/<span class="c" (style="--k:\d+")>(.*?)<\/span>/g, `<span class="clip"><span class="c" $1>$2</span></span>`)}</h1>
-    <div class="ab-g"><span class="lbl mono" data-r>(Hello)</span><p class="big" data-r>${esc(a.role)} <em>${esc(a.line)}</em></p>
+    <div class="ab-g"><p class="big" data-r>${esc(a.role)}${a.line ? " " + esc(a.line) : ""}</p>
       <div class="ab-l">
         <div data-r><p class="mono">Get in touch</p><a href="mailto:${a.email}">${esc(a.email)}</a>${a.socials.map((x) => `<a href="${x.url}" target="_blank" rel="noopener">${esc(x.label)} ↗</a>`).join("")}</div>
         <div data-r><p class="mono">Currently at</p>${a.now.map((x) => `<span>${esc(x)}</span>`).join("")}</div>
@@ -219,17 +205,24 @@ $("#lbx").onclick = lbClose; $("#lbp").onclick = () => lbStep(-1); $("#lbnx").on
 addEventListener("keydown", (e) => { if (lb.hidden) return; if (e.key === "Escape") lbClose(); if (e.key === "ArrowRight") lbStep(1); if (e.key === "ArrowLeft") lbStep(-1); });
 
 // ---------- the thing in the hole, and the ship ----------
-new Crawler({
+const crawler = new Crawler({
   holes: [$("#hole")], pads: [$("#pad")], reduce,
   sfx: (k, a, b) => sound.critter(k, a, b),
-  sel: ".name .c,.row .tt .c,.row .c2,.row .k,.row .n,.big .w,.lbl,.nav a,.brand,.mq span,.pj-t .c,.gh h2,.gh p,.pj-lead p,.tile,.tile figcaption,.cta,.mail,.fcols a,.nxp .t,.ab-l a,.ab-l span,.hero-meta span",
-  letter: ".name .c,.row .tt .c,.pj-t .c",
-  loose: ",.tile figcaption,.big .w,.row .c2",
+  sel: ".card .tt .c,.card .c2,.card .cm,.pj-t .c,.gh h2,.tile,.tile figcaption,.nav a,.brand,.fcols a,.fcols span,.lead2",
+  letter: ".card .tt .c,.pj-t .c",
+  loose: ",.tile figcaption,.card .c2",
+  gentle: true,
   anchors: () => {
     const out = [];
-    $$(".name .c,.row,.tile .tm,.pj-t .wd,.big .w,.cta").forEach((el) => { const q = el.getBoundingClientRect(); if (q.bottom < 0 || q.top > innerHeight || !q.width) return; out.push([q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]); });
+    $$(".card .cm,.tile .tm,.pj-t .wd,.lead2").forEach((el) => { const q = el.getBoundingClientRect(); if (q.bottom < 0 || q.top > innerHeight || !q.width) return; out.push([q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]); });
     return out;
   },
 });
+
+// the spider lives in the page: scroll and it's carried away with the content, then chases you back
+{ let ly = scrollY; addEventListener("scroll", () => { const dy = scrollY - ly; ly = scrollY; if (dy && !jumping) crawler.shift(0, -dy); }, { passive: true }); }
+let jumping = false;
+const leapIn = () => { jumping = true; setTimeout(() => { jumping = false; crawler.leap("bottom"); }, 60); };
+addEventListener("hashchange", leapIn);
 
 route();

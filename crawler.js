@@ -50,8 +50,8 @@ function type(g, txt, x, y, size, col, align = "center") {
 }
 
 export class Crawler {
-  constructor({ holes, holeEl, pads = [], padEl, sfx, nodeHit, nodeReset, anchors, reduce = false, sel = SEL, letter = LETTER, loose = ",.node,.tile figcaption,.wi .wn" }) {
-    Object.assign(this, { holes, holeEl, pads, padEl, sfx: sfx || (() => {}), nodeHit, nodeReset, anchors, reduce, SEL: sel, LETTER: letter, LOOSE: loose });
+  constructor({ holes, holeEl, pads = [], padEl, sfx, nodeHit, nodeReset, anchors, reduce = false, sel = SEL, letter = LETTER, loose = ",.node,.tile figcaption,.wi .wn", gentle = false }) {
+    Object.assign(this, { holes, holeEl, pads, padEl, sfx: sfx || (() => {}), nodeHit, nodeReset, anchors, reduce, SEL: sel, LETTER: letter, LOOSE: loose, gentle });
     this.on = false; this.state = "home"; this.saved = new Map(); this.dmg = new Map();
     this.bolts = []; this.sparks = []; this.fall = []; this.rage = 0; this.hp = HP; this.sc = 1;
     this.ship = { on: false, alive: false, x: 0, y: 0, vx: 0, vy: 0, a: 0, spin: 0, hull: HULL, safe: 0, trail: [] };
@@ -89,6 +89,22 @@ export class Crawler {
     }, true);
     addEventListener("pointerup", () => { this.firing = false; if (this.state === "held") this.letGo(); if (this.swallow) setTimeout(() => (this.swallow = false), 60); }, true);
     ["mousedown", "click"].forEach((t) => addEventListener(t, (e) => { if (this.state === "carry" || this.state === "held" || (t === "click" && this.swallow) || (this.ship.on && !e.target.closest?.(MENU))) { e.stopPropagation(); e.preventDefault(); if (t === "click") this.swallow = false; } }, true));
+  }
+  // the page moved under it (a scroll, a new page): it's carried along, off the screen if need be, then runs to catch up
+  shift(dx, dy) {
+    if (!this.on || !this.p || ["back", "dying"].includes(this.state)) return;
+    const mv = (q) => { q[0] += dx; q[1] += dy; };
+    this.p.x += dx; this.p.y += dy; this.tail?.forEach(mv);
+    [...(this.legs || []), ...(this.feel || [])].forEach((l) => { l.fx += dx; l.fy += dy; l.sx += dx; l.sy += dy; l.tx += dx; l.ty += dy; l.j.forEach(mv); });
+    this.bolts.forEach((b) => { if (b.by === "it") { b.x += dx; b.y += dy; } });
+    if (this.state === "carry" || this.state === "held") return;
+    this.loose = true; this.state = "out";
+  }
+  // a new page: it leaps in from the edge the page came from
+  leap(from = "bottom") {
+    if (!this.on || !this.p) return;
+    const W = innerWidth, H = innerHeight, x = Math.min(W - 40, Math.max(40, this.p.x)), y = from === "top" ? -90 : H + 90;
+    this.shift(x - this.p.x, y - this.p.y); this.v.x = 0; this.v.y = from === "top" ? 900 : -900; this.sfx("squeak");
   }
   spot(el, q) { const r = (q ? el.querySelector(q) : el).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
   holePos() { return this.spot(this.holeEl?.() || this.holes[0], "i"); }
@@ -216,9 +232,17 @@ export class Crawler {
   mutate(el, dx, dy, power = 1, x = 0, y = 0) {
     const c = pick(this.colors()), bounce = "transform .3s cubic-bezier(.2,1.8,.4,1),background-color .2s,color .2s,filter .3s,outline-color .2s,letter-spacing .3s";
     if (el.matches(".node")) { this.nodeHit?.(el, dx, dy, c, power); return c; }
-    if (el.matches(".tile")) { this.shootTile(el, dx, dy, power, x, y); return c; }
+    if (el.matches(".tile,.cm")) { this.shootTile(el, dx, dy, power, x, y); return c; }
     if (el.matches(this.LETTER)) {
       if (this.fall.some((f) => f.el === el)) return c;
+      if (this.gentle) {
+        // a knock, not a demolition: the letter jumps, takes a colour, and every so often falls off
+        this.set(el, "color", c);
+        if (Math.random() < .18 * power) { this.drop(el, dx, dy); return c; }
+        this.set(el, "transition", bounce); this.set(el, "position", "relative"); this.set(el, "zIndex", "4");
+        this.set(el, "transform", `translate(${(dx * rnd(3, 10)).toFixed(1)}px,${(dy * rnd(3, 10)).toFixed(1)}px) rotate(${rnd(-18, 18).toFixed(1)}deg)`);
+        return c;
+      }
       const kind = Math.floor(Math.random() * 4);
       if (kind === 0) { this.set(el, "backgroundColor", c); this.set(el, "color", "#fff"); }
       else if (kind === 1) this.set(el, "color", c);
@@ -231,6 +255,12 @@ export class Crawler {
       if (word && Math.random() < .4) { this.set(word, "transition", bounce); this.set(word, "display", "inline-flex"); this.set(word, "transform", `rotate(${rnd(-12, 12).toFixed(1)}deg) scale(${rnd(1.05, 1.3).toFixed(2)}) skewX(${rnd(-14, 14).toFixed(0)}deg)`); this.set(word, "backgroundColor", c + "44"); }
       return c;
     }
+    if (this.gentle) {
+      this.set(el, "transition", bounce);
+      if (getComputedStyle(el).display === "inline") this.set(el, "display", "inline-block");
+      this.set(el, "transform", `translate(${(dx * rnd(3, 9)).toFixed(0)}px,${(dy * rnd(3, 9)).toFixed(0)}px) rotate(${rnd(-4, 4).toFixed(1)}deg)`);
+      this.set(el, "color", c); return c;
+    }
     this.set(el, "transition", bounce);
     if (getComputedStyle(el).display === "inline") this.set(el, "display", "inline-block");
     this.set(el, "transform", `translate(${(dx * rnd(6, 24)).toFixed(0)}px,${(dy * rnd(6, 24)).toFixed(0)}px) rotate(${rnd(-12, 12).toFixed(1)}deg) scale(${rnd(1.1, 1.9).toFixed(2)}) skewX(${rnd(-16, 16).toFixed(0)}deg)`);
@@ -240,16 +270,17 @@ export class Crawler {
   }
   // every hit is a small explosion: whatever is nearby is thrown outwards too
   blast(x, y, R, main) {
+    if (this.gentle) R *= .45;
     document.querySelectorAll(this.LETTER + this.LOOSE).forEach((el) => {
       if (el === main || this.fall.some((f) => f.el === el)) return;
       const r = el.getBoundingClientRect(); if (!r.width || r.bottom < 0 || r.top > innerHeight) return;
       const dx = r.left + r.width / 2 - x, dy = r.top + r.height / 2 - y, d = Math.hypot(dx, dy); if (d > R || d < 1) return;
       const k = 1 - d / R, ux = dx / d, uy = dy / d;
       if (el.matches(".node")) { this.nodeHit?.(el, ux, uy, null, k * .8); return; }
-      if (k > .55 && Math.random() < .5 && el.matches(this.LETTER)) { this.drop(el, ux, uy); return; }
+      if (k > .55 && Math.random() < (this.gentle ? .08 : .5) && el.matches(this.LETTER)) { this.drop(el, ux, uy); return; }
       this.set(el, "transition", "transform .35s cubic-bezier(.2,1.8,.4,1)"); this.set(el, "position", "relative");
       if (getComputedStyle(el).display === "inline") this.set(el, "display", "inline-block");
-      this.set(el, "transform", `translate(${(ux * k * 34).toFixed(1)}px,${(uy * k * 34).toFixed(1)}px) rotate(${(rnd(-40, 40) * k).toFixed(1)}deg) scale(${(1 + k * .5).toFixed(2)})`);
+      const g = this.gentle ? .35 : 1; this.set(el, "transform", `translate(${(ux * k * 34 * g).toFixed(1)}px,${(uy * k * 34 * g).toFixed(1)}px) rotate(${(rnd(-40, 40) * k * g).toFixed(1)}deg) scale(${(1 + k * .5 * g).toFixed(2)})`);
     });
   }
   // light: one of the ship's shots, a smaller bang than one of its
@@ -322,7 +353,7 @@ export class Crawler {
     if (!going) this.grow = Math.min(1, this.grow + dt * 1.6);
     // where it wants to be
     const hole = this.holePos();
-    let tx = T.x, ty = T.y, top = (560 + this.rage * 90) * (.62 + .38 * hpk) * (vs ? .5 : 1), grip = 4.5, stand = (vs ? 270 : 150) + Math.sin(now / 1700) * 30 - this.rage * 20;
+    let tx = T.x, ty = T.y, top = (560 + this.rage * 90) * (.62 + .38 * hpk) * (vs ? .5 : 1) * (this.loose ? 2.6 : 1), grip = 4.5, stand = (vs ? 270 : 150) + Math.sin(now / 1700) * 30 - this.rage * 20;
     if (back) { tx = hole.x; ty = hole.y; stand = 0; top = 1100; grip = 12; }
     else if (dying) {
       // beaten: it hauls itself home in heaves, on the two legs that still work
@@ -343,7 +374,8 @@ export class Crawler {
       const ax = gx - p.x, ay = gy - p.y, ad = Math.hypot(ax, ay) || 1, want = back ? Math.min(top, 200 + ad * 5) : dying ? top : Math.min(top, ad * (pounce ? 12 : 3.2));
       v.x += ((ax / ad) * want - v.x) * Math.min(1, dt * grip); v.y += ((ay / ad) * want - v.y) * Math.min(1, dt * grip);
       p.x += v.x * dt; p.y += v.y * dt;
-      if (!going) { if (p.x < 24 || p.x > W - 24) v.x *= -.4; if (p.y < 24 || p.y > H - 24) v.y *= -.4; p.x = clamp(p.x, 24, W - 24); p.y = clamp(p.y, 24, H - 24); }
+      if (this.loose && p.x > 30 && p.x < W - 30 && p.y > 30 && p.y < H - 30) this.loose = false;
+      if (!going && !this.loose) { if (p.x < 24 || p.x > W - 24) v.x *= -.4; if (p.y < 24 || p.y > H - 24) v.y *= -.4; p.x = clamp(p.x, 24, W - 24); p.y = clamp(p.y, 24, H - 24); }
     }
     const speed = Math.hypot(v.x, v.y);
     let face = carry && speed > 40 ? Math.atan2(v.y, v.x) : Math.atan2(T.y - p.y, T.x - p.x); if (going) face = Math.atan2(dym, dxm);
