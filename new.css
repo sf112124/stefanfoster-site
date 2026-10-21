@@ -247,3 +247,5 @@ html.flying{-webkit-user-select:none;user-select:none}
   .ab-l{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){ .grain,.mq span::after{animation:none} [data-r]{opacity:1;transform:none} }
+/* while the game is on, letters get knocked loose: keep them plain ink so they stay visible */
+html.crawling .row .tt,html.flying .row .tt,html.crawling .row .c2,html.flying .row .c2{mix-blend-mode:normal;color:var(--ink)}
