@@ -76,13 +76,14 @@ PROJECTS.forEach((p, i) => {
 
 // the names fill the screen top to bottom, as big as they can be without running off the sides
 const nms = $$(".nm"), fitIdx = () => {
+  const VW = document.documentElement.clientWidth;
   const ts = nms.map((n) => $(".t", n)); ts.forEach((t) => (t.style.fontSize = "100px"));
-  const wide = Math.max(...nms.map((n) => (innerWidth < 820 ? 0 : n.firstElementChild.offsetWidth) + $(".t", n).offsetWidth));
-  const byW = 100 * innerWidth * (innerWidth < 820 ? .92 : .8) / wide, byH = (innerHeight - 70) / (nms.length * .88);
+  const wide = Math.max(...nms.map((n) => (VW < 820 ? 0 : n.firstElementChild.offsetWidth) + $(".t", n).offsetWidth));
+  const byW = 100 * VW * (VW < 820 ? .92 : .8) / wide, byH = (innerHeight - 70) / (nms.length * (VW < 820 ? 1.35 : .88));
   ts.forEach((t) => (t.style.fontSize = `${Math.min(byW, byH, innerWidth < 820 ? 999 : 999).toFixed(1)}px`));
 };
 fitIdx(); document.fonts.ready.then(fitIdx); addEventListener("resize", fitIdx);
-// variable type: every letter swells towards the cursor, light far off, heavy close by
+// variable type: letters thin out as the cursor passes, then fill back in
 const LET = $$(".nm .t i");
 
 // arrivals
@@ -107,8 +108,10 @@ function frame(now) {
     const R = innerWidth * .2;
     LET.forEach((el) => { const r = el.getBoundingClientRect(); if (r.bottom < -50 || r.top > innerHeight + 50) return;
       const d = Math.hypot(r.left + r.width / 2 - cx, r.top + r.height / 2 - cy), k = Math.max(0, 1 - d / R), e = k * k * (3 - 2 * k);
-      const w = Math.round(380 + e * 520); if (el._w !== w) { el._w = w; el.style.fontVariationSettings = `"wght" ${w}`; } });
+      const w = Math.round(720 - e * 520); if (el._w !== w) { el._w = w; el.style.fontVariationSettings = `"wght" ${w}`; } });
   }
+  // phones: whichever name sits in the middle of the screen gets the band
+  if (!home.hidden && touch) { let best = null, bd = 1e9; nms.forEach((n) => { const r = n.getBoundingClientRect(), d = Math.abs(r.top + r.height / 2 - innerHeight * .5); if (d < bd) { bd = d; best = n; } }); nms.forEach((n) => n.classList.toggle("on", n === best)); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
