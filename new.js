@@ -58,7 +58,10 @@ if (!touch) {
 // behind it, with two pictures from the project either side.
 const idx = $("#idx");
 const media = (x) => x && (x.v ? `<video muted loop playsinline preload="none" poster="${x.i}" data-src="${x.v}"></video>` : `<img src="${x.i}" alt="" loading="lazy"${x.pos ? ` style="object-position:${x.pos}"` : ""}>`);
-PROJECTS.forEach((p, i) => {
+// favourites in the middle, fanning out to the top and bottom
+const ORDER = ["coca-cola", "summer-of-sport", "ai-commissions", "la-croisiere", "ai-experiments", "les-benjamins", "3d-explorations", "relax", "gumtree"];
+const LIST = [...PROJECTS].sort((x, y) => (ORDER.indexOf(x.slug) + 1 || 99) - (ORDER.indexOf(y.slug) + 1 || 99));
+LIST.forEach((p, i) => {
   const a = document.createElement("a");
   a.className = "nm"; a.href = p.page ? p.page : `#${p.slug}`;
   const HOV = { "coca-cola": [{ i: "media/coca-cola/hover-1.jpg" }, { i: "media/coca-cola/hover-2.jpg" }], gumtree: [{ i: "media/gumtree/hover-1.jpg" }, { i: "media/gumtree/hover-2.jpg", pos: "30% 50%" }] }[p.slug];
