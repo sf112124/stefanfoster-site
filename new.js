@@ -54,25 +54,6 @@ if (!touch) {
 }
 
 // ---------- home ----------
-const name = $("#name");
-name.innerHTML = letters("Stefan Foster");
-const nameC = $$(".c", name).map((el) => ({ el, x: 0, y: 0, vx: 0, vy: 0, r: 0, vr: 0 }));
-const chrome = $("#chrome video");
-// the name fills the width exactly, whatever the screen
-const fitName = () => { name.style.fontSize = "100px"; const w = name.parentElement.clientWidth - 2 * parseFloat(getComputedStyle(name.parentElement).paddingLeft); name.style.fontSize = `${(100 * w / name.scrollWidth * .995).toFixed(2)}px`; };
-fitName(); document.fonts.ready.then(fitName); addEventListener("resize", fitName);
-
-// statement: each word lights as you read down
-const stmt = $("#stmt");
-stmt.innerHTML = stmt.innerHTML.replace(/(<em>.*?<\/em>)|([^\s<]+)/g, (m, em) => `<span class="w">${m}</span>`);
-const words = $$(".w", stmt);
-
-// marquee of clients
-const mq = $("#mq");
-const CL = ["Apple", "Jacquemus", "Coca-Cola", "Les Benjamins", "Gumtree", "Apple", "Jacquemus", "Coca-Cola", "Les Benjamins", "Gumtree"];
-mq.innerHTML = [...CL, ...CL].map((c) => `<span>${c}</span>`).join("");
-let mqx = 0, lastY = scrollY, vel = 0;
-
 // the index
 const idx = $("#idx"), fr = $("#fr"), pv = $("#pv");
 $("#count").textContent = `(${pad(PROJECTS.length)})`;
@@ -117,28 +98,6 @@ function frame(now) {
     const nx = lerp(px, mx, .1); pvx = nx - px; px = nx; py = lerp(py, my, .1);
     const w = pv.offsetWidth, h = pv.offsetHeight;
     pv.style.transform = `translate3d(${(px - w / 2).toFixed(1)}px,${(py - h / 2).toFixed(1)}px,0) rotate(${clamp(pvx * .3, -7, 7).toFixed(2)}deg)`;
-  }
-  // scroll speed feeds the marquee
-  const dy = scrollY - lastY; lastY = scrollY; vel = lerp(vel, dy, .1);
-  if (!home.hidden) {
-    mqx -= (1.1 + Math.abs(vel) * .35) * (vel < -.5 ? -1 : 1);
-    const half = mq.scrollWidth / 2; if (half) { if (mqx < -half) mqx += half; if (mqx > 0) mqx -= half; }
-    mq.style.transform = `translate3d(${mqx.toFixed(1)}px,0,0)`;
-    // the name: letters lean away from the dot, then spring home. Push hard and they spin.
-    const game = document.documentElement.matches(".crawling,.flying");
-    if (!touch && !reduce && !game) nameC.forEach((L) => {
-      const r = L.el.getBoundingClientRect(), lx = r.left + r.width / 2 - L.x, ly = r.top + r.height / 2 - L.y;
-      const ddx = lx - cx, ddy = ly - cy, d = Math.hypot(ddx, ddy), R = innerWidth * .11;
-      if (d < R) { const f = (1 - d / R) ** 2 * 1.4; L.vx += ddx / (d || 1) * f; L.vy += ddy / (d || 1) * f; L.vr += (ddx > 0 ? 1 : -1) * f * .12; }
-      L.vx += -L.x * .045; L.vy += -L.y * .045; L.vr += -L.r * .04;
-      L.vx *= .86; L.vy *= .86; L.vr *= .88; L.x += L.vx; L.y += L.vy; L.r += L.vr;
-      L.el.style.transform = `translate(${L.x.toFixed(1)}px,${L.y.toFixed(1)}px) rotate(${L.r.toFixed(1)}deg)`;
-    });
-    // the chrome turns towards you and drifts as you scroll away from it
-    const hx = mx / innerWidth - .5, hy = my / innerHeight - .5;
-    chrome.style.transform = `translateY(${(scrollY * -.2).toFixed(1)}px)`;
-    // statement words light along a reading line
-    const H = innerHeight, sr = stmt.getBoundingClientRect(), k = clamp((H * .8 - sr.top) / (sr.height + H * .25)), n = words.length;
   }
   requestAnimationFrame(frame);
 }
