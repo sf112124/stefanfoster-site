@@ -79,8 +79,11 @@ const nms = $$(".nm"), fitIdx = () => {
   const VW = document.documentElement.clientWidth;
   const ts = nms.map((n) => $(".t", n)); ts.forEach((t) => (t.style.fontSize = "100px"));
   const wide = Math.max(...nms.map((n) => (VW < 820 ? 0 : n.firstElementChild.offsetWidth) + $(".t", n).offsetWidth));
-  const byW = 100 * VW * (VW < 820 ? .92 : .8) / wide, byH = (innerHeight - 70) / (nms.length * (VW < 820 ? 1.35 : .88));
-  ts.forEach((t) => (t.style.fontSize = `${Math.min(byW, byH, innerWidth < 820 ? 999 : 999).toFixed(1)}px`));
+  const byW = 100 * VW * (VW < 820 ? .92 : .9) / wide, byH = (innerHeight - (VW < 820 ? 70 : 4)) / (nms.length * (VW < 820 ? 1.3 : .74));
+  const fs = Math.min(byW, byH), k = VW < 820 ? 1 : Math.min(1.45, byH / fs);
+  // when the screen is wider than the list wants, the letters stretch taller so the names still run top to bottom
+  ts.forEach((t) => { t.style.fontSize = `${fs.toFixed(1)}px`; t.style.transform = k > 1.01 ? `scaleY(${k.toFixed(3)})` : ""; t.style.transformOrigin = "50% 0"; });
+  nms.forEach((n) => (n.style.height = k > 1.01 ? `${(fs * .74 * k).toFixed(1)}px` : ""));
 };
 fitIdx(); document.fonts.ready.then(fitIdx); addEventListener("resize", fitIdx);
 // variable type: letters thin out as the cursor passes, then fill back in
