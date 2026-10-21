@@ -129,17 +129,16 @@ function frame(now) {
     if (!touch && !reduce && !game) nameC.forEach((L) => {
       const r = L.el.getBoundingClientRect(), lx = r.left + r.width / 2 - L.x, ly = r.top + r.height / 2 - L.y;
       const ddx = lx - cx, ddy = ly - cy, d = Math.hypot(ddx, ddy), R = innerWidth * .11;
-      if (d < R) { const f = (1 - d / R) ** 2 * 3.2; L.vx += ddx / (d || 1) * f; L.vy += ddy / (d || 1) * f; L.vr += (ddx > 0 ? 1 : -1) * f * .35; }
+      if (d < R) { const f = (1 - d / R) ** 2 * 1.4; L.vx += ddx / (d || 1) * f; L.vy += ddy / (d || 1) * f; L.vr += (ddx > 0 ? 1 : -1) * f * .12; }
       L.vx += -L.x * .045; L.vy += -L.y * .045; L.vr += -L.r * .04;
       L.vx *= .86; L.vy *= .86; L.vr *= .88; L.x += L.vx; L.y += L.vy; L.r += L.vr;
       L.el.style.transform = `translate(${L.x.toFixed(1)}px,${L.y.toFixed(1)}px) rotate(${L.r.toFixed(1)}deg)`;
     });
     // the chrome turns towards you and drifts as you scroll away from it
     const hx = mx / innerWidth - .5, hy = my / innerHeight - .5;
-    chrome.style.transform = `translateY(${(scrollY * -.25 + Math.sin(t * .8) * 8).toFixed(1)}px) rotateY(${(hx * 22).toFixed(1)}deg) rotateX(${(-hy * 16).toFixed(1)}deg)`;
+    chrome.style.transform = `translateY(${(scrollY * -.2).toFixed(1)}px)`;
     // statement words light along a reading line
     const H = innerHeight, sr = stmt.getBoundingClientRect(), k = clamp((H * .8 - sr.top) / (sr.height + H * .25)), n = words.length;
-    words.forEach((w, i) => { w.style.opacity = (.12 + clamp((k * (n + 6) - i) / 6) * .88).toFixed(3); });
   }
   requestAnimationFrame(frame);
 }
@@ -188,7 +187,7 @@ function renderProject(i) {
     const solo = g.items.length === 1, even = !solo && p.layout === "gallery-2", cols = !solo && g.items.every((x) => x.w / x.h < .8);
     return `<section class="grp">
       ${g.sec ? `<div class="gh"><span class="lbl mono">(${pad(gi + 1)})</span><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p>${esc(g.sec.text)}</p>` : ""}</div>` : ""}
-      <div class="gm${solo ? " solo" : ""}${even ? " even" : ""}${cols ? " cols" : ""}" style="--n:${Math.min(g.items.length, 4)}">${g.items.map((it) => tileHTML(it, n++)).join("")}</div></section>`;
+      <div class="gm${p.layout ? " big" : solo ? " solo" : ""}${!p.layout && cols ? " cols" : ""}" style="--n:${Math.min(g.items.length, 4)}">${g.items.map((it) => tileHTML(it, n++)).join("")}</div></section>`;
   }).join("");
   view.innerHTML = `<article class="pj" id="pj">
     <div class="pj-meta mono"><span>(${pad(i + 1)}/${pad(PROJECTS.length)})</span><span>${esc(p.client)}</span><span>${esc(p.kind || "")}</span><a href="#" data-home><span class="roll" data-t="← Index">← Index</span></a></div>
@@ -198,7 +197,7 @@ function renderProject(i) {
     <a class="nxp" href="${nx.page || "#" + nx.slug}" data-cur="Next"><span class="lbl mono">(Next project)</span><span class="t">${esc(nx.title)} <i>→</i></span></a>
   </article>`;
   requestAnimationFrame(() => requestAnimationFrame(() => $("#pj").classList.add("in")));
-  watch(view); wireTiles(p);
+  watch(view); wireTiles(p); justify();
 }
 const tio = new IntersectionObserver((es) => es.forEach((e) => {
   const v = $("video", e.target);
@@ -226,6 +225,23 @@ function renderAbout() {
   requestAnimationFrame(() => requestAnimationFrame(() => $("#pj").classList.add("in")));
   watch(view);
 }
+
+// galleries: rows of pictures at their own shapes, as tall as the screen allows, edges flush
+function justify() {
+  $$(".gm.big", view).forEach((row) => {
+    const tiles = [...row.children], W = row.clientWidth, gap = parseFloat(getComputedStyle(row).columnGap) || 12;
+    const A = (t) => +t.style.getPropertyValue("--a"), hOf = (ts) => (W - gap * (ts.length - 1) - 1) / ts.reduce((a, t) => a + A(t), 0);
+    const size = (t, h) => { t.style.width = `${(A(t) * h).toFixed(1)}px`; };
+    if (innerWidth < 820) { tiles.forEach((t) => (t.style.width = "100%")); return; }
+    const maxH = innerHeight * .8;
+    for (let k = 0; k < tiles.length;) {
+      const line = [tiles[k++]];
+      while (k < tiles.length && hOf(line) > maxH && hOf([...line, tiles[k]]) >= maxH * .6) line.push(tiles[k++]);
+      const h = Math.min(hOf(line), maxH); line.forEach((t) => size(t, h));
+    }
+  });
+}
+addEventListener("resize", () => { if (!view.hidden) justify(); });
 
 // ---------- lightbox ----------
 const lb = $("#lb"), lbs = $("#lbs");
