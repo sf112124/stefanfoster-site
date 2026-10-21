@@ -57,13 +57,15 @@ if (!touch) {
 // the index: names stacked big and tight down the middle. Hover one and a black band runs across the page
 // behind it, with two pictures from the project either side.
 const idx = $("#idx");
-const media = (x) => x && (x.v ? `<video muted loop playsinline preload="none" poster="${x.i}" data-src="${x.v}"></video>` : `<img src="${x.i}" alt="" loading="lazy">`);
+const media = (x) => x && (x.v ? `<video muted loop playsinline preload="none" poster="${x.i}" data-src="${x.v}"></video>` : `<img src="${x.i}" alt="" loading="lazy"${x.pos ? ` style="object-position:${x.pos}"` : ""}>`);
 PROJECTS.forEach((p, i) => {
   const a = document.createElement("a");
   a.className = "nm"; a.href = p.page ? p.page : `#${p.slug}`;
-  const two = p.slug === "les-benjamins" ? { i: "media/les-benjamins/kv-green-s-sm.jpg" } : (() => { const q = p.pieces.filter((x) => !x.play)[1]; return q && { v: q.loop, i: q.thumb }; })();
-  a.innerHTML = `<span class="k">${esc(p.client)}</span><span class="t">${esc(p.title)}</span>
-    <span class="pa">${media(p.cover) || ""}</span>${two ? `<span class="pb">${media(two)}</span>` : ""}`;
+  const HOV = { "coca-cola": [{ i: "media/coca-cola/hover-1.jpg" }, { i: "media/coca-cola/hover-2.jpg" }], gumtree: [{ i: "media/gumtree/hover-1.jpg" }, { i: "media/gumtree/hover-2.jpg", pos: "30% 50%" }] }[p.slug];
+  const one = HOV ? HOV[0] : p.cover;
+  const two = HOV ? HOV[1] : p.slug === "les-benjamins" ? { i: "media/les-benjamins/kv-green-s-sm.jpg" } : (() => { const q = p.pieces.filter((x) => !x.play)[1]; return q && { v: q.loop, i: q.thumb }; })();
+  a.innerHTML = `<span class="k">${esc(p.client)}</span><span class="t">${[...p.title].map((ch) => ch === " " ? " " : `<i>${esc(ch)}</i>`).join("")}</span>
+    <span class="pa">${media(one) || ""}</span>${two ? `<span class="pb">${media(two)}</span>` : ""}`;
   idx.appendChild(a);
   a.addEventListener("mouseenter", () => {
     sound.tick?.(.4 + i * .05, .02);
@@ -71,6 +73,17 @@ PROJECTS.forEach((p, i) => {
   });
   a.addEventListener("mouseleave", () => $$("video", a).forEach((v) => v.pause()));
 });
+
+// the names fill the screen top to bottom, as big as they can be without running off the sides
+const nms = $$(".nm"), fitIdx = () => {
+  const ts = nms.map((n) => $(".t", n)); ts.forEach((t) => (t.style.fontSize = "100px"));
+  const wide = Math.max(...nms.map((n) => (innerWidth < 820 ? 0 : n.firstElementChild.offsetWidth) + $(".t", n).offsetWidth));
+  const byW = 100 * innerWidth * (innerWidth < 820 ? .92 : .8) / wide, byH = (innerHeight - 70) / (nms.length * .88);
+  ts.forEach((t) => (t.style.fontSize = `${Math.min(byW, byH, innerWidth < 820 ? 999 : 999).toFixed(1)}px`));
+};
+fitIdx(); document.fonts.ready.then(fitIdx); addEventListener("resize", fitIdx);
+// variable type: every letter swells towards the cursor, light far off, heavy close by
+const LET = $$(".nm .t i");
 
 // arrivals
 const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -8% 0px" });
@@ -89,6 +102,12 @@ function frame(now) {
     const nx = lerp(px, mx, .1); pvx = nx - px; px = nx; py = lerp(py, my, .1);
     const w = pv.offsetWidth, h = pv.offsetHeight;
     pv.style.transform = `translate3d(${(px - w / 2).toFixed(1)}px,${(py - h / 2).toFixed(1)}px,0) rotate(${clamp(pvx * .3, -7, 7).toFixed(2)}deg)`;
+  }
+  if (!home.hidden && !touch && !reduce) {
+    const R = innerWidth * .2;
+    LET.forEach((el) => { const r = el.getBoundingClientRect(); if (r.bottom < -50 || r.top > innerHeight + 50) return;
+      const d = Math.hypot(r.left + r.width / 2 - cx, r.top + r.height / 2 - cy), k = Math.max(0, 1 - d / R), e = k * k * (3 - 2 * k);
+      const w = Math.round(380 + e * 520); if (el._w !== w) { el._w = w; el.style.fontVariationSettings = `"wght" ${w}`; } });
   }
   requestAnimationFrame(frame);
 }
