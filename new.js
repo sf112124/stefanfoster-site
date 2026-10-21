@@ -54,17 +54,22 @@ if (!touch) {
 }
 
 // ---------- home ----------
-// the index: the work as a grid of moving pictures, alternating big and small
+// the index: names stacked big and tight down the middle. Hover one and a black band runs across the page
+// behind it, with two pictures from the project either side.
 const idx = $("#idx");
-const SPAN = [7, 5, 5, 7, 7, 5, 4, 4, 4];
-const cio = new IntersectionObserver((es) => es.forEach((e) => { const v = $("video", e.target); if (!v) return; if (e.isIntersecting) { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); } else v.pause(); }), { rootMargin: "120px 0px" });
+const media = (x) => x && (x.v ? `<video muted loop playsinline preload="none" poster="${x.i}" data-src="${x.v}"></video>` : `<img src="${x.i}" alt="" loading="lazy">`);
 PROJECTS.forEach((p, i) => {
-  const a = document.createElement("a"), c = p.cover;
-  a.className = "card"; a.href = p.page ? p.page : `#${p.slug}`; a.style.setProperty("--span", SPAN[i] || 6);
-  a.innerHTML = `<div class="cm">${c ? (c.v ? `<video muted loop playsinline preload="none" poster="${c.i}" data-src="${c.v}"></video>` : `<img src="${c.i}" alt="" loading="lazy">`) : ""}</div>
-    <div class="cc"><span class="tt">${letters(p.title, (ch) => `<b>${ch}</b>`)}</span><span class="c2 mono">${esc(p.client)}</span></div>`;
-  idx.appendChild(a); cio.observe(a);
-  a.addEventListener("mouseenter", () => sound.tick?.(.4 + i * .05, .02));
+  const a = document.createElement("a");
+  a.className = "nm"; a.href = p.page ? p.page : `#${p.slug}`;
+  const two = p.slug === "les-benjamins" ? { i: "media/les-benjamins/kv-green-s-sm.jpg" } : (() => { const q = p.pieces.filter((x) => !x.play)[1]; return q && { v: q.loop, i: q.thumb }; })();
+  a.innerHTML = `<span class="k">${esc(p.client)}</span><span class="t">${esc(p.title)}</span>
+    <span class="pa">${media(p.cover) || ""}</span>${two ? `<span class="pb">${media(two)}</span>` : ""}`;
+  idx.appendChild(a);
+  a.addEventListener("mouseenter", () => {
+    sound.tick?.(.4 + i * .05, .02);
+    $$("video", a).forEach((v) => { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); });
+  });
+  a.addEventListener("mouseleave", () => $$("video", a).forEach((v) => v.pause()));
 });
 
 // arrivals
@@ -208,13 +213,13 @@ addEventListener("keydown", (e) => { if (lb.hidden) return; if (e.key === "Escap
 const crawler = new Crawler({
   holes: [$("#hole")], pads: [$("#pad")], reduce,
   sfx: (k, a, b) => sound.critter(k, a, b),
-  sel: ".card .tt .c,.card .c2,.card .cm,.pj-t .c,.gh h2,.tile,.tile figcaption,.nav a,.brand,.fcols a,.fcols span,.lead2",
-  letter: ".card .tt .c,.pj-t .c",
-  loose: ",.tile figcaption,.card .c2",
+  sel: ".nm .t,.nm .k,.pj-t .c,.gh h2,.tile,.tile figcaption,.nav a,.brand,.fcols a,.fcols span,.lead2",
+  letter: ".pj-t .c",
+  loose: ",.tile figcaption,.nm .k",
   gentle: true,
   anchors: () => {
     const out = [];
-    $$(".card .cm,.tile .tm,.pj-t .wd,.lead2").forEach((el) => { const q = el.getBoundingClientRect(); if (q.bottom < 0 || q.top > innerHeight || !q.width) return; out.push([q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]); });
+    $$(".nm .t,.tile .tm,.pj-t .wd,.lead2").forEach((el) => { const q = el.getBoundingClientRect(); if (q.bottom < 0 || q.top > innerHeight || !q.width) return; out.push([q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]); });
     return out;
   },
 });
