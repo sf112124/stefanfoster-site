@@ -321,6 +321,8 @@ body{counter-reset:sec}
 .hero .t-hero{font-size:clamp(34px,6.4vw,120px);line-height:.92}
 .sec .t-head,.sec .t-hero{font-size:clamp(24px,3.2vw,52px);line-height:.98}
 .nav b{font-family:"Anybody",sans-serif;font-stretch:150%;font-weight:620;text-transform:uppercase;font-size:13px;letter-spacing:-.01em}
+.vt{display:inline-block}
+.vw{display:inline-block;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -659,5 +661,6 @@ if (!matchMedia("(hover: none)").matches) {
   (function f() { cx += (mx - cx) * .2; cy += (my - cy) * .2; cur.style.transform = `translate3d(${cx.toFixed(1)}px,${cy.toFixed(1)}px,0)`; requestAnimationFrame(f); })();
 }
 </script>
+<script type="module">import { vtype } from "./vtype.js"; vtype(".t-hero,.t-head");</script>
 </body>
 </html>

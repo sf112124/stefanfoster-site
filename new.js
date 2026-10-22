@@ -2,6 +2,7 @@ import { PROJECTS, ABOUT } from "./projects.js";
 import MEDIA from "./media.js";
 import { Crawler } from "./crawler.js";
 import { Sound } from "./sound.js";
+import { vtype } from "./vtype.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -223,7 +224,7 @@ function renderProject(i) {
     <a class="nxp" href="${nx.page || "#" + nx.slug}" data-cur="Next"><span class="t"><small>Next</small> ${esc(nx.title)} <i>→</i></span></a>
   </article>`;
   requestAnimationFrame(() => requestAnimationFrame(() => $("#pj").classList.add("in")));
-  watch(view); wireTiles(p); justify();
+  watch(view); wireTiles(p); justify(); vtype(".pj-t,.nxp .t", view);
 }
 const tio = new IntersectionObserver((es) => es.forEach((e) => {
   const v = $("video", e.target);
@@ -344,4 +345,5 @@ function tilt() {
 { const mid = $$(".nm")[4]; if (mid) { mid.classList.add("on"); $$("video", mid).forEach((v) => { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); });
   if (touch && !location.hash) requestAnimationFrame(() => { const r = mid.getBoundingClientRect(); scrollTo(0, scrollY + r.top + r.height / 2 - innerHeight / 2); }); } }
 
+vtype(".ct-n");
 route();
