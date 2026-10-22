@@ -115,7 +115,10 @@ fitIdx(); document.fonts.ready.then(fitIdx); addEventListener("resize", fitIdx);
 const LET = $$(".nm .t i");
 // flow: letters lift towards the cursor. Transform only, so nothing ever reflows; positions measured once, not every frame
 const FL = $$(".fi .w i").map((el) => ({ el, x: 0, y: 0, k: 0 }));
-const measureFL = () => { const sy = scrollY; FL.forEach((L) => { L.el.style.transform = ""; const r = L.el.getBoundingClientRect(); L.x = r.left + r.width / 2; L.y = r.top + sy + r.height / 2; }); };
+// each letter's box is fixed at its resting width, so making it heavier never pushes the line about
+const measureFL = () => { const sy = scrollY;
+  FL.forEach((L) => { L.el.style.width = ""; L.el.style.fontVariationSettings = ""; L.w = null; });
+  FL.forEach((L) => { const r = L.el.getBoundingClientRect(); L.el.style.width = `${r.width.toFixed(2)}px`; L.x = r.left + r.width / 2; L.y = r.top + sy + r.height / 2; }); };
 if (FL.length) { measureFL(); document.fonts.ready.then(measureFL); addEventListener("resize", measureFL); }
 
 // arrivals
@@ -144,11 +147,12 @@ function frame(now) {
   }
   // phones: whichever name sits in the middle of the screen gets the band
   if (!home.hidden && touch && scrollY > 4) { let best = null, bd = 1e9; nms.forEach((n) => { const r = n.getBoundingClientRect(), d = Math.abs(r.top + r.height / 2 - innerHeight * .5); if (d < bd) { bd = d; best = n; } }); nms.forEach((n) => n.classList.toggle("on", n === best)); }
-  if (false) {
-    const R = 170, sy = scrollY;
+  // flow: letters swell heavier as the cursor nears them, then thin back out
+  if (FL.length && !home.hidden && !touch && !reduce) {
+    const R = 220, sy = scrollY;
     FL.forEach((L) => { const d = Math.hypot(L.x - cx, L.y - sy - cy), t = Math.max(0, 1 - d / R), e = t * t * (3 - 2 * t);
-      L.k += (e - L.k) * .35; if (L.k < .002 && !L.on) return; L.on = L.k > .002;
-      L.el.style.transform = L.on ? `translateY(${(-L.k * .16).toFixed(3)}em) scaleY(${(1 + L.k * .28).toFixed(3)})` : ""; });
+      L.k += (e - L.k) * .3; const w = Math.round(700 + L.k * 200);
+      if (L.w !== w) { L.w = w; L.el.style.fontVariationSettings = `"wght" ${w}`; } });
   }
   requestAnimationFrame(frame);
 }
