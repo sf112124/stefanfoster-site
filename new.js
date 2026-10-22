@@ -115,10 +115,17 @@ fitIdx(); document.fonts.ready.then(fitIdx); addEventListener("resize", fitIdx);
 const LET = $$(".nm .t i");
 // flow: letters lift towards the cursor. Transform only, so nothing ever reflows; positions measured once, not every frame
 const FL = $$(".fi .w i").map((el) => ({ el, x: 0, y: 0, k: 0 }));
-// each letter's box is fixed at its resting width, so making it heavier never pushes the line about
-const measureFL = () => { const sy = scrollY;
-  FL.forEach((L) => { L.el.style.width = ""; L.el.style.fontVariationSettings = ""; L.w = null; });
-  FL.forEach((L) => { const r = L.el.getBoundingClientRect(); L.el.style.width = `${r.width.toFixed(2)}px`; L.x = r.left + r.width / 2; L.y = r.top + sy + r.height / 2; }); };
+// lines are fixed once (a break after the last name on each line), so names can swell outwards without anything re-wrapping.
+// letter positions are measured at rest, so the effect doesn't chase itself as the line grows
+const measureFL = () => {
+  const box = $(".flb"); if (!box) return; const sy = scrollY;
+  $$("br.lb", box).forEach((b) => b.remove()); box.classList.remove("fixed");
+  FL.forEach((L) => { L.el.style.fontVariationSettings = ""; L.w = null; });
+  const fis = $$(".fi", box); let top = null;
+  fis.forEach((a, i) => { const t = a.getBoundingClientRect().top; if (top != null && Math.abs(t - top) > 4) a.before(Object.assign(document.createElement("br"), { className: "lb" })); top = t; });
+  box.classList.add("fixed");
+  FL.forEach((L) => { const r = L.el.getBoundingClientRect(); L.x = r.left + r.width / 2; L.y = r.top + sy + r.height / 2; });
+};
 if (FL.length) { measureFL(); document.fonts.ready.then(measureFL); addEventListener("resize", measureFL); }
 
 // arrivals
@@ -151,8 +158,8 @@ function frame(now) {
   if (FL.length && !home.hidden && !touch && !reduce) {
     const R = 260, sy = scrollY;
     FL.forEach((L) => { const d = Math.hypot(L.x - cx, L.y - sy - cy), t = Math.max(0, 1 - d / R), e = t * t * (3 - 2 * t);
-      L.k += (e - L.k) * .25; const w = Math.round(700 - L.k * 590);
-      if (L.w !== w) { L.w = w; L.el.style.fontVariationSettings = `"wght" ${w}`; } });
+      L.k += (e - L.k) * .22; const w = Math.round(L.k * 100);
+      if (L.w !== w) { L.w = w; L.el.style.fontVariationSettings = `"wght" ${620 + w * 2.8}, "wdth" ${128 + w * .22}`; } });
   }
   requestAnimationFrame(frame);
 }
