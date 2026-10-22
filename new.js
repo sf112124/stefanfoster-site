@@ -64,6 +64,9 @@ const LIST = [...PROJECTS].sort((x, y) => (ORDER.indexOf(x.slug) + 1 || 99) - (O
 const FLOW = document.body.dataset.flow != null;
 // flow layout: the work set like a paragraph, names running into each other with a little moving picture between each
 if (FLOW) {
+  // a paragraph is read from the top left, so the favourite goes first
+  const FO = ["ai-experiments", "les-benjamins", "la-croisiere", "ai-commissions", "3d-explorations", "summer-of-sport", "relax", "coca-cola", "gumtree"];
+  LIST.sort((x, y) => FO.indexOf(x.slug) - FO.indexOf(y.slug));
   idx.classList.add("fl"); const box = document.createElement("div"); box.className = "flb"; idx.appendChild(box);
   const SCRIPT = { "from-earth": "to", "summer-of-sport": "of", "la-croisiere": "La", "les-benjamins": "to" };
   const ORN = ["✿", "❋", "✺", "✾"];
