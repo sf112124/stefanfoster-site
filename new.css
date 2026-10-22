@@ -384,8 +384,8 @@ html.crawling .row .tt,html.flying .row .tt,html.crawling .row .c2,html.flying .
 /* hover punch: the name jumps letter by letter, flashes orange, settles */
 /* hover: each letter rolls up into a fresh copy of itself, staggered left to right */
 .fi .w i{clip-path:inset(-.3em -.06em 0 -.06em);vertical-align:top;line-height:.86}
-.fi .w i b{display:block;font-weight:inherit;text-shadow:0 1.15em 0 currentColor;transition:transform .55s cubic-bezier(.7,0,.2,1);transition-delay:calc(var(--k) * 14ms)}
-.fi:hover .w i b{transform:translateY(-1.15em)}
+.fi .w i b{display:block;font-weight:inherit;text-shadow:0 1.15em 0 currentColor;transition:none}
+.fi:hover .w i b{transform:translateY(-1.15em);transition:transform .55s cubic-bezier(.7,0,.2,1);transition-delay:calc(var(--k) * 14ms)}
 .fi .sc{transition:transform .55s cubic-bezier(.7,0,.2,1)}
 .fi:hover .sc{transform:translateY(-.06em) skewX(-6deg)}
 @keyframes wob{0%{rotate:0deg}40%{rotate:-10deg}100%{rotate:0deg}}
