@@ -22,10 +22,10 @@ const A = buildArt();
 const cv = $("cv"), g = cv.getContext("2d"); g.imageSmoothingEnabled = false;
 
 // ---------- what's remembered between visits ----------
-const S = { starter: null, lvl: 3, hp: null, won: [], flags: {} };
+const S = { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [] };
 const save = () => { try { localStorage.setItem("foster-valley", JSON.stringify(S)); } catch (e) {} };
-const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); return true; } } catch (e) {} return false; };
-const stats = (lvl) => ({ max: 30 + lvl * 6, atk: 10 + lvl, def: 10 + lvl });
+const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; return true; } } catch (e) {} return false; };
+const stats = (lvl) => ({ max: 30 + lvl * 6 + (S.reels || []).length * 2, atk: 10 + lvl + (S.reels || []).length, def: 10 + lvl });
 
 // ---------- sound: a few square waves, like an old handheld ----------
 const au = {
@@ -164,6 +164,11 @@ function prep(m) {
   return m;
 }
 const maps = { world: prep(buildWorld()), house: prep(buildHouse()) };
+// eight film reels hidden around the valley, each on the nearest free bit of ground to its spot
+{ const m = maps.world, spots = [[6, 18], [44, 15], [68, 19], [20, 25], [56, 31], [27, 47], [47, 47], [4, 34]];
+  const free = (x, y) => x > 1 && y > 1 && x < m.W - 2 && y < m.H - 2 && !m.solid[m.I(x, y)] && !m.tg[m.I(x, y)] && !m.objs.some((o) => !o.flat && y === o.y && x >= o.x && x < o.x + (o.w || 1));
+  spots.forEach(([sx, sy], n) => { for (let r = 0; r < 8; r++) { let done = false; for (let dy = -r; dy <= r && !done; dy++) for (let dx = -r; dx <= r && !done; dx++) if (free(sx + dx, sy + dy)) { m.objs.push({ k: "reel", n, x: sx + dx, y: sy + dy, w: 1, flat: 1 }); done = true; } if (done) break; } });
+  m.flat = m.objs.filter((o) => o.flat); }
 let map = maps.house, mode = "title", busy = false, t0 = 0, cam = { x: 0, y: 0 }, nightOn = false, zoneNow = "", fade = 0, bt = null;
 const P = { x: 3, y: 4, fx: 3, fy: 4, px: 48, py: 64, dir: "down", moving: false, t: 0, steps: 0, grass: 0 };
 const objAt = (x, y) => map.objs.find((o) => !o.gone && y === o.y && x >= o.x && x < o.x + o.w && (o.solid || o.act));
@@ -176,7 +181,7 @@ function night() { nightOn = !nightOn; au.sfx("secret"); toast(nightOn ? "NIGHT 
 // ---------- walking about ----------
 function walk(dt) {
   if (P.moving) {
-    P.t += dt / .165;
+    P.t += dt / (keys.b ? .095 : .165);
     if (P.t >= 1) { P.moving = false; P.px = P.x * 16; P.py = P.y * 16; arrive(); }
     else { P.px = (P.fx + (P.x - P.fx) * P.t) * 16; P.py = (P.fy + (P.y - P.fy) * P.t) * 16; }
   }
@@ -197,6 +202,8 @@ function arrive() {
     warp(maps.world, 35, 37, "down"); return;
   }
   if (map.id === "world") {
+    const rl = map.objs.find((o) => o.k === "reel" && o.x === P.x && o.y === P.y && !S.reels.includes(o.n));
+    if (rl) { S.reels.push(rl.n); const st = stats(S.lvl); S.hp = Math.min(st.max, (S.hp ?? st.max) + 2); save(); hud(); au.sfx("level"); script(async () => { await ui.say([`You found a film reel! (${S.reels.length} of 8)`, SAY.reels[rl.n], "Your tool feels stronger."]); }); return; }
     if (P.x === 35 && P.y === 36) { warp(maps.house, 6, 7, "up"); return; }
     const z = ZONES.find((q) => P.x >= q.r[0] && P.x <= q.r[2] && P.y >= q.r[1] && P.y <= q.r[3]); const zn = z ? z.n : "";
     if (zn && zn !== zoneNow) toast(zn.toUpperCase(), 1800); zoneNow = zn;
@@ -246,30 +253,42 @@ async function stefan() {
 }
 
 // ---------- a fight ----------
+const TCOL = { AI: "#57c9b5", IMAGE: "#6ea4f2", FILM: "#b79cff", NONE: "#ff2d4a" };
 const BG = { "la-croisiere": ["#bfeaf7", "#ffe9b8", "#ff9dbb"], "ai-commissions": ["#b7f3e4", "#57c9b5", "#b79cff"], "3d-explorations": ["#e0d4ff", "#a58cf0", "#86d2ec"], "ai-experiments": ["#ffc4f1", "#e772cf", "#ffd76a"], "summer-of-sport": ["#c4f0b0", "#ffd76a", "#f2907f"], relax: ["#a5e8cf", "#86d2ec", "#fff4e0"], "coca-cola": ["#ffd9a6", "#e6a25a", "#f0546a"], gumtree: ["#ffd0e3", "#ff86b6", "#a9dcbc"], x: ["#e9e4f0", "#b79cff", "#ffb38a"] };
 async function fight(def, slug) {
   const mine = STARTERS[S.starter], st = stats(S.lvl), boss = def.boss || 0, L = (slug ? 2 : boss ? 2 + boss : 1) + S.won.length;
   const me = { ...mine, lvl: S.lvl, max: st.max, hp: clamp(S.hp ?? st.max, 1, st.max), atk: st.atk, def: st.def, am: 1, dm: 1, ox: -200, oy: 0, a: 1, fl: 0 };
-  const foe = { ...def, lvl: L, max: Math.round((20 + L * 6) * (boss ? 1.35 : 1)), atk: 6 + L, def: 9 + L, am: 1, dm: 1, ox: 200, oy: 0, a: 1, fl: 0 }; foe.hp = foe.max;
+  const foe = { ...def, lvl: L, max: Math.round((20 + L * 6) * (boss ? 2 : 1.6)), atk: 6 + L, def: 9 + L, am: 1, dm: 1, ox: 200, oy: 0, a: 1, fl: 0 }; foe.hp = foe.max;
   au.sfx("encounter"); au.music(null);
-  for (let k = 0; k < 3; k++) { fade = .9; await sleep(70); fade = 0; await sleep(70); } await fadeTo(1, 260);
-  bt = { me, foe, bg: BG[slug] || BG.x, shake: 0, t: 0 }; mode = "battle"; hud(); au.music("battle"); bars(); $("sfoe").hidden = $("sme").hidden = false;
+  for (let k = 0; k < 2; k++) { fade = .9; await sleep(60); fade = 0; await sleep(60); }
+  await tween(420, (k) => (wipe = k)); fade = 1; wipe = 0;
+  bt = { me, foe, bg: BG[slug] || BG.x, shake: 0, t: 0, pops: [], parts: [], flash: 0, qte: null }; mode = "battle"; hud(); au.music("battle"); bars(); $("sfoe").hidden = $("sme").hidden = false;
   await fadeTo(0, 200); await tween(420, (k) => { foe.ox = 200 * (1 - k); me.ox = -200 * (1 - k); });
   await ui.line(def.intro || `${def.name} appears!`, {});
   let result = null;
   const tell = (t) => ui.line(t, { auto: 1.15 });
+  // action commands: a bar sweeps when you attack (press A on the gold for a perfect hit), and a ! flashes when they attack (press A on it to block)
+  const qteAttack = () => new Promise((res) => { took("a"); bt.qte = { kind: "atk", t: 0, dur: .95, zone: [.72, .86], res, done: false }; });
+  const qteBlock = () => new Promise((res) => { took("a"); bt.qte = { kind: "blk", t: 0, at: rnd(.45, 1.05), win: .26, res, done: false }; });
+  const pop = (txt, x, y, col, big) => bt.pops.push({ txt, x, y, col, big, t: 0 });
+  const burst = (x, y, col, n = 14) => { for (let k = 0; k < n; k++) { const a = rnd(0, 6.28), sp = rnd(40, 140); bt.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30, t: 0, col }); } };
   const hurt = async (who, n, e) => { au.sfx(e > 1 ? "super" : "hit"); bt.shake = e > 1 ? 7 : 4; for (let k = 0; k < 4; k++) { who.a = .15; await sleep(55); who.a = 1; await sleep(55); } const from = who.hp, to = Math.max(0, who.hp - n); await tween(380, (k) => { who.hp = from + (to - from) * k; bars(); }); who.hp = to; bars(); };
   const act = async (att, dfn, mv, isMe) => {
-    await tell(`${att.name} uses ${mv.n}!`);
+    await tell(`${att.name} uses ${mv.n}!`); ui.hide();
     if (mv.kind === "heal") { const to = Math.min(att.max, att.hp + Math.round(att.max * .45)), from = att.hp; au.sfx("heal"); att.fl = 1; await tween(450, (k) => { att.hp = from + (to - from) * k; att.fl = 1 - k; bars(); }); await tell(`${att.name} got some health back.`); return; }
     if (mv.kind === "buff") { att.am = Math.min(1.75, att.am * 1.3); au.sfx("buff"); await tween(300, (k) => (att.oy = -Math.sin(k * Math.PI) * 8)); await tell(`${att.name}'s attack rose.`); return; }
     if (mv.acc && Math.random() > mv.acc) { au.sfx("miss"); await tell("It missed."); return; }
-    const pw = Array.isArray(mv.p) ? rnd(mv.p[0], mv.p[1]) : mv.p, e = isMe ? eff(mv.t, dfn.type) : eff(att.type, dfn.type), crit = Math.random() < .08;
-    const n = Math.max(1, Math.round(pw * ((att.atk * att.am) / (dfn.def * dfn.dm)) * (.55 + att.lvl * .09) * e * (crit ? 1.5 : 1) * rnd(.88, 1.08)));
+    const q = isMe ? await qteAttack() : await qteBlock();
+    const pw = Array.isArray(mv.p) ? rnd(mv.p[0], mv.p[1]) : mv.p, e = isMe ? eff(mv.t, dfn.type) : eff(att.type, dfn.type), crit = isMe && q === "perfect";
+    const qm = isMe ? (q === "perfect" ? 1.4 : q === "good" ? 1.1 : .9) : (q === "block" ? .4 : 1);
+    const n = Math.max(1, Math.round(pw * ((att.atk * att.am) / (dfn.def * dfn.dm)) * (.55 + att.lvl * .09) * e * qm * rnd(.9, 1.06)));
+    const tx = isMe ? 238 : 84, ty = isMe ? 66 : 118;
+    if (isMe && q !== "miss") pop(q === "perfect" ? "PERFECT!" : "GOOD", tx, ty - 34, q === "perfect" ? "#ffd76a" : "#fff8ec", q === "perfect");
+    if (!isMe && q === "block") pop("BLOCKED!", tx, ty - 34, "#a9dcbc", true);
     const dir = isMe ? 1 : -1; await tween(150, (k) => { att.ox = dir * 26 * Math.sin(k * Math.PI); att.oy = -dir * 10 * Math.sin(k * Math.PI); });
+    bt.flash = crit ? 1 : .6; burst(tx, ty, TCOL[isMe ? mv.t : att.type] || "#fff8ec", crit ? 26 : 14); pop(String(n), tx + rnd(-10, 10), ty - 10, "#fff8ec", false);
     await hurt(dfn, n, e);
-    if (crit) await tell("A critical hit!");
-    if (e > 1) await tell("It's super effective!");
+    if (e > 1) await tell("It's super effective!"); else if (e < 1) await tell("It's not very effective.");
   };
   while (!result) {
     ui.show(`What will ${me.name} do?`);
@@ -302,6 +321,36 @@ async function fight(def, slug) {
   if (result === "win" && slug) { await card(slug); if (S.won.length === PROJECTS.length) toast("ALL EIGHT FOUND. GO BACK AND SEE STEFAN.", 5000); }
   return result;
 }
+function qteStep(dt) {
+  const q = bt.qte; q.t += dt; const hit = took("a");
+  if (q.done) { q.hold = (q.hold || 0) + dt; if (q.hold > .28) { bt.qte = null; q.res(q.out); } return; }
+  if (q.kind === "atk") {
+    const k = q.t / q.dur;
+    if (hit) { q.done = true; q.k = k; q.out = k >= q.zone[0] && k <= q.zone[1] ? "perfect" : Math.abs(k - (q.zone[0] + q.zone[1]) / 2) < .2 ? "good" : "miss"; au.sfx(q.out === "perfect" ? "level" : q.out === "good" ? "ok" : "back"); }
+    else if (k >= 1.08) { q.done = true; q.k = 1; q.out = "miss"; }
+  } else {
+    if (hit) { q.done = true; q.out = q.t >= q.at && q.t <= q.at + q.win ? "block" : "none"; if (q.out === "block") au.sfx("buff"); }
+    else if (q.t > q.at + q.win + .05) { q.done = true; q.out = "none"; }
+  }
+}
+function drawQte(now) {
+  const q = bt.qte; if (!q) return;
+  // drawn in the same panel the words usually sit in, so your eye is already there
+  const px = 6, py = 137, pw = 308, ph = 38;
+  g.fillStyle = "#2b1f3b"; g.fillRect(px, py + 2, pw, ph); g.fillRect(px - 1, py - 1, pw + 2, ph + 2); g.fillStyle = "#fff8ec"; g.fillRect(px + 1, py, pw - 2, ph - 2);
+  g.font = "9px 'Pixelify Sans', monospace"; g.textAlign = "left"; g.fillStyle = "#2b1f3b";
+  if (q.kind === "atk") {
+    const x = 150, y = py + 14, w = 150, h = 9, k = q.done ? q.k : Math.min(1, q.t / q.dur);
+    g.fillText(q.done ? (q.out === "perfect" ? "PERFECT!" : q.out === "good" ? "GOOD" : "MISSED THE GOLD") : "PRESS A ON THE GOLD", px + 12, py + 22);
+    g.fillRect(x - 1, y - 1, w + 2, h + 2); g.fillStyle = "#e6dccb"; g.fillRect(x, y, w, h);
+    g.fillStyle = "#ffd76a"; g.fillRect(x + Math.round(q.zone[0] * w), y, Math.round((q.zone[1] - q.zone[0]) * w), h);
+    g.fillStyle = "#2b1f3b"; g.fillRect(x + Math.round(k * w) - 1, y - 4, 3, h + 8);
+  } else {
+    const on = q.t >= q.at && q.t <= q.at + q.win && !q.done;
+    g.fillText(q.done ? (q.out === "block" ? "BLOCKED!" : "TOO LATE") : on ? "NOW! PRESS A" : "GET READY TO BLOCK...", px + 12, py + 22);
+    if (on) { const s = 1 + Math.sin(now / 40) * .12, cx = 250, cy = py + 18; g.save(); g.translate(cx, cy); g.scale(s, s); g.fillStyle = "#2b1f3b"; g.fillRect(-8, -12, 16, 24); g.fillStyle = "#ffd76a"; g.fillRect(-6, -10, 12, 20); g.fillStyle = "#2b1f3b"; g.fillRect(-2, -7, 4, 10); g.fillRect(-2, 5, 4, 3); g.restore(); }
+  }
+}
 function tween(ms, fn) { return new Promise((res) => { const s = performance.now(); const step = (n) => { const k = clamp((n - s) / ms, 0, 1); fn(k); if (k < 1) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); }); }
 function bars() {
   if (!bt) return;
@@ -328,7 +377,7 @@ function card(slug) {
     $("cclose").addEventListener("click", () => busyCard && busyCard());
   });
 }
-let busyCard = null, folioOpen = false;
+let busyCard = null, folioOpen = false, wipe = 0;
 function folio() {
   if (!S.starter || busy) return; folioOpen = true; au.sfx("ok");
   const el = $("folio"), m = STARTERS[S.starter];
@@ -350,7 +399,7 @@ function endCard() {
     $("cclose").addEventListener("click", () => busyCard && busyCard());
   });
 }
-function hud() { $("bfolio").textContent = `FOLIO ${S.won.length}/${PROJECTS.length}`; $("hud").hidden = mode !== "world"; $("bfolio").hidden = !S.starter; }
+function hud() { $("bfolio").textContent = `FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8`; $("hud").hidden = mode !== "world"; $("bfolio").hidden = !S.starter; }
 $("bfolio").addEventListener("click", () => { if (folioOpen) closeFolio(); else if (mode === "world") folio(); });
 $("bsnd").addEventListener("click", () => { au.on = !au.on; $("bsnd").textContent = au.on ? "SOUND ON" : "SOUND OFF"; if (au.on) au.unlock(); });
 
@@ -370,6 +419,7 @@ function drawWorld(now) {
   const spr = (o) => o.k === "npc" ? A.who[o.who][o.dir || "down"][(o.step || 0) % 2] : o.k === "wallart" ? A.obj[o.art] : Array.isArray(A.obj[o.k]) ? A.obj[o.k][o.k === "geyser" ? Math.floor(now / 300 + o.x) % 3 : f2] : A.obj[o.k];
   const put = (o) => {
     if (o.gone) return; if (o.k === "wire") return wire(o, cx, cy, now);
+    if (o.k === "reel") { if (!S.reels.includes(o.n)) reel(o.x * 16 - cx + 8, o.y * 16 - cy + 8 + Math.round(Math.sin(now / 260 + o.n) * 1.5), now); return; }
     const s = spr(o); if (!s) return; const bx = (o.x + o.w / 2) * 16 - cx, by = (o.y + 1) * 16 - cy;
     if (bx < -60 || bx > VW + 60 || by < -10 || by > VH + 90) return;
     if (o.k === "wallart") { g.drawImage(s, Math.round(bx - s.width / 2), by - s.height - 6); return; }
@@ -385,7 +435,37 @@ function drawWorld(now) {
   row.forEach((o) => { if (!drawn && o.y > py) me(); put(o); }); if (!drawn) me();
   // standing in long grass, it comes up over your feet
   [[P.x, P.y], [P.fx, P.fy]].forEach(([x, y]) => { if (x < 0 || y < 0 || x >= map.W || y >= map.H) return; const z = map.tg[map.I(x, y)]; if (z && (P.moving || (x === P.x && y === P.y))) g.drawImage(A.grass[z][(f2 + x + y) % 2], 0, 8, 16, 8, x * 16 - cx, y * 16 - cy + 8, 16, 8); });
-  if (nightOn && map.id === "world") { g.globalCompositeOperation = "multiply"; g.fillStyle = "#6c6fc4"; g.fillRect(0, 0, VW, VH); g.globalCompositeOperation = "source-over"; }
+  if (map.id === "world") ambience(now, cx, cy);
+}
+// the valley breathes: cloud shadows, things drifting in the air, dust where you walk, and evening by London's clock
+const hourNow = () => +new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "numeric", hour12: false }).format(new Date());
+const isNight = () => nightOn !== (hourNow() >= 19 || hourNow() < 6);
+const motes = Array.from({ length: 26 }, () => ({ x: Math.random() * VW, y: Math.random() * VH, s: Math.random(), p: Math.random() * 7 }));
+const dust = []; let lastStep = 0;
+function ambience(now, cx, cy) {
+  const night = isNight(), t = now / 1000;
+  // dust where your feet land on bare ground
+  if (P.moving && P.steps !== lastStep) { lastStep = P.steps; const tt = map.base[map.I(P.fx, P.fy)]; if (tt === TT.path || tt === TT.sand || tt === TT.track || tt === TT.soil) for (let k = 0; k < 3; k++) dust.push({ x: P.fx * 16 + 8 + rnd(-4, 4), y: P.fy * 16 + 14, vx: rnd(-8, 8), vy: rnd(-10, -3), t: 0 }); }
+  for (let i = dust.length - 1; i >= 0; i--) { const d = dust[i]; d.t += 1 / 60; d.x += d.vx / 60; d.y += d.vy / 60; if (d.t > .45) { dust.splice(i, 1); continue; } g.fillStyle = `rgba(233,220,203,${(1 - d.t / .45) * .9})`; g.fillRect(Math.round(d.x - cx), Math.round(d.y - cy), 2, 2); }
+  // big soft cloud shadows sliding over everything
+  if (!night) { g.fillStyle = "rgba(43,31,59,.07)"; for (let k = 0; k < 3; k++) { const x = ((t * 7 + k * 230) % 760) - 220 - (cx * .15) % 760, y = 30 + k * 55 - (cy * .1) % 200; g.beginPath(); g.ellipse(x, y, 70, 24, 0, 0, 7); g.ellipse(x + 40, y + 10, 50, 20, 0, 0, 7); g.fill(); } }
+  // evening: the light drops, the windows and fireflies come on
+  if (night) { g.globalCompositeOperation = "multiply"; g.fillStyle = "#6c6fc4"; g.fillRect(0, 0, VW, VH); g.globalCompositeOperation = "source-over";
+    const lx = Math.round(P.px - cx + 8), ly = Math.round(P.py - cy + 8), lg = g.createRadialGradient(lx, ly, 0, lx, ly, 46); lg.addColorStop(0, "rgba(255,226,160,.28)"); lg.addColorStop(1, "rgba(255,226,160,0)"); g.fillStyle = lg; g.fillRect(0, 0, VW, VH); }
+  // petals by day, fireflies by night
+  motes.forEach((m) => {
+    m.x += (night ? Math.sin(t * 1.3 + m.p) * .25 : .35 + m.s * .3) ; m.y += night ? Math.cos(t * 1.1 + m.p) * .2 : .18 + m.s * .2;
+    if (m.x > VW + 4) m.x = -4; if (m.y > VH + 4) m.y = -4; if (m.x < -4) m.x = VW + 4; if (m.y < -4) m.y = VH + 4;
+    if (night) { const a = .5 + Math.sin(t * 3 + m.p * 5) * .5; g.fillStyle = `rgba(255,236,140,${a})`; g.fillRect(Math.round(m.x), Math.round(m.y), 1, 1); g.fillStyle = `rgba(255,236,140,${a * .25})`; g.fillRect(Math.round(m.x) - 1, Math.round(m.y) - 1, 3, 3); }
+    else { g.fillStyle = m.s > .5 ? "rgba(255,157,187,.85)" : "rgba(255,255,255,.85)"; g.fillRect(Math.round(m.x), Math.round(m.y), m.s > .8 ? 2 : 1, 1); }
+  });
+}
+function reel(x, y, now) {
+  x = Math.round(x); y = Math.round(y);
+  const glow = .35 + Math.sin(now / 200) * .15; g.fillStyle = `rgba(255,215,106,${glow})`; g.beginPath(); g.arc(x, y, 8, 0, 7); g.fill();
+  g.fillStyle = "#2b1f3b"; g.beginPath(); g.arc(x, y, 5.5, 0, 7); g.fill(); g.fillStyle = "#cfd3e0"; g.beginPath(); g.arc(x, y, 4.5, 0, 7); g.fill();
+  g.fillStyle = "#2b1f3b"; const a0 = now / 300; for (let k = 0; k < 4; k++) { const a = a0 + k * Math.PI / 2; g.fillRect(Math.round(x + Math.cos(a) * 2.6) - 1, Math.round(y + Math.sin(a) * 2.6) - 1, 2, 2); }
+  g.fillRect(x, y, 1, 1);
 }
 function wire(o, cx, cy, now) {
   const x0 = (o.x + .5) * 16 - cx, x1 = (o.x2 + .5) * 16 - cx, y = (o.y + 1) * 16 - cy - 34; g.fillStyle = "#2b1f3b";
@@ -406,16 +486,25 @@ function drawBattle(now) {
     g.globalAlpha = 1;
   };
   fig(b.foe, 238, 96, 2, Math.round(Math.sin(now / 420) * 2)); fig(b.me, 84, 150, 2, Math.round(Math.sin(now / 480 + 1) * 2));
+  // sparks, numbers, the white flash of a big hit, and the action command on top
+  for (let i = b.parts.length - 1; i >= 0; i--) { const p = b.parts[i]; p.t += 1 / 60; p.x += p.vx / 60; p.y += p.vy / 60; p.vy += 260 / 60; if (p.t > .6) { b.parts.splice(i, 1); continue; } g.fillStyle = p.col; g.globalAlpha = 1 - p.t / .6; g.fillRect(Math.round(p.x), Math.round(p.y), 2, 2); g.globalAlpha = 1; }
+  g.textAlign = "center";
+  for (let i = b.pops.length - 1; i >= 0; i--) { const p = b.pops[i]; p.t += 1 / 60; if (p.t > 1) { b.pops.splice(i, 1); continue; } const yy = p.y - Math.min(1, p.t * 3) * 10, sc = p.t < .12 ? 1 + (1 - p.t / .12) * .6 : 1;
+    g.font = `${Math.round((p.big ? 14 : 11) * sc)}px 'Pixelify Sans', monospace`; g.globalAlpha = p.t > .75 ? (1 - p.t) / .25 : 1; g.fillStyle = "#2b1f3b"; g.fillText(p.txt, p.x + 1, yy + 1); g.fillStyle = p.col; g.fillText(p.txt, p.x, yy); g.globalAlpha = 1; }
+  if (b.flash > 0) { g.fillStyle = `rgba(255,255,255,${b.flash * .55})`; g.fillRect(0, 0, VW, VH); b.flash = Math.max(0, b.flash - .08); }
+  drawQte(now);
 }
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = clamp((now - t0) / 1000, 0, .05); t0 = now;
   if (busyCard) { if (took("a") || took("b")) busyCard(); }
   else if (folioOpen) { if (took("b") || took("f") || took("a")) closeFolio(); }
+  else if (bt && bt.qte) qteStep(dt);
   else { ui.update(dt); if (mode === "world") walk(dt); }
   if (took("m")) $("bsnd").click();
   if (mode === "battle" && bt) drawBattle(now); else drawWorld(now);
   if (fade > 0) { g.fillStyle = `rgba(255,248,236,${fade})`; g.fillRect(0, 0, VW, VH); }
+  if (wipe > 0) { g.fillStyle = "#2b1f3b"; for (let k = -6; k < 14; k++) { const w = 26 * wipe; g.beginPath(); g.moveTo(k * 26, 0); g.lineTo(k * 26 + w, 0); g.lineTo(k * 26 + w - 90, VH); g.lineTo(k * 26 - 90, VH); g.fill(); } }
   for (const k in tap) tap[k] = false;   // a press counts for the frame it lands in and no longer
 }
 
@@ -428,7 +517,7 @@ function fit() {
 addEventListener("resize", fit); fit();
 async function start(fresh) {
   au.unlock(); au.sfx("ok");
-  if (fresh) { Object.assign(S, { starter: null, lvl: 3, hp: null, won: [], flags: {} }); save(); }
+  if (fresh) { Object.assign(S, { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [] }); save(); }
   await fadeTo(1, 250); $("title").hidden = true; mode = "world"; hud(); au.music("world");
   if (S.starter) place(maps.world, 35, 37, "down"); else place(maps.house, 3, 4, "right");
   await fadeTo(0, 300);

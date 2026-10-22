@@ -5,15 +5,17 @@ const SOLID = new Set([TT.water, TT.fizz, TT.wall, TT.skirt, TT.void]);
 const rng = (s) => () => ((s = (s * 16807) % 2147483647) / 2147483647);
 
 // ---- types. A tool is strongest against the kind of work it's made for. ----
-export const eff = (a, d) => (a === d ? 1.5 : 1);
+// A triangle: AI beats FILM (it makes them faster), IMAGE beats AI (someone has to fix the hands), FILM beats IMAGE (motion beats stills).
+export const BEATS = { AI: "FILM", IMAGE: "AI", FILM: "IMAGE" };
+export const eff = (a, d) => (BEATS[a] === d ? 1.4 : BEATS[d] === a ? .75 : 1);
 
 // ---- the three tools you can take with you ----
 export const STARTERS = {
-  ai: { name: "AI", type: "AI", art: "ai", about: "AI. Strong against AI projects.",
+  ai: { name: "AI", type: "AI", art: "ai", about: "AI. Beats FILM projects, weak to IMAGE.",
     moves: [{ n: "GENERATE", t: "AI", p: 14 }, { n: "VARIATIONS", t: "AI", p: 24, acc: .74 }, { n: "UPSCALE", kind: "buff" }, { n: "RETRY", kind: "heal" }] },
-  ps: { name: "PHOTOSHOP", type: "IMAGE", art: "ps", about: "PHOTOSHOP. Strong against IMAGE projects.",
+  ps: { name: "PHOTOSHOP", type: "IMAGE", art: "ps", about: "PHOTOSHOP. Beats AI projects, weak to FILM.",
     moves: [{ n: "BRUSH", t: "IMAGE", p: 14 }, { n: "LIQUIFY", t: "IMAGE", p: 24, acc: .74 }, { n: "SHARPEN", kind: "buff" }, { n: "HEAL BRUSH", kind: "heal" }] },
-  pr: { name: "PREMIERE", type: "FILM", art: "pr", about: "PREMIERE. Strong against FILM projects.",
+  pr: { name: "PREMIERE", type: "FILM", art: "pr", about: "PREMIERE. Beats IMAGE projects, weak to AI.",
     moves: [{ n: "CUT", t: "FILM", p: 12 }, { n: "SMASH CUT", t: "FILM", p: 22, acc: .74 }, { n: "SPEED RAMP", kind: "buff" }, { n: "UNDO", kind: "heal" }] },
 };
 
@@ -45,7 +47,7 @@ export const EXTRA = {
 // ---- what people and things say ----
 export const SAY = {
   intro: ["Hi, I'm Stefan. This is my portfolio.", "My eight projects are out in the long grass around the valley.", "Find one and beat it, and you get to see the work.", "First, pick a tool to take with you: AI, Photoshop or Premiere. They're on the stands behind me."],
-  after: ["The door is at the bottom of the room. Walk into long grass to find a project.", "Each tool is strongest against the kind of work it's made for.", "The coffee machine in here brings your tool back to full health."],
+  after: ["The door is at the bottom of the room. Walk into long grass to find a project.", "AI beats FILM, PHOTOSHOP beats AI, PREMIERE beats IMAGE.", "In a fight, press A as the bar hits the gold for a perfect hit. When they wind up, press A on the ! to block.", "There are eight film reels hidden around the valley too. Each one makes your tool stronger.", "The coffee machine in here brings your tool back to full health."],
   ending: ["That's all eight. Thanks for playing through my work.", "If you'd like to work together, my details are on the next screen."],
   needPick: ["Pick a tool from the stands first."],
   noPick: ["Pick one of the three tools on the stands."],
@@ -56,6 +58,16 @@ export const SAY = {
   left: ["You've already picked your tool."],
   goat: ["A goat on a power line, from Ai Experiments.", "The original video has 101M views."],
   hole: ["A hole in the ground. The sign says DO NOT OPEN."],
+  reels: [
+    "Before AI video was everywhere, Stefan faked a goat on a power line. It hit 101M views and the Daily Mail thought it was real.",
+    "Summer of Sport: 23 illustrations across 1200+ sites in Paris and Marseille, each drawn on iPad.",
+    "The Jacquemus truck film, Ibiza, we are here, did 3.9M views.",
+    "Coca-Cola's taste is beyond words, so the film didn't use any. Just Ahhh. Oooh. Yeah. Music by Tyler, The Creator.",
+    "#RELAX: the AirPods Camera Remote film with @sedjropointelle did 3.5M organic views.",
+    "Stefan got fed up not knowing how 3D renders were made, so he taught himself Blender.",
+    "La Croisière redefined how Apple shows up on social.",
+    "Gumtree: good finds sell themselves. No salespeople, no fanfare.",
+  ],
   holeDone: ["THE CRAWLER is back in its hole."],
   lost: ["You're back at the studio. Your tool is at full health again."],
   ran: ["You got away."],
