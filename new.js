@@ -122,7 +122,7 @@ let hovFi = null;
 // lines are fixed once (a break after the last name on each line), so names can swell outwards without anything re-wrapping.
 // letter positions are measured at rest, so the effect doesn't chase itself as the line grows
 const measureFL = () => {
-  const box = $(".flb"); if (!box) return; const sy = scrollY;
+  const box = $(".flb"); if (!box || $("#home").hidden) return; const sy = scrollY;
   $$("br.lb", box).forEach((b) => b.remove()); box.classList.remove("fixed");
   FL.forEach((L) => { L.el.style.fontVariationSettings = ""; L.w = null; });
   const fis = $$(".fi", box); let top = null;
@@ -183,7 +183,7 @@ function route() {
     renderProject(PROJECTS.indexOf(p));
     scrollTo(0, 0);
   } else {
-    view.hidden = true; view.innerHTML = ""; home.hidden = false; document.body.classList.remove("viewing"); fitIdx();
+    view.hidden = true; view.innerHTML = ""; home.hidden = false; document.body.classList.remove("viewing"); fitIdx(); measureFL();
     if (h === "work" || h === "contact") $("#" + h).scrollIntoView({ behavior: "smooth" });
     else scrollTo(0, homeY);
   }
