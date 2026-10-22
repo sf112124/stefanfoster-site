@@ -78,8 +78,8 @@ if (FLOW) {
     a.innerHTML = `${i % 3 === 1 ? `<span class="orn">${ORN[i % 4]}</span>` : ""}<span class="tw">${words}</span>${c ? `<span class="th">${media(c)}</span>` : ""}`;
     box.appendChild(a);
     if (p.slug === "ai-commissions") { a.classList.add("on", "home"); }
-    a.addEventListener("mouseenter", () => { $$(".fi.on").forEach((x) => x.classList.remove("on")); a.classList.add("on"); sound.tick?.(.4 + i * .05, .02); $$("video", a).forEach((v) => { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); }); });
-    a.addEventListener("mouseleave", () => { a.classList.remove("on"); $$("video", a).forEach((v) => v.pause()); });
+    a.addEventListener("mouseenter", () => { hovFi = a; $$(".fi.on").forEach((x) => x.classList.remove("on")); a.classList.add("on"); sound.tick?.(.4 + i * .05, .02); $$("video", a).forEach((v) => { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); }); });
+    a.addEventListener("mouseleave", () => { if (hovFi === a) hovFi = null; a.classList.remove("on"); $$("video", a).forEach((v) => v.pause()); });
   });
   // off the names entirely: back to AI Commissions
   box.addEventListener("mouseleave", () => { $$(".fi.on").forEach((x) => x.classList.remove("on")); $(".fi.home")?.classList.add("on"); });
@@ -117,7 +117,8 @@ fitIdx(); document.fonts.ready.then(fitIdx); addEventListener("resize", fitIdx);
 // variable type: letters thin out as the cursor passes, then fill back in
 const LET = $$(".nm .t i");
 // flow: letters lift towards the cursor. Transform only, so nothing ever reflows; positions measured once, not every frame
-const FL = $$(".fi .w i").map((el) => ({ el, x: 0, y: 0, k: 0 }));
+const FL = $$(".fi .w i").map((el) => ({ el, fi: el.closest(".fi"), x: 0, y: 0, k: 0 }));
+let hovFi = null;
 // lines are fixed once (a break after the last name on each line), so names can swell outwards without anything re-wrapping.
 // letter positions are measured at rest, so the effect doesn't chase itself as the line grows
 const measureFL = () => {
@@ -160,7 +161,7 @@ function frame(now) {
   // flow: letters swell heavier as the cursor nears them, then thin back out
   if (FL.length && !home.hidden && !touch && !reduce) {
     const R = 260, sy = scrollY;
-    FL.forEach((L) => { const d = Math.hypot(L.x - cx, L.y - sy - cy), t = Math.max(0, 1 - d / R), e = t * t * (3 - 2 * t);
+    FL.forEach((L) => { const d = Math.hypot(L.x - cx, L.y - sy - cy), t = L.fi === hovFi ? Math.max(0, 1 - d / R) : 0, e = t * t * (3 - 2 * t);
       L.k += (e - L.k) * .22; const w = Math.round(L.k * 100);
       if (L.w !== w) { L.w = w; L.el.style.fontVariationSettings = `"wght" ${620 + w * 2.8}, "wdth" ${128 + w * .22}`; } });
   }
