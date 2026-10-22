@@ -68,29 +68,29 @@ Object.assign(CORP, {
 });
 // ---- the people out on the roads who want "a quick chat" ----
 export const TRAINERS = {
-  darren: { name: "DARREN", role: "ACCOUNT DIRECTOR", look: "ad", port: "t_ad", x: 16, y: 27, dir: "right", lv: 0, team: ["brief"],
+  darren: { name: "JIMI", role: "ACCOUNT DIRECTOR", look: "jimi", port: "t_jimi", x: 16, y: 27, dir: "right", lv: 0, team: ["brief"],
     intro: ["You work with Stefan, right? Quick one.", "Client's sent over a brief. Well. It's more of a vibe.", "They want it to go viral. By Friday. Can you jump on it?"],
     win: ["Okay, love that. Let's do a WIP on Thursday?"], after: ["I've put a hold in your calendar. Just a placeholder."] },
-  priya: { name: "PRIYA", role: "MARKETING MANAGER", look: "mm", port: "t_mm", x: 55, y: 28, dir: "left", lv: 1, team: ["kpi"],
+  priya: { name: "TORA", role: "MARKETING LEAD", look: "mm", port: "t_mm", x: 55, y: 28, dir: "left", lv: 1, team: ["kpi"],
     intro: ["Hi! Huge fan of the work.", "Before we brief, can we align on the verticals?", "And I'll need KPIs for each one. Per platform. Per week."],
     win: ["Fine. I'll tell the team the KPI is vibes."], after: ["We're seeing really strong engagement on this chat."] },
-  gary: { name: "GARY", role: "MEDIA PLANNER", look: "mp", port: "t_mp", x: 19, y: 42, dir: "right", lv: 1, team: ["mediaplan"],
+  gary: { name: "PARIS", role: "OMD MEDIA PLANNER", look: "mp", port: "t_mp", x: 19, y: 42, dir: "right", lv: 1, team: ["mediaplan"],
     intro: ["Got a sec? I've built the media plan.", "It's fourteen tabs. The ROI is on tab nine.", "Can the film be a 6, a 15, a 30, in 9:16, 4:5 and 1:1?"],
     win: ["Right. I'll just... reforecast."], after: ["Tab nine is looking a lot healthier now."] },
-  jules: { name: "JULES", role: "BRAND STRATEGIST", look: "bs", port: "t_bs", x: 25, y: 11, dir: "right", lv: 2, team: ["deck"],
+  jules: { name: "BRANCO", role: "BRAND STRATEGIST", look: "bs", port: "t_bs", x: 25, y: 11, dir: "right", lv: 2, team: ["deck"],
     intro: ["Let's zoom out for a second.", "What does the brand actually believe? What's its purpose?", "I've done a deck. It's only eighty slides."],
     win: ["Hm. I suppose the work does speak for itself."], after: ["I'm moving the purpose slide to the appendix."] },
-  mia: { name: "MIA", role: "SOCIAL LEAD", look: "sl", port: "t_sl", x: 62, y: 11, dir: "left", lv: 2, team: ["vertical"],
+  mia: { name: "ANNA", role: "SOCIAL LEAD", look: "sl", port: "t_sl", x: 62, y: 11, dir: "left", lv: 2, team: ["vertical"],
     intro: ["Omg hiii. Can it be a trend?", "Like, vertical, but it has to feel organic.", "And can we hook them in the first half a second?"],
     win: ["Okay that's actually so good. Posting it now."], after: ["It's doing numbers. Like, real numbers."] },
-  cmo: { name: "RICHARD", role: "CMO", look: "cmo", port: "t_cmo", x: 35, y: 9, dir: "down", lv: 4, boss: 1, team: ["roi"], needs: ["darren", "priya", "gary", "jules", "mia"], unlock: "THE CMO WANTS A WORD. NORTH ROAD.",
-    gate: ["My team speaks for me.", "Deal with all five of them first, then we'll talk."],
+  cmo: { name: "TOMMY", role: "CMO", look: "cmo", port: "t_cmo", x: 35, y: 9, dir: "down", lv: 4, boss: 1, team: ["roi"], needs: ["darren", "priya", "gary", "jules", "mia"], unlock: "THE CMO WANTS A WORD. NORTH ROAD.",
+    gate: ["My team speaks for me.", "Get past Jimi, Tora, Paris, Branco and Anna first. Then we'll talk."],
     intro: ["So. You're the one who's been getting past my team.", "Let's talk numbers. Then stakeholders. Then numbers again."],
     win: ["...Fine. It's approved.", "Don't change a thing."], after: ["Approved. Go and make it."] },
   // the MAL office: the gym
-  jimi: { name: "JIMI", role: "HEAD OF ACCOUNTS", look: "jimi", port: "t_jimi", map: "mal1", x: 10, y: 4, dir: "right", lv: 3, team: ["timesheet"],
-    intro: ["Welcome to accounts. Lovely to see you.", "Before you go up, have you done your timesheet?", "I'll need a job number for this conversation, by the way."],
-    win: ["Fair. I'll code it to new business."], after: ["Nice trainers, by the way. Mine are better."] },
+  jimi: { name: "THE TIMESHEET POLICE", role: "ACCOUNTS", look: "ad", port: "t_ad", map: "mal1", x: 10, y: 4, dir: "right", lv: 3, team: ["timesheet"],
+    intro: ["Welcome to accounts.", "Nobody goes upstairs until their timesheet is in.", "And we'll need a job number for this conversation."],
+    win: ["Fine. We'll code it to new business."], after: ["We know about the 37 hours you logged as \"thinking\"."] },
   pat: { name: "PAT", role: "MOTION DESIGNER", look: "pat", port: "t_pat", map: "mal2", x: 5, y: 4, dir: "right", lv: 3, team: ["easing"],
     intro: ["Hey. Look at this curve.", "Ease in, ease out. A little overshoot on the end.", "Nothing in this world should ever move linearly."],
     win: ["Okay, that had lovely easing. I'll allow it."], after: ["I've been tweaking one keyframe since nine."] },
@@ -101,7 +101,7 @@ export const TRAINERS = {
     intro: ["Love it. Genuinely.", "Quick question though. How much does it cost?", "And can we shoot the whole thing in one day?"],
     win: ["Right. I'll find the money. Somewhere."], after: ["The eyebrow goes up when the budget goes up."] },
   tim: { name: "TIM", role: "GYM LEADER", look: "tim", port: "t_tim", map: "mal2", x: 18, y: 4, dir: "down", lv: 6, boss: 1, team: ["lion"], needs: ["jimi", "pat", "chris", "jeremy"], unlock: "TIM WILL SEE YOU NOW. THE GLASS OFFICE.",
-    gate: ["Door's open, but get past the floor first.", "Jimi, Pat, Chris and Jeremy. Then come and see me."],
+    gate: ["Door's open, but get past the floor first.", "Accounts, Pat, Chris and Jeremy. Then come and see me."],
     intro: ["So you want to make work here.", "Everyone has an idea. Show me the big one.", "And it had better be on brief."],
     win: ["That's the work.", "Take the badge. You've earned it."], after: ["Good work doesn't need a deck. Mostly."] },
 };
@@ -132,7 +132,17 @@ export const SAY = {
   ],
   malLocked: ["The doors are locked. A note on the glass says:", "\"By appointment only. Come back once you've found four of Stefan's projects.\""],
   malcoffee: ["Free coffee from the office machine. It's fine.", "Your tool is back to full health."],
-  smoke: [["Just stepping out for five.", "Don't tell Jeremy. I'm meant to be on a call."], ["*vapes* It's mango ice.", "Honestly, every good idea in that building started out here."], ["A bin with an ashtray on top, full to the brim."]],
+  smoke: [["KATIA: Just stepping out for five.", "I've written forty endlines on this one cigarette. Thirty-nine of them are bad.", "Don't tell Jeremy. I'm meant to be on a call."], ["ALFIE: *vapes* It's mango ice.", "Honestly, every good idea in that building started out here."], ["A bin with an ashtray on top, full to the brim."]],
+  // ---- Stefan's studio, and bits of his life scattered round the valley ----
+  monstera: ["A huge monstera in a huge pot.", "Stefan talks to it more than he'd admit."],
+  wardrobe: ["Stefan's wardrobe.", "Five pairs of the exact same baggy cargos, in five colours.", "And a pair of Vomeros that have seen things."],
+  oils: ["Little brown bottles of essential oils.", "Stefan blends his own. This one's labelled \"Monday\"."],
+  tv: ["A K-drama, paused on episode 14.", "Someone's about to confess something. Best not touch it."],
+  tank: ["A spider tank. A small, friendly spider waves a leg at you.", "There used to be two.", "The other one got out, and Stefan swears it's living in a hole somewhere, DO NOT OPEN."],
+  arcade: ["An arcade cabinet that says SYNTH-FOLIO.", "It turns all of Stefan's work into a little music machine."],
+  guitar: ["You strum Stefan's acoustic.", "Nylon strings. He likes them softer."],
+  grow: ["A tiny glass bottle on the bench, labelled \"Grow\" in curly handwriting.", "The film's in Ai Experiments: one tablet, one tube carriage, and a very bad commute.", "You put it back. Some things are better as films."],
+  balloons: ["Three hot air balloons in pink, green and yellow, shaped like the flowers of the valley.", "Stefan's team flew them over Cappadocia for Les Benjamins and Apple.", "The whole story is on its own page."],
   badge: ["You got the MAL BADGE!"],
   holeDone: ["THE CRAWLER is back in its hole."],
   lost: ["You're back at the studio. Your tool is at full health again."],
@@ -148,6 +158,7 @@ export const SAY = {
     relax: ["THE LAGOON", "#RELAX is in the long grass here."],
     riviera: ["THE BEACH", "La Croisière is in the long grass here."],
     hole: ["DO NOT OPEN"],
+    cappa: ["FROM EARTH TO SKY", "Les Benjamins x Apple. Cappadocia."],
     malout: ["MEDIA ARTS LAB", "Ground floor: kitchen and the all-agency space. First: accounts. Second: creative and production."],
     mal: ["Reception. There's nobody here, just a bowl of mints and a sign-in iPad.", "Accounts on the first floor. Creative and production on the second. Tim's office is the glass one."],
   },
@@ -209,6 +220,10 @@ export function buildWorld() {
   // the MAL office, the gym, on the east side of the square. Locked until every project is found.
   put("mal", 43, 35, { w: 7 }); rect(43, 31, 49, 35, (x, y) => { solid[I(x, y)] = 1; keep[I(x, y)] = 1; });
   road(41, 36, 46, 37); road(46, 36, 46, 41); clear(41, 29, 53, 41); put("sign", 44, 37, { act: "sign:malout" });
+  // Cappadocia: three balloons on the open grass east of the north road
+  clear(37, 13, 46, 19); put("balloon0", 39, 16, { act: "balloons" }); put("balloon1", 42, 15, { act: "balloons" }); put("balloon2", 45, 16, { act: "balloons" }); put("sign", 41, 18, { act: "sign:cappa" });
+  // a bench by the paddock road, with something left on it
+  clear(51, 14, 54, 16); put("bench", 52, 15, { w: 2, act: "grow" });
   // round the corner: the smoking area
   rect(50, 31, 53, 34, (x, y) => { set(x, y, TT.paving); keep[I(x, y)] = 1; });
   put("bin", 50, 31, { act: "smoke:2" });
@@ -242,7 +257,8 @@ export function buildHouse() {
   put("bed", 1, 3); put("plant", 2, 2); put("shelf", 3, 2, { w: 2 }); put("desk", 5, 2, { w: 2, act: "desk", anim: 1 });
   put("coffee", 7, 2, { act: "coffee" }); put("fridge", 8, 2);
   put("stand", 9, 2, { act: "pick:ai", pick: "ai" }); put("stand", 10, 2, { act: "pick:ps", pick: "ps" }); put("stand", 11, 2, { act: "pick:pr", pick: "pr" });
-  put("guitar", 12, 4); put("plant", 0, 6);
+  put("guitar", 12, 4, { act: "guitar" }); put("monstera", 0, 6, { act: "monstera" });
+  put("wardrobe", 0, 3, { act: "wardrobe" }); put("oils", 12, 3, { act: "oils" }); put("tv", 10, 6, { w: 2, act: "tv" }); put("tank", 12, 7, { act: "tank" }); put("arcade", 1, 7, { act: "arcade" });
   objs.push({ k: "wallart", art: "poster", x: 0, y: 1, solid: 0, w: 1, flat: 1, act: "poster" }, { k: "wallart", art: "window", x: 12, y: 1, solid: 0, w: 1, flat: 1 });
   objs.push({ k: "npc", who: "stefan", x: 6, y: 4, w: 1, solid: 1, act: "stefan", dir: "down", id: "stefan" });
   objs.forEach((o) => { if (o.solid && o.k !== "npc") for (let k = 0; k < (o.w || 1); k++) solid[I(o.x + k, o.y)] = 1; });

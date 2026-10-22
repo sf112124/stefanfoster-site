@@ -259,6 +259,9 @@ async function run(act, o) {
     else if (a === "trainer") await chat(o);
     else if (a === "smoke") { o.dir = OPP[P.dir]; await ui.say(SAY.smoke[+b]); }
     else if (a === "malcoffee") { await ui.say(SAY.malcoffee[0]); S.hp = stats(S.lvl).max; au.sfx("heal"); if (S.starter) await ui.say(SAY.malcoffee[1]); save(); }
+    else if (a === "guitar") { const t = au.ctx ? au.ctx.currentTime : 0; [392, 494, 587, 784, 659, 587, 494, 587].forEach((f, i) => au.note(f, .5, { at: t + i * .16, type: "triangle", vol: .06 })); await ui.say(SAY.guitar); }
+    else if (a === "arcade") { await ui.say(SAY.arcade, { keep: true }); const c = await ui.choose(["Play it", "Not now"], { cls: "yn" }); ui.hide(); if (c === 0) window.open("synth", "_blank"); }
+    else if (a === "balloons") { await ui.say(SAY.balloons, { keep: true }); const c = await ui.choose(["See the page", "Keep exploring"], { cls: "yn" }); ui.hide(); if (c === 0) window.open("benjamins", "_blank"); }
     else if (a === "goat") { au.sfx("baa"); await ui.say(SAY.goat); }
     else if (a === "hole") {
       if (S.flags.crawler) { await ui.say(SAY.holeDone); return; }
