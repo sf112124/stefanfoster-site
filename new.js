@@ -149,9 +149,9 @@ function frame(now) {
   if (!home.hidden && touch && scrollY > 4) { let best = null, bd = 1e9; nms.forEach((n) => { const r = n.getBoundingClientRect(), d = Math.abs(r.top + r.height / 2 - innerHeight * .5); if (d < bd) { bd = d; best = n; } }); nms.forEach((n) => n.classList.toggle("on", n === best)); }
   // flow: letters swell heavier as the cursor nears them, then thin back out
   if (FL.length && !home.hidden && !touch && !reduce) {
-    const R = 220, sy = scrollY;
+    const R = 260, sy = scrollY;
     FL.forEach((L) => { const d = Math.hypot(L.x - cx, L.y - sy - cy), t = Math.max(0, 1 - d / R), e = t * t * (3 - 2 * t);
-      L.k += (e - L.k) * .3; const w = Math.round(700 + L.k * 200);
+      L.k += (e - L.k) * .25; const w = Math.round(700 - L.k * 590);
       if (L.w !== w) { L.w = w; L.el.style.fontVariationSettings = `"wght" ${w}`; } });
   }
   requestAnimationFrame(frame);
