@@ -65,7 +65,7 @@ const FLOW = document.body.dataset.flow != null;
 // flow layout: the work set like a paragraph, names running into each other with a little moving picture between each
 if (FLOW) {
   // a paragraph is read from the top left, so the favourite goes first
-  const FO = ["ai-experiments", "les-benjamins", "la-croisiere", "ai-commissions", "3d-explorations", "summer-of-sport", "relax", "coca-cola", "gumtree"];
+  const FO = ["ai-experiments", "les-benjamins", "la-croisiere", "3d-explorations", "ai-commissions", "summer-of-sport", "relax", "coca-cola", "gumtree"];
   LIST.sort((x, y) => FO.indexOf(x.slug) - FO.indexOf(y.slug));
   idx.classList.add("fl"); const box = document.createElement("div"); box.className = "flb"; idx.appendChild(box);
   const SCRIPT = { "from-earth": "to", "summer-of-sport": "of", "la-croisiere": "La", "les-benjamins": "to" };
@@ -77,9 +77,12 @@ if (FLOW) {
     const c = p.slug === "coca-cola" ? { i: "media/coca-cola/hover-1.jpg" } : p.slug === "gumtree" ? { i: "media/gumtree/hover-2.jpg" } : p.cover;
     a.innerHTML = `${i % 3 === 1 ? `<span class="orn">${ORN[i % 4]}</span>` : ""}<span class="tw">${words}</span>${c ? `<span class="th">${media(c)}</span>` : ""}`;
     box.appendChild(a);
-    a.addEventListener("mouseenter", () => { idx.classList.add("hov"); sound.tick?.(.4 + i * .05, .02); $$("video", a).forEach((v) => { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); }); });
-    a.addEventListener("mouseleave", () => { idx.classList.remove("hov"); $$("video", a).forEach((v) => v.pause()); });
+    if (p.slug === "ai-commissions") { a.classList.add("on", "home"); }
+    a.addEventListener("mouseenter", () => { $$(".fi.on").forEach((x) => x.classList.remove("on")); a.classList.add("on"); sound.tick?.(.4 + i * .05, .02); $$("video", a).forEach((v) => { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); }); });
+    a.addEventListener("mouseleave", () => { a.classList.remove("on"); $$("video", a).forEach((v) => v.pause()); });
   });
+  // off the names entirely: back to AI Commissions
+  box.addEventListener("mouseleave", () => { $$(".fi.on").forEach((x) => x.classList.remove("on")); $(".fi.home")?.classList.add("on"); });
   // thumbnails play gently on their own once on screen
   $$(".fi video").forEach((v) => { v.src = v.dataset.src; v.play().catch(() => {}); });
 }
@@ -197,7 +200,7 @@ function tileHTML(it, k) {
     : `<img src="${it.still || it.thumb}" alt="" loading="lazy">`;
   const label = it.play ? "Play" : it.yt || it.film ? "Watch" : "Open";
   return `<figure class="tile" data-k="${k}" data-cur="${label}" style="--a:${(it.w / it.h).toFixed(4)}">
-    <div class="tm">${media}${it.yt || it.film ? `<span class="pf"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 1.5 10.5 6 3 10.5z" fill="currentColor"/></svg>Play film</span>` : ""}</div>
+    <div class="tm">${media}${it.yt || (it.film && it.audio) ? `<i class="veil"></i><span class="pf"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 1.5 10.5 6 3 10.5z" fill="currentColor"/></svg>Play film</span>` : ""}</div>
     <figcaption class="mono"><span>${pad(k + 1)}</span>${it.caption ? `<b>${esc(it.caption)}</b>` : ""}${it.stat ? `<em>${esc(it.stat)}</em>` : ""}</figcaption></figure>`;
 }
 function renderProject(i) {

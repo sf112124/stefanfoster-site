@@ -354,7 +354,7 @@ html.crawling .row .tt,html.flying .row .tt,html.crawling .row .c2,html.flying .
 .fi .th{overflow:hidden}
 .fi .th img,.fi .th video{transition:transform .5s cubic-bezier(.3,1.6,.4,1)}
 .fi:hover .th img,.fi:hover .th video{transform:scale(1.25)}
-.idx.fl.hov .fi:not(:hover){opacity:.22}
+.idx.fl .fi:not(.on){opacity:.22}
 .fi{position:relative}
 @media (max-width:820px){ .idx.fl{min-height:0;padding-top:96px;font-size:clamp(20px,6.4vw,36px);line-height:.9} }
 
@@ -409,7 +409,9 @@ body.viewing .corner{display:none}
 
 /* play the full film: a clear button on every film */
 .tile{cursor:pointer}
-.tm .pf{position:absolute;left:12px;bottom:12px;z-index:2;display:inline-flex;align-items:center;gap:8px;padding:9px 14px 9px 12px;border-radius:99px;background:#efeee9;color:#0c0c0c;font-family:"Anybody",var(--sans);font-stretch:130%;font-weight:700;font-size:11px;letter-spacing:.02em;text-transform:uppercase;transition:background .3s,color .3s,transform .4s var(--ease)}
+.tm .veil{position:absolute;inset:0;z-index:1;background:rgba(239,238,233,.45);transition:opacity .4s}
+.tile:hover .tm .veil{opacity:0}
+.tm .pf{position:absolute;left:50%;top:50%;translate:-50% -50%;z-index:2;display:inline-flex;align-items:center;gap:8px;padding:9px 14px 9px 12px;border-radius:99px;background:#efeee9;color:#0c0c0c;font-family:"Anybody",var(--sans);font-stretch:130%;font-weight:700;font-size:11px;letter-spacing:.02em;text-transform:uppercase;transition:background .3s,color .3s,transform .4s var(--ease)}
 .tm .pf svg{width:10px;height:10px}
 .tile:hover .tm .pf{background:var(--acc);color:#fff;transform:scale(1.06)}
 .tile .play{display:none}
