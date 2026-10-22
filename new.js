@@ -69,8 +69,8 @@ if (FLOW) {
   const ORN = ["✿", "❋", "✺", "✾"];
   LIST.forEach((p, i) => {
     const a = document.createElement("a"); a.className = "fi"; a.href = p.page ? p.page : `#${p.slug}`;
-    const sw = SCRIPT[p.slug];
-    const words = p.title.split(" ").map((w) => w === sw ? `<em class="sc">${esc(w.toLowerCase())}</em>` : `<span class="w">${[...w].map((ch) => `<i>${esc(ch)}</i>`).join("")}</span>`).join(" ");
+    const sw = SCRIPT[p.slug]; let K = 0;
+    const words = p.title.split(" ").map((w) => w === sw ? `<em class="sc">${esc(w.toLowerCase())}</em>` : `<span class="w">${[...w].map((ch) => `<i style="--k:${K++}">${esc(ch)}</i>`).join("")}</span>`).join(" ");
     const c = p.slug === "coca-cola" ? { i: "media/coca-cola/hover-1.jpg" } : p.slug === "gumtree" ? { i: "media/gumtree/hover-2.jpg" } : p.cover;
     a.innerHTML = `${i % 3 === 1 ? `<span class="orn">${ORN[i % 4]}</span>` : ""}<span class="tw">${words}</span>${c ? `<span class="th">${media(c)}</span>` : ""}`;
     box.appendChild(a);
@@ -144,8 +144,8 @@ function frame(now) {
   if (FL.length && !home.hidden && !touch && !reduce) {
     const R = 170, sy = scrollY;
     FL.forEach((L) => { const d = Math.hypot(L.x - cx, L.y - sy - cy), t = Math.max(0, 1 - d / R), e = t * t * (3 - 2 * t);
-      L.k += (e - L.k) * .18; if (L.k < .002 && !L.on) return; L.on = L.k > .002;
-      L.el.style.transform = L.on ? `translateY(${(-L.k * .12).toFixed(3)}em) scaleY(${(1 + L.k * .18).toFixed(3)})` : ""; });
+      L.k += (e - L.k) * .35; if (L.k < .002 && !L.on) return; L.on = L.k > .002;
+      L.el.style.transform = L.on ? `translateY(${(-L.k * .16).toFixed(3)}em) scaleY(${(1 + L.k * .28).toFixed(3)})` : ""; });
   }
   requestAnimationFrame(frame);
 }
