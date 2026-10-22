@@ -141,7 +141,7 @@ function frame(now) {
   }
   // phones: whichever name sits in the middle of the screen gets the band
   if (!home.hidden && touch && scrollY > 4) { let best = null, bd = 1e9; nms.forEach((n) => { const r = n.getBoundingClientRect(), d = Math.abs(r.top + r.height / 2 - innerHeight * .5); if (d < bd) { bd = d; best = n; } }); nms.forEach((n) => n.classList.toggle("on", n === best)); }
-  if (FL.length && !home.hidden && !touch && !reduce) {
+  if (false) {
     const R = 170, sy = scrollY;
     FL.forEach((L) => { const d = Math.hypot(L.x - cx, L.y - sy - cy), t = Math.max(0, 1 - d / R), e = t * t * (3 - 2 * t);
       L.k += (e - L.k) * .35; if (L.k < .002 && !L.on) return; L.on = L.k > .002;
