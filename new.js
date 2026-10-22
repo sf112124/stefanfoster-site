@@ -65,7 +65,7 @@ const FLOW = document.body.dataset.flow != null;
 // flow layout: the work set like a paragraph, names running into each other with a little moving picture between each
 if (FLOW) {
   // a paragraph is read from the top left, so the favourite goes first
-  const FO = ["ai-experiments", "les-benjamins", "la-croisiere", "3d-explorations", "ai-commissions", "summer-of-sport", "relax", "coca-cola", "gumtree"];
+  const FO = ["ai-commissions", "la-croisiere", "3d-explorations", "les-benjamins", "ai-experiments", "summer-of-sport", "relax", "coca-cola", "gumtree"];
   LIST.sort((x, y) => FO.indexOf(x.slug) - FO.indexOf(y.slug));
   idx.classList.add("fl"); const box = document.createElement("div"); box.className = "flb"; idx.appendChild(box);
   const SCRIPT = { "from-earth": "to", "summer-of-sport": "of", "la-croisiere": "La", "les-benjamins": "to" };
@@ -77,7 +77,7 @@ if (FLOW) {
     const c = p.slug === "coca-cola" ? { i: "media/coca-cola/hover-1.jpg" } : p.slug === "gumtree" ? { i: "media/gumtree/hover-2.jpg" } : p.cover;
     a.innerHTML = `${i % 3 === 1 ? `<span class="orn">${ORN[i % 4]}</span>` : ""}<span class="tw">${words}</span>${c ? `<span class="th">${media(c)}</span>` : ""}`;
     box.appendChild(a);
-    if (p.slug === "ai-commissions") { a.classList.add("on", "home"); }
+    if (p.slug === "ai-experiments") { a.classList.add("on", "home"); }
     a.addEventListener("mouseenter", () => { hovFi = a; $$(".fi.on").forEach((x) => x.classList.remove("on")); a.classList.add("on"); sound.tick?.(.4 + i * .05, .02); $$("video", a).forEach((v) => { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); }); });
     a.addEventListener("mouseleave", () => { if (hovFi === a) hovFi = null; a.classList.remove("on"); $$("video", a).forEach((v) => v.pause()); });
   });
