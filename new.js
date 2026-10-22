@@ -133,7 +133,7 @@ function frame(now) {
     const R = innerWidth * .2;
     LET.forEach((el) => { const r = el.getBoundingClientRect(); if (r.bottom < -50 || r.top > innerHeight + 50) return;
       const d = Math.hypot(r.left + r.width / 2 - cx, r.top + r.height / 2 - cy), k = Math.max(0, 1 - d / R), e = k * k * (3 - 2 * k);
-      const w = Math.round((el._f ??= el.closest(".fi") ? 800 : 720) - e * (el._f === 800 ? 600 : 520)); if (el._w !== w) { el._w = w; el.style.fontVariationSettings = `"wght" ${w}`; } });
+      const w = Math.round((el._f ??= el.closest(".fi") ? 780 : 720) - e * (el._f === 780 ? 560 : 520)); if (el._w !== w) { el._w = w; el.style.fontVariationSettings = `"wght" ${w}`; } });
   }
   // phones: whichever name sits in the middle of the screen gets the band
   if (!home.hidden && touch && scrollY > 4) { let best = null, bd = 1e9; nms.forEach((n) => { const r = n.getBoundingClientRect(), d = Math.abs(r.top + r.height / 2 - innerHeight * .5); if (d < bd) { bd = d; best = n; } }); nms.forEach((n) => n.classList.toggle("on", n === best)); }
