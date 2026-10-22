@@ -235,7 +235,7 @@ function arrive() {
     if (rl) { S.reels.push(rl.n); const st = stats(S.lvl); S.hp = Math.min(st.max, (S.hp ?? st.max) + 2); save(); hud(); au.sfx("level"); script(async () => { await ui.say([`You found a film reel! (${S.reels.length} of 8)`, SAY.reels[rl.n], "Your tool feels stronger."]); }); return; }
     if (P.x === 35 && P.y === 36) { warp(maps.house, 6, 7, "up"); return; }
     if (P.x === 46 && P.y === 35) {
-      if (S.won.length < PROJECTS.length) { script(async () => { await ui.say(SAY.malLocked); place(map, 46, 36, "down"); }); return; }
+      if (S.won.length < 4) { script(async () => { await ui.say(SAY.malLocked); place(map, 46, 36, "down"); }); return; }
       warp(maps.mal0, 15, 12, "up"); return;
     }
     const sp = spotted(); if (sp) { P.grass = 0; script(() => challenge(sp)); return; }
@@ -351,7 +351,7 @@ async function fight(def, slug, trId) {
   const mine = formOf(S.starter, S.lvl), st = stats(S.lvl), boss = tr ? tr.boss || 0 : def.boss || 0;
   const L = tr ? 3 + tr.lv + Math.floor((S.won.length + S.beat.length) / 2) : (slug ? 2 : boss ? 2 + boss : 1) + S.won.length;
   const me = { ...mine, lvl: S.lvl, max: st.max, hp: clamp(S.hp ?? st.max, 1, st.max), atk: st.atk, def: st.def, am: 1, dm: 1, ox: -200, oy: 0, a: 1, fl: 0 };
-  const mk = (d) => { const f = { ...d, lvl: L, max: Math.round((20 + L * 6) * (tr ? (boss ? 1.5 : 1.15) : boss ? 2 : 1.6)), atk: 6 + L, def: 9 + L, am: 1, dm: 1, ox: 200, oy: 0, a: 1, fl: 0 }; f.hp = f.max; return f; };
+  const mk = (d) => { const f = { ...d, lvl: L, max: Math.round((20 + L * 6) * (tr ? (boss ? 2.2 : 1.6) : boss ? 2 : 1.6)), atk: 6 + L, def: 9 + L, am: 1, dm: 1, ox: 200, oy: 0, a: 1, fl: 0 }; f.hp = f.max; return f; };
   let foe = mk(def), ti = 0;
   au.sfx("encounter"); au.music(null);
   for (let k = 0; k < 2; k++) { fade = .9; await sleep(60); fade = 0; await sleep(60); }
@@ -425,7 +425,7 @@ async function fight(def, slug, trId) {
   if (result !== "win") S.hp = result === "run" ? Math.max(1, Math.round(me.hp)) : S.hp;
   au.music("world"); await fadeTo(0, 300);
   if (result === "lose") await ui.say(SAY.lost);
-  if (result === "win" && slug) { await card(slug); if (S.won.length === PROJECTS.length) toast("ALL EIGHT FOUND. THE MAL OFFICE IS OPEN.", 5000); }
+  if (result === "win" && slug) { await card(slug); if (S.won.length === 4) toast("FOUR FOUND. THE MAL OFFICE IS OPEN, EAST OF THE SQUARE.", 5000); if (S.won.length === PROJECTS.length) toast("ALL EIGHT FOUND. GO BACK AND SEE STEFAN.", 5000); }
   return result;
 }
 // your tool grows up: it flickers between old and new, then the new one stays
