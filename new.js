@@ -61,7 +61,26 @@ const media = (x) => x && (x.v ? `<video muted loop playsinline preload="none" p
 // favourites in the middle, fanning out to the top and bottom
 const ORDER = ["coca-cola", "summer-of-sport", "ai-commissions", "la-croisiere", "ai-experiments", "les-benjamins", "3d-explorations", "relax", "gumtree"];
 const LIST = [...PROJECTS].sort((x, y) => (ORDER.indexOf(x.slug) + 1 || 99) - (ORDER.indexOf(y.slug) + 1 || 99));
-LIST.forEach((p, i) => {
+const FLOW = document.body.dataset.flow != null;
+// flow layout: the work set like a paragraph, names running into each other with a little moving picture between each
+if (FLOW) {
+  idx.classList.add("fl"); const box = document.createElement("div"); box.className = "flb"; idx.appendChild(box);
+  const SCRIPT = { "from-earth": "to", "summer-of-sport": "of", "la-croisiere": "La", "les-benjamins": "to" };
+  const ORN = ["✿", "❋", "✺", "✾"];
+  LIST.forEach((p, i) => {
+    const a = document.createElement("a"); a.className = "fi"; a.href = p.page ? p.page : `#${p.slug}`;
+    const sw = SCRIPT[p.slug];
+    const words = p.title.split(" ").map((w) => w === sw ? `<em class="sc">${esc(w.toLowerCase())}</em>` : `<span class="w">${[...w].map((ch) => `<i>${esc(ch)}</i>`).join("")}</span>`).join(" ");
+    const c = p.slug === "coca-cola" ? { i: "media/coca-cola/hover-1.jpg" } : p.slug === "gumtree" ? { i: "media/gumtree/hover-2.jpg" } : p.cover;
+    a.innerHTML = `${i % 3 === 1 ? `<span class="orn">${ORN[i % 4]}</span>` : ""}<span class="tw">${words}</span>${c ? `<span class="th">${media(c)}</span>` : ""}`;
+    box.appendChild(a);
+    a.addEventListener("mouseenter", () => { idx.classList.add("hov"); sound.tick?.(.4 + i * .05, .02); $$("video", a).forEach((v) => { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); }); });
+    a.addEventListener("mouseleave", () => { idx.classList.remove("hov"); $$("video", a).forEach((v) => v.pause()); });
+  });
+  // thumbnails play gently on their own once on screen
+  $$(".fi video").forEach((v) => { v.src = v.dataset.src; v.play().catch(() => {}); });
+}
+if (!FLOW) LIST.forEach((p, i) => {
   const a = document.createElement("a");
   a.className = "nm"; a.href = p.page ? p.page : `#${p.slug}`;
   const HOV = { "coca-cola": [{ i: "media/coca-cola/hover-1.jpg" }, { i: "media/coca-cola/hover-2.jpg" }], gumtree: [{ i: "media/gumtree/hover-1.jpg" }, { i: "media/gumtree/hover-2.jpg", pos: "30% 50%" }] }[p.slug];
@@ -79,7 +98,7 @@ LIST.forEach((p, i) => {
 
 // the names fill the screen top to bottom, as big as they can be without running off the sides
 const nms = $$(".nm"), fitIdx = () => {
-  const VW = document.documentElement.clientWidth; if ($("#home").hidden || !VW) return;
+  const VW = document.documentElement.clientWidth; if ($("#home").hidden || !VW || !nms.length) return;
   const ts = nms.map((n) => $(".t", n)); ts.forEach((t) => (t.style.fontSize = "100px"));
   const wide = Math.max(...nms.map((n) => (VW < 820 ? 0 : n.firstElementChild.offsetWidth) + $(".t", n).offsetWidth));
   const byW = 100 * VW * (VW < 820 ? .92 : .9) / wide, byH = VW < 820 ? 999 : (innerHeight - 32) / (nms.length * .74);
@@ -90,7 +109,7 @@ const nms = $$(".nm"), fitIdx = () => {
 };
 fitIdx(); document.fonts.ready.then(fitIdx); addEventListener("resize", fitIdx);
 // variable type: letters thin out as the cursor passes, then fill back in
-const LET = $$(".nm .t i");
+const LET = $$(".nm .t i, .fi .w i");
 
 // arrivals
 const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -8% 0px" });
@@ -114,7 +133,7 @@ function frame(now) {
     const R = innerWidth * .2;
     LET.forEach((el) => { const r = el.getBoundingClientRect(); if (r.bottom < -50 || r.top > innerHeight + 50) return;
       const d = Math.hypot(r.left + r.width / 2 - cx, r.top + r.height / 2 - cy), k = Math.max(0, 1 - d / R), e = k * k * (3 - 2 * k);
-      const w = Math.round(720 - e * 520); if (el._w !== w) { el._w = w; el.style.fontVariationSettings = `"wght" ${w}`; } });
+      const w = Math.round((el._f ??= el.closest(".fi") ? 800 : 720) - e * (el._f === 800 ? 600 : 520)); if (el._w !== w) { el._w = w; el.style.fontVariationSettings = `"wght" ${w}`; } });
   }
   // phones: whichever name sits in the middle of the screen gets the band
   if (!home.hidden && touch && scrollY > 4) { let best = null, bd = 1e9; nms.forEach((n) => { const r = n.getBoundingClientRect(), d = Math.abs(r.top + r.height / 2 - innerHeight * .5); if (d < bd) { bd = d; best = n; } }); nms.forEach((n) => n.classList.toggle("on", n === best)); }
