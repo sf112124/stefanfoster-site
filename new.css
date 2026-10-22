@@ -382,11 +382,12 @@ html.crawling .row .tt,html.flying .row .tt,html.crawling .row .c2,html.flying .
 }
 
 /* hover punch: the name jumps letter by letter, flashes orange, settles */
-.fi:hover .w i{animation:hop .55s cubic-bezier(.3,1.9,.4,1) both;animation-delay:calc(var(--k) * 24ms)}
-@keyframes hop{0%{translate:0 0;rotate:0deg}30%{translate:0 -.1em;rotate:-6deg}60%{rotate:4deg}100%{translate:0 0;rotate:0deg}}
-.fi .th{transition:rotate .5s cubic-bezier(.3,1.9,.4,1)}
-.fi:hover .th{rotate:-5deg}
-.fi:hover .sc{animation:wob .6s cubic-bezier(.3,1.9,.4,1)}
+/* hover: each letter rolls up into a fresh copy of itself, staggered left to right */
+.fi .w i{clip-path:inset(-.3em -.06em 0 -.06em);vertical-align:top;line-height:.86}
+.fi .w i b{display:block;font-weight:inherit;text-shadow:0 1.15em 0 currentColor;transition:transform .55s cubic-bezier(.7,0,.2,1);transition-delay:calc(var(--k) * 14ms)}
+.fi:hover .w i b{transform:translateY(-1.15em)}
+.fi .sc{transition:transform .55s cubic-bezier(.7,0,.2,1)}
+.fi:hover .sc{transform:translateY(-.06em) skewX(-6deg)}
 @keyframes wob{0%{rotate:0deg}40%{rotate:-10deg}100%{rotate:0deg}}
 .fi .sc{display:inline-block}
 
@@ -406,3 +407,10 @@ body.viewing .corner{display:none}
 .ct-r{font-family:"Anybody",var(--sans);font-stretch:130%;font-weight:600;font-size:12px;letter-spacing:.02em}
 .ct-g a,.ct-g span{font-family:"Anybody",var(--sans);font-stretch:120%;font-weight:560;font-size:12px;letter-spacing:.01em}
 @media (max-width:820px){ .ct-g{grid-template-columns:1fr 1fr} .corner{bottom:10px} }
+
+/* play the full film: a clear button on every film */
+.tile{cursor:pointer}
+.tm .pf{position:absolute;left:12px;bottom:12px;z-index:2;display:inline-flex;align-items:center;gap:8px;padding:9px 14px 9px 12px;border-radius:99px;background:#efeee9;color:#0c0c0c;font-family:"Anybody",var(--sans);font-stretch:130%;font-weight:700;font-size:11px;letter-spacing:.02em;text-transform:uppercase;transition:background .3s,color .3s,transform .4s var(--ease)}
+.tm .pf svg{width:10px;height:10px}
+.tile:hover .tm .pf{background:var(--acc);color:#fff;transform:scale(1.06)}
+.tile .play{display:none}

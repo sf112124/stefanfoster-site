@@ -73,7 +73,7 @@ if (FLOW) {
   LIST.forEach((p, i) => {
     const a = document.createElement("a"); a.className = "fi"; a.href = p.page ? p.page : `#${p.slug}`;
     const sw = SCRIPT[p.slug]; let K = 0;
-    const words = p.title.split(" ").map((w) => w === sw ? `<em class="sc">${esc(w.toLowerCase())}</em>` : `<span class="w">${[...w].map((ch) => `<i style="--k:${K++}">${esc(ch)}</i>`).join("")}</span>`).join(" ");
+    const words = p.title.split(" ").map((w) => w === sw ? `<em class="sc">${esc(w.toLowerCase())}</em>` : `<span class="w">${[...w].map((ch) => `<i style="--k:${K++}"><b>${esc(ch)}</b></i>`).join("")}</span>`).join(" ");
     const c = p.slug === "coca-cola" ? { i: "media/coca-cola/hover-1.jpg" } : p.slug === "gumtree" ? { i: "media/gumtree/hover-2.jpg" } : p.cover;
     a.innerHTML = `${i % 3 === 1 ? `<span class="orn">${ORN[i % 4]}</span>` : ""}<span class="tw">${words}</span>${c ? `<span class="th">${media(c)}</span>` : ""}`;
     box.appendChild(a);
@@ -185,12 +185,12 @@ document.addEventListener("click", (e) => {
 });
 
 function tileHTML(it, k) {
-  const media = it.yt || it.play ? `<img src="${it.thumb}" alt="" loading="lazy">${it.yt ? `<i class="play"></i>` : ""}`
+  const media = it.yt || it.play ? `<img src="${it.thumb}" alt="" loading="lazy">`
     : it.loop ? `<img src="${it.thumb}" alt="" loading="lazy"><video muted loop playsinline preload="none" data-src="${it.loop}"></video>`
     : `<img src="${it.still || it.thumb}" alt="" loading="lazy">`;
   const label = it.play ? "Play" : it.yt || it.film ? "Watch" : "Open";
   return `<figure class="tile" data-k="${k}" data-cur="${label}" style="--a:${(it.w / it.h).toFixed(4)}">
-    <div class="tm">${media}</div>
+    <div class="tm">${media}${it.yt || it.film ? `<span class="pf"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 1.5 10.5 6 3 10.5z" fill="currentColor"/></svg>Play film</span>` : ""}</div>
     <figcaption class="mono"><span>${pad(k + 1)}</span>${it.caption ? `<b>${esc(it.caption)}</b>` : ""}${it.stat ? `<em>${esc(it.stat)}</em>` : ""}</figcaption></figure>`;
 }
 function renderProject(i) {
