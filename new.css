@@ -436,3 +436,5 @@ body.viewing .corner{display:none}
 .nxp{text-align:center;border-top:1px solid var(--line);padding:44px 0 64px;margin-top:0}
 .nxp .t{justify-content:center}
 @media (max-width:820px){ .pj{padding-top:80px} .gm.big .tile{width:100%!important} .pj-lead{margin-bottom:36px} }
+body.viewing .top{background:var(--bg);mix-blend-mode:normal}
+@media (max-width:820px){ .gm.big{gap:10px} .gm.big .tile{margin:0} }
