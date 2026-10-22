@@ -70,13 +70,17 @@ if (FLOW) {
   idx.classList.add("fl"); const box = document.createElement("div"); box.className = "flb"; idx.appendChild(box);
   const SCRIPT = { "from-earth": "to", "summer-of-sport": "of", "la-croisiere": "La", "les-benjamins": "to" };
   const ORN = ["✿", "❋", "✺", "✾"];
+  // the lines are set by design, not by measuring: each line is its own row and never wraps
+  const LINES = [["ai-commissions"], ["la-croisiere"], ["3d-explorations"], ["les-benjamins"], ["ai-experiments"], ["summer-of-sport", "relax"], ["coca-cola", "gumtree"]];
+  const rowOf = {}; LINES.forEach((l, r) => l.forEach((sl) => (rowOf[sl] = r)));
+  const rows = LINES.map(() => { const d = document.createElement("div"); d.className = "fr"; box.appendChild(d); return d; });
   LIST.forEach((p, i) => {
     const a = document.createElement("a"); a.className = "fi"; a.href = p.page ? p.page : `#${p.slug}`;
     const sw = SCRIPT[p.slug]; let K = 0;
     const words = p.title.split(" ").map((w) => w === sw ? `<em class="sc">${esc(w.toLowerCase())}</em>` : `<span class="w">${[...w].map((ch) => `<i style="--k:${K++}"><b>${esc(ch)}</b></i>`).join("")}</span>`).join(" ");
     const c = p.slug === "coca-cola" ? { i: "media/coca-cola/hover-1.jpg" } : p.slug === "gumtree" ? { i: "media/gumtree/hover-2.jpg" } : p.cover;
     a.innerHTML = `${i % 3 === 1 ? `<span class="orn">${ORN[i % 4]}</span>` : ""}<span class="tw">${words}</span>${c ? `<span class="th">${media(c)}</span>` : ""}`;
-    box.appendChild(a);
+    (rows[rowOf[p.slug]] || box).appendChild(a);
     if (p.slug === "ai-experiments") { a.classList.add("on", "home"); }
     a.addEventListener("mouseenter", () => { hovFi = a; $$(".fi.on").forEach((x) => x.classList.remove("on")); a.classList.add("on"); sound.tick?.(.4 + i * .05, .02); $$("video", a).forEach((v) => { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); }); });
     a.addEventListener("mouseleave", () => { if (hovFi === a) hovFi = null; a.classList.remove("on"); $$("video", a).forEach((v) => v.pause()); });
@@ -123,11 +127,7 @@ let hovFi = null;
 // letter positions are measured at rest, so the effect doesn't chase itself as the line grows
 const measureFL = () => {
   const box = $(".flb"); if (!box || $("#home").hidden) return; const sy = scrollY;
-  $$("br.lb", box).forEach((b) => b.remove()); box.classList.remove("fixed");
   FL.forEach((L) => { L.el.style.fontVariationSettings = ""; L.w = null; });
-  const fis = $$(".fi", box); let top = null;
-  fis.forEach((a, i) => { const t = a.getBoundingClientRect().top; if (top != null && Math.abs(t - top) > 4) a.before(Object.assign(document.createElement("br"), { className: "lb" })); top = t; });
-  box.classList.add("fixed");
   FL.forEach((L) => { const r = L.el.getBoundingClientRect(); L.x = r.left + r.width / 2; L.y = r.top + sy + r.height / 2; });
 };
 if (FL.length) { measureFL(); document.fonts.ready.then(measureFL); addEventListener("resize", measureFL); }

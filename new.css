@@ -340,7 +340,9 @@ html.crawling .row .tt,html.flying .row .tt,html.crawling .row .c2,html.flying .
 /* flow layout (try) */
 .idx.fl{display:grid!important;place-items:center;min-height:100svh;text-align:center;padding:80px var(--gut)!important;font-family:"Anybody",var(--sans);font-stretch:150%;font-weight:700;text-transform:uppercase;font-size:clamp(22px,4vw,74px);line-height:.86;letter-spacing:-.03em}
 .flb{max-width:1440px}
-.flb.fixed{white-space:nowrap;max-width:none}
+.flb.fixed{}
+.fr{white-space:nowrap}
+@media (max-width:820px){ .fr{white-space:normal} }
 .fi{display:inline;white-space:nowrap;transition:opacity .15s}
 .fi .w{white-space:nowrap}
 .fi .tw{white-space:nowrap}
