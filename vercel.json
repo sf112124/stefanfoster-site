@@ -16,6 +16,11 @@
       "source": "/new",
       "destination": "/",
       "permanent": false
+    },
+    {
+      "source": "/try",
+      "destination": "/",
+      "permanent": false
     }
   ]
 }
