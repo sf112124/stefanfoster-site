@@ -1,7 +1,7 @@
 // Foster Valley: the map, what's in it, and all the text.
-export const TT = { grass: 0, path: 1, sand: 2, water: 3, bridge: 4, track: 5, lawnA: 6, lawnB: 7, soil: 8, fizz: 9, floor: 10, wall: 11, skirt: 12, rug: 13, mat: 14, void: 15 };
+export const TT = { grass: 0, path: 1, sand: 2, water: 3, bridge: 4, track: 5, lawnA: 6, lawnB: 7, soil: 8, fizz: 9, floor: 10, wall: 11, skirt: 12, rug: 13, mat: 14, void: 15, carpet: 16, kitchen: 17, glass: 18, stairsU: 19, stairsD: 20, paving: 21 };
 export const TNAME = Object.keys(TT);
-const SOLID = new Set([TT.water, TT.fizz, TT.wall, TT.skirt, TT.void]);
+const SOLID = new Set([TT.water, TT.fizz, TT.wall, TT.skirt, TT.void, TT.glass]);
 const rng = (s) => () => ((s = (s * 16807) % 2147483647) / 2147483647);
 
 // ---- types. A tool is strongest against the kind of work it's made for. ----
@@ -11,11 +11,11 @@ export const eff = (a, d) => (BEATS[a] === d ? 1.4 : BEATS[d] === a ? .75 : 1);
 
 // ---- the three tools you can take with you ----
 export const STARTERS = {
-  ai: { name: "AI", type: "AI", art: "ai", about: "AI. Beats FILM projects, weak to IMAGE.",
+  ai: { name: "AI", type: "AI", art: "ai", about: "AI. Beats FILM projects, weak to IMAGE.", evo: [{ lvl: 5, name: "AGENT", art: "ai2" }, { lvl: 8, name: "AGI", art: "ai3" }],
     moves: [{ n: "GENERATE", t: "AI", p: 14 }, { n: "VARIATIONS", t: "AI", p: 24, acc: .74 }, { n: "UPSCALE", kind: "buff" }, { n: "RETRY", kind: "heal" }] },
-  ps: { name: "PHOTOSHOP", type: "IMAGE", art: "ps", about: "PHOTOSHOP. Beats AI projects, weak to FILM.",
+  ps: { name: "PHOTOSHOP", type: "IMAGE", art: "ps", about: "PHOTOSHOP. Beats AI projects, weak to FILM.", evo: [{ lvl: 5, name: "LAYERLORD", art: "ps2" }, { lvl: 8, name: "GEN FILL", art: "ps3" }],
     moves: [{ n: "BRUSH", t: "IMAGE", p: 14 }, { n: "LIQUIFY", t: "IMAGE", p: 24, acc: .74 }, { n: "SHARPEN", kind: "buff" }, { n: "HEAL BRUSH", kind: "heal" }] },
-  pr: { name: "PREMIERE", type: "FILM", art: "pr", about: "PREMIERE. Beats IMAGE projects, weak to AI.",
+  pr: { name: "PREMIERE", type: "FILM", art: "pr", about: "PREMIERE. Beats IMAGE projects, weak to AI.", evo: [{ lvl: 5, name: "THE EDIT", art: "pr2" }, { lvl: 8, name: "DIRECTOR'S CUT", art: "pr3" }],
     moves: [{ n: "CUT", t: "FILM", p: 12 }, { n: "SMASH CUT", t: "FILM", p: 22, acc: .74 }, { n: "SPEED RAMP", kind: "buff" }, { n: "UNDO", kind: "heal" }] },
 };
 
@@ -54,6 +54,18 @@ export const CORP = {
   stakeholder: { name: "STAKEHOLDER", type: "AI", art: "stakeholder", moves: [{ n: "ONE MORE OPINION", p: 9 }, { n: "LOOP IN LEGAL", p: 7 }, { n: "CIRCLE BACK", p: 6 }] },
   deck: { name: "THE DECK", type: "IMAGE", art: "deck", moves: [{ n: "80 SLIDES", p: 9 }, { n: "APPENDIX", p: 7 }, { n: "TAKE IT OFFLINE", p: 6 }] },
 };
+// what your tool has grown into by a given level: 0, 1 or 2 evolutions in
+export const stageOf = (id, lvl) => (STARTERS[id].evo || []).filter((e) => lvl >= e.lvl).length;
+export const formOf = (id, lvl) => { const m = STARTERS[id], k = stageOf(id, lvl); return k ? { ...m, name: m.evo[k - 1].name, art: m.evo[k - 1].art, stage: k } : { ...m, stage: 0 }; };
+// the people in the MAL office have creatures of their own
+Object.assign(CORP, {
+  easing: { name: "EASE IN OUT", type: "FILM", art: "easing", moves: [{ n: "OVERSHOOT", p: 9 }, { n: "BEZIER", p: 7 }, { n: "NEVER LINEAR", p: 8 }] },
+  dj: { name: "DEEP CUT", type: "AI", art: "dj", moves: [{ n: "40 MONTHLY LISTENERS", p: 9 }, { n: "WHITE LABEL", p: 7 }, { n: "B2B SET", p: 8 }] },
+  budget: { name: "THE BUDGET", type: "IMAGE", art: "budget", moves: [{ n: "ONE SHOOT DAY", p: 9 }, { n: "OVERAGE", p: 8 }, { n: "CALL SHEET", p: 7 }] },
+  timesheet: { name: "TIMESHEET", type: "IMAGE", art: "timesheet", moves: [{ n: "FILL IT IN", p: 9 }, { n: "JOB NUMBER", p: 7 }, { n: "FRIDAY 5PM", p: 8 }] },
+  bigidea: { name: "THE BIG IDEA", type: "AI", art: "bigidea", moves: [{ n: "WHAT IF", p: 10 }, { n: "BLANK PAGE", p: 8 }, { n: "BACK TO THE BRIEF", p: 8 }] },
+  lion: { name: "GOLD LION", type: "FILM", art: "lion", moves: [{ n: "SHORTLIST", p: 11 }, { n: "CASE STUDY", p: 9 }, { n: "JURY PRIZE", p: 10 }] },
+});
 // ---- the people out on the roads who want "a quick chat" ----
 export const TRAINERS = {
   darren: { name: "DARREN", role: "ACCOUNT DIRECTOR", look: "ad", port: "t_ad", x: 24, y: 27, dir: "right", lv: 0, team: ["brief"],
@@ -71,10 +83,27 @@ export const TRAINERS = {
   mia: { name: "MIA", role: "SOCIAL LEAD", look: "sl", port: "t_sl", x: 55, y: 11, dir: "left", lv: 2, team: ["vertical", "deck"],
     intro: ["Omg hiii. Can it be a trend?", "Like, vertical, but it has to feel organic.", "And can we hook them in the first half a second?"],
     win: ["Okay that's actually so good. Posting it now."], after: ["It's doing numbers. Like, real numbers."] },
-  cmo: { name: "RICHARD", role: "CMO", look: "cmo", port: "t_cmo", x: 35, y: 9, dir: "down", lv: 4, boss: 1, team: ["roi", "kpi", "stakeholder"],
+  cmo: { name: "RICHARD", role: "CMO", look: "cmo", port: "t_cmo", x: 35, y: 9, dir: "down", lv: 4, boss: 1, team: ["roi", "kpi", "stakeholder"], needs: ["darren", "priya", "gary", "jules", "mia"], unlock: "THE CMO WANTS A WORD. NORTH ROAD.",
     gate: ["My team speaks for me.", "Deal with all five of them first, then we'll talk."],
     intro: ["So. You're the one who's been getting past my team.", "Let's talk numbers. Then stakeholders. Then numbers again."],
     win: ["...Fine. It's approved.", "Don't change a thing."], after: ["Approved. Go and make it."] },
+  // the MAL office: the gym
+  jimi: { name: "JIMI", role: "HEAD OF ACCOUNTS", look: "jimi", port: "t_jimi", map: "mal1", x: 10, y: 4, dir: "right", lv: 3, team: ["timesheet", "roi"],
+    intro: ["Welcome to accounts. Lovely to see you.", "Before you go up, have you done your timesheet?", "I'll need a job number for this conversation, by the way."],
+    win: ["Fair. I'll code it to new business."], after: ["Nice trainers, by the way. Mine are better."] },
+  pat: { name: "PAT", role: "MOTION DESIGNER", look: "pat", port: "t_pat", map: "mal2", x: 5, y: 4, dir: "right", lv: 3, team: ["easing", "vertical"],
+    intro: ["Hey. Look at this curve.", "Ease in, ease out. A little overshoot on the end.", "Nothing in this world should ever move linearly."],
+    win: ["Okay, that had lovely easing. I'll allow it."], after: ["I've been tweaking one keyframe since nine."] },
+  chris: { name: "CHRIS", role: "MUSIC", look: "chris", port: "t_chris", map: "mal2", x: 10, y: 6, dir: "left", lv: 4, team: ["dj", "deck"],
+    intro: ["Have you heard of this artist? About forty monthly listeners.", "Played a tiny indie set last night. Basement. Incredible.", "We should get them on the next film before anyone else does."],
+    win: ["Fine. But they'll be huge. You'll see."], after: ["I'll send you the link. Headphones only."] },
+  jeremy: { name: "JEREMY", role: "PRODUCER", look: "jeremy", port: "t_jeremy", map: "mal2", x: 13, y: 5, dir: "down", lv: 4, team: ["budget", "stakeholder"],
+    intro: ["Love it. Genuinely.", "Quick question though. How much does it cost?", "And can we shoot the whole thing in one day?"],
+    win: ["Right. I'll find the money. Somewhere."], after: ["The eyebrow goes up when the budget goes up."] },
+  tim: { name: "TIM", role: "GYM LEADER", look: "tim", port: "t_tim", map: "mal2", x: 18, y: 4, dir: "down", lv: 6, boss: 1, team: ["bigidea", "brief", "lion"], needs: ["jimi", "pat", "chris", "jeremy"], unlock: "TIM WILL SEE YOU NOW. THE GLASS OFFICE.",
+    gate: ["Door's open, but get past the floor first.", "Jimi, Pat, Chris and Jeremy. Then come and see me."],
+    intro: ["So you want to make work here.", "Everyone has an idea. Show me the big one.", "And it had better be on brief."],
+    win: ["That's the work.", "Take the badge. You've earned it."], after: ["Good work doesn't need a deck. Mostly."] },
 };
 
 // ---- what people and things say ----
@@ -101,6 +130,10 @@ export const SAY = {
     "La Croisière redefined how Apple shows up on social.",
     "Gumtree: good finds sell themselves. No salespeople, no fanfare.",
   ],
+  malLocked: ["The doors are locked. A note on the glass says:", "\"By appointment only. Find all eight of Stefan's projects first.\""],
+  malcoffee: ["Free coffee from the office machine. It's fine.", "Your tool is back to full health."],
+  smoke: [["Just stepping out for five.", "Don't tell Jeremy. I'm meant to be on a call."], ["*vapes* It's mango ice.", "Honestly, every good idea in that building started out here."], ["A bin with an ashtray on top, full to the brim."]],
+  badge: ["You got the MAL BADGE!"],
   holeDone: ["THE CRAWLER is back in its hole."],
   lost: ["You're back at the studio. Your tool is at full health again."],
   ran: ["You got away."],
@@ -115,6 +148,8 @@ export const SAY = {
     relax: ["THE LAGOON", "#RELAX is in the long grass here."],
     riviera: ["THE BEACH", "La Croisière is in the long grass here."],
     hole: ["DO NOT OPEN"],
+    malout: ["MEDIA ARTS LAB", "Ground floor: kitchen and the all-agency space. First: accounts. Second: creative and production."],
+    mal: ["Reception. There's nobody here, just a bowl of mints and a sign-in iPad.", "Accounts on the first floor. Creative and production on the second. Tim's office is the glass one."],
   },
 };
 
@@ -171,6 +206,13 @@ export function buildWorld() {
   rect(54, 38, 62, 42, (x, y) => (tg[I(x, y)] = 1));
   [[52, 44], [58, 45], [64, 44]].forEach(([x, y]) => { put("parasol", x, y); objs.push({ k: "towel", x: x + 1, y, solid: 0, w: 1, flat: 1 }); });
   put("palm", 51, 36); put("palm", 65, 37); put("palm", 66, 43); put("sign", 49, 41, { act: "sign:riviera" });
+  // the MAL office, the gym, on the east side of the square. Locked until every project is found.
+  put("mal", 43, 35, { w: 7 }); rect(43, 31, 49, 35, (x, y) => { solid[I(x, y)] = 1; keep[I(x, y)] = 1; });
+  road(41, 36, 46, 37); road(46, 36, 46, 41); clear(41, 29, 53, 41); put("sign", 44, 37, { act: "sign:malout" });
+  // round the corner: the smoking area
+  rect(50, 31, 53, 34, (x, y) => { set(x, y, TT.paving); keep[I(x, y)] = 1; });
+  put("bin", 50, 31, { act: "smoke:2" });
+  objs.push({ k: "npc", who: "smoker", x: 51, y: 32, w: 1, solid: 1, dir: "right", act: "smoke:0", puff: 1 }, { k: "npc", who: "vaper", x: 53, y: 33, w: 1, solid: 1, dir: "left", act: "smoke:1", puff: 2 });
   // the hole
   clear(33, 22, 38, 25);
   put("hole", 22, 48, { act: "hole", flat: 1 }); put("sign", 23, 48, { act: "sign:hole" }); clear(20, 46, 25, 49);
@@ -184,10 +226,10 @@ export function buildWorld() {
     const q = r(); if (q < .085) objs.push({ k: kind(x, y), x, y, solid: 1, w: 1 }); else if (q < .1) objs.push({ k: "rock", x, y, solid: 1, w: 1 });
   });
   // the clients, standing about on the roads
-  for (const id in TRAINERS) { const t = TRAINERS[id]; objs.push({ k: "npc", who: t.look, x: t.x, y: t.y, w: 1, solid: 1, dir: t.dir, act: "trainer:" + id, tr: id }); }
+  for (const id in TRAINERS) { const t = TRAINERS[id]; if (t.map) continue; objs.push({ k: "npc", who: t.look, x: t.x, y: t.y, w: 1, solid: 1, dir: t.dir, act: "trainer:" + id, tr: id }); }
   objs.forEach((o) => { if (o.solid && o.k !== "npc" && o.k !== "house") for (let k = 0; k < (o.w || 1); k++) solid[I(o.x + k, o.y)] = 1; });   // (people are checked as you walk)
   for (let i = 0; i < N; i++) if (SOLID.has(base[i])) solid[i] = 1;
-  solid[I(35, 36)] = 0;
+  solid[I(35, 36)] = 0; solid[I(46, 35)] = 0;
   return { id: "world", W, H, base, vr, tg, solid, objs, start: [35, 37] };
 }
 // the studio: one room
@@ -207,4 +249,44 @@ export function buildHouse() {
   solid[I(1, 2)] = 1;   // the head of the bed
   for (let i = 0; i < N; i++) if (SOLID.has(base[i])) solid[i] = 1;
   return { id: "house", W, H, base, vr, tg, solid, objs, start: [3, 4], exit: [6, 8] };
+}
+
+// ---- the MAL office: three floors, all the same tired carpet ----
+function room(id, W, H) { const N = W * H; return { id, W, H, base: new Uint8Array(N), vr: new Uint8Array(N), tg: new Uint8Array(N), solid: new Uint8Array(N), objs: [], warps: [] }; }
+function seal(m) {
+  const I = (x, y) => y * m.W + x;
+  for (const id in TRAINERS) { const t = TRAINERS[id]; if (t.map === m.id) m.objs.push({ k: "npc", who: t.look, x: t.x, y: t.y, w: 1, solid: 1, dir: t.dir, act: "trainer:" + id, tr: id }); }
+  m.objs.forEach((o) => { if (o.solid && o.k !== "npc") for (let k = 0; k < (o.w || 1); k++) m.solid[I(o.x + k, o.y)] = 1; });
+  for (let i = 0; i < m.W * m.H; i++) if (SOLID.has(m.base[i])) m.solid[i] = 1;
+  return m;
+}
+export function buildOffice(f) {
+  const m = room("mal" + f, 22, 14), I = (x, y) => y * m.W + x, B = (x, y, t) => (m.base[I(x, y)] = t);
+  const put = (k, x, y, o = {}) => m.objs.push({ k, x, y, solid: 1, w: 1, ...o }), wall = (k, x, o = {}) => m.objs.push({ k: "wallart", art: k, x, y: 1, solid: 0, w: 1, flat: 1, ...o });
+  for (let y = 0; y < m.H; y++) for (let x = 0; x < m.W; x++) { B(x, y, y === 0 ? TT.wall : y === 1 ? TT.skirt : TT.carpet); m.vr[I(x, y)] = (x + y) % 2; }
+  const rows = (ys, xs) => ys.forEach((y) => xs.forEach(([a, b]) => { for (let x = a; x <= b; x++) put("bdesk", x, y); }));
+  if (f === 0) {
+    // ground: the kitchen on the left, the all-agency space on the right
+    for (let y = 2; y < m.H; y++) for (let x = 0; x <= 8; x++) B(x, y, TT.kitchen);
+    put("counter", 0, 2); put("counter", 1, 2); put("counter", 2, 2); put("coffee", 3, 2, { act: "malcoffee" }); put("fridge", 4, 2); put("counter", 5, 2); put("counter", 6, 2); put("plant", 8, 2);
+    put("ktable", 2, 6, { w: 3 }); put("ktable", 2, 10, { w: 3 });
+    wall("screen", 14); put("sofaL", 11, 5, { w: 2 }); put("sofaLf", 17, 5, { w: 2 }); put("ctable", 14, 6, { w: 2 }); put("sofa", 13, 9, { w: 3 }); put("plant", 10, 2); put("plant", 21, 4);
+    put("rdesk", 10, 11, { w: 3, act: "sign:mal" });
+    B(20, 2, TT.stairsU); m.warps.push({ x: 20, y: 2, to: "mal1", tx: 20, ty: 3, dir: "down" });
+    B(15, 13, TT.mat); m.warps.push({ x: 15, y: 13, to: "world", tx: 46, ty: 36, dir: "down" });
+  } else if (f === 1) {
+    // accounts: rows and rows of black desks
+    rows([6, 9, 12], [[3, 8], [12, 17]]); wall("board", 6); wall("screen", 14);
+    put("sofaL", 19, 8, { w: 2 }); put("plant", 21, 12); put("printer", 20, 12); put("plant", 0, 13);
+    B(20, 2, TT.stairsD); m.warps.push({ x: 20, y: 2, to: "mal0", tx: 20, ty: 3, dir: "down" });
+    B(1, 2, TT.stairsU); m.warps.push({ x: 1, y: 2, to: "mal2", tx: 1, ty: 3, dir: "down" });
+  } else {
+    // creative and production, and Tim's glass box in the corner
+    rows([9, 12], [[3, 8], [10, 13]]); wall("board", 6); wall("board", 11);
+    for (let y = 2; y <= 7; y++) B(15, y, TT.glass); for (let x = 15; x <= 21; x++) B(x, 7, TT.glass); B(18, 7, TT.carpet);
+    put("desk", 17, 2, { w: 2 }); put("shelf", 20, 2, { w: 2 }); put("plant", 16, 2);
+    put("sofaL", 1, 10, { w: 2 }); put("printer", 20, 12); put("plant", 21, 13); put("sofa", 16, 11, { w: 3 });
+    B(1, 2, TT.stairsD); m.warps.push({ x: 1, y: 2, to: "mal1", tx: 1, ty: 3, dir: "down" });
+  }
+  return seal(m);
 }

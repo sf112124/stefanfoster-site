@@ -4,7 +4,7 @@ import { PROJECTS as ALLP, ABOUT } from "../projects.js";
 const PROJECTS = ALLP.filter((p) => !p.page); // pages of their own (and locked ones) stay out of the game
 import MEDIA from "../media.js";
 import { buildArt, C } from "./art.js";
-import { buildWorld, buildHouse, STARTERS, FOES, EXTRA, CORP, TRAINERS, SAY, ZONES, TT, TNAME, eff } from "./data.js";
+import { buildWorld, buildHouse, buildOffice, STARTERS, FOES, EXTRA, CORP, TRAINERS, SAY, ZONES, TT, TNAME, eff, formOf, stageOf } from "./data.js";
 import { person, LOOKS } from "./people.js";
 
 // each patch of long grass belongs to one project, by name, so the site's order can change without moving them
@@ -23,7 +23,14 @@ const A = buildArt();
 // people are drawn from outfit recipes; every creature and portrait is a painted sprite in game/art
 for (const k in LOOKS) A.who[k] = person(LOOKS[k]);
 A.who.you = A.who.boy; A.port = {}; A.monF = {};
-const ART = ["ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo"];
+const ART = ["ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "lion", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo"];
+// walking sprites: one strip per person, nine frames (front, left, back; standing then each foot), right is the left mirrored
+const WALK = ["stefan", "boy", "girl", "ad", "mm", "mp", "bs", "sl", "cmo", "tim", "pat", "chris", "jeremy", "jimi", "smoker", "vaper"];
+await Promise.all(WALK.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => {
+  const fw = im.width / 9, fh = im.height, cut = (i) => { const c = document.createElement("canvas"); c.width = fw; c.height = fh; c.getContext("2d").drawImage(im, i * fw, 0, fw, fh, 0, 0, fw, fh); return c; };
+  const f = [...Array(9)].map((_, i) => cut(i)); A.who[k] = { down: f.slice(0, 3), left: f.slice(3, 6), up: f.slice(6, 9) }; A.who[k].right = A.who[k].left.map((c) => A.flip(c)); res(); };
+  im.onerror = res; im.src = `game/art/w_${k}.png`; })));
+A.who.you = A.who.boy;
 await Promise.all(ART.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => { if (k.startsWith("t_")) A.port[k.slice(2)] = im; else { A.mon[k] = im; A.monF[k] = A.flip(im); } res(); }; im.onerror = res; im.src = `game/art/${k}.png`; })));
 const cv = $("cv"), g = cv.getContext("2d"); g.imageSmoothingEnabled = false;
 
@@ -31,7 +38,7 @@ const cv = $("cv"), g = cv.getContext("2d"); g.imageSmoothingEnabled = false;
 const S = { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [], beat: [], look: "boy" };
 const save = () => { try { localStorage.setItem("foster-valley", JSON.stringify(S)); } catch (e) {} };
 const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; S.beat = S.beat || []; S.look = S.look || "boy"; A.who.you = A.who[S.look] || A.who.boy; return true; } } catch (e) {} return false; };
-const stats = (lvl) => ({ max: 30 + lvl * 6 + (S.reels || []).length * 2, atk: 10 + lvl + (S.reels || []).length, def: 10 + lvl });
+const stats = (lvl) => { const st = S.starter ? stageOf(S.starter, lvl) : 0; return { max: 30 + lvl * 6 + (S.reels || []).length * 2 + st * 10, atk: 10 + lvl + (S.reels || []).length + st * 3, def: 10 + lvl + st * 2 }; };
 
 // ---------- sound: a few square waves, like an old handheld ----------
 const au = {
@@ -79,7 +86,7 @@ const au = {
   tracks: {}, vol: .42,
   fadeTo(a, v, ms, done) { clearInterval(a._f); const from = a.volume, s = performance.now(); a._f = setInterval(() => { const k = Math.min(1, (performance.now() - s) / ms); a.volume = from + (v - from) * k; if (k >= 1) { clearInterval(a._f); done && done(); } }, 30); },
   music(name) {
-    if (name === "world" && map && map.id === "house") name = "studio";
+    if (name === "world" && map && map.id !== "world") name = "studio";
     if (this.tune === name) return; const prev = this.tracks[this.tune]; this.tune = name;
     if (prev) this.fadeTo(prev, 0, 400, () => prev.pause());
     if (!name || !this.on) return;
@@ -182,7 +189,7 @@ function prep(m) {
   m.flat = m.objs.filter((o) => o.flat); m.tall = m.objs.filter((o) => !o.flat);
   return m;
 }
-const maps = { world: prep(buildWorld()), house: prep(buildHouse()) };
+const maps = { world: prep(buildWorld()), house: prep(buildHouse()), mal0: prep(buildOffice(0)), mal1: prep(buildOffice(1)), mal2: prep(buildOffice(2)) };
 // eight film reels hidden around the valley, each on the nearest free bit of ground to its spot
 { const m = maps.world, spots = [[6, 18], [44, 15], [68, 19], [20, 25], [56, 31], [27, 47], [47, 47], [4, 34]];
   const free = (x, y) => x > 1 && y > 1 && x < m.W - 2 && y < m.H - 2 && !m.solid[m.I(x, y)] && !m.tg[m.I(x, y)] && !m.objs.some((o) => !o.flat && y === o.y && x >= o.x && x < o.x + (o.w || 1));
@@ -216,6 +223,9 @@ function walk(dt) {
 async function script(fn) { if (busy) return; busy = true; try { await fn(); } finally { busy = false; for (const k in tap) tap[k] = false; } }
 function arrive() {
   const i = map.I(P.x, P.y);
+  const wp = (map.warps || []).find((w) => w.x === P.x && w.y === P.y);
+  if (wp) { warp(maps[wp.to], wp.tx, wp.ty, wp.dir); return; }
+  if (map.id !== "world") { const sp = spotted(); if (sp) script(() => challenge(sp)); }
   if (map.id === "house" && map.base[i] === TT.mat) {
     if (!S.starter) { script(async () => { await ui.say(SAY.needPick, { who: "STEFAN" }); place(map, P.x, P.y - 1, "up"); }); return; }
     warp(maps.world, 35, 37, "down"); return;
@@ -224,6 +234,10 @@ function arrive() {
     const rl = map.objs.find((o) => o.k === "reel" && o.x === P.x && o.y === P.y && !S.reels.includes(o.n));
     if (rl) { S.reels.push(rl.n); const st = stats(S.lvl); S.hp = Math.min(st.max, (S.hp ?? st.max) + 2); save(); hud(); au.sfx("level"); script(async () => { await ui.say([`You found a film reel! (${S.reels.length} of 8)`, SAY.reels[rl.n], "Your tool feels stronger."]); }); return; }
     if (P.x === 35 && P.y === 36) { warp(maps.house, 6, 7, "up"); return; }
+    if (P.x === 46 && P.y === 35) {
+      if (S.won.length < PROJECTS.length) { script(async () => { await ui.say(SAY.malLocked); place(map, 46, 36, "down"); }); return; }
+      warp(maps.mal0, 15, 12, "up"); return;
+    }
     const sp = spotted(); if (sp) { P.grass = 0; script(() => challenge(sp)); return; }
     const z = ZONES.find((q) => P.x >= q.r[0] && P.x <= q.r[2] && P.y >= q.r[1] && P.y <= q.r[3]); const zn = z ? z.n : "";
     if (zn && zn !== zoneNow) toast(zn.toUpperCase(), 1800); zoneNow = zn;
@@ -243,6 +257,8 @@ async function run(act, o) {
     else if (a === "stefan") await stefan();
     else if (a === "coffee") { await ui.say(SAY.coffee[0]); S.hp = stats(S.lvl).max; au.sfx("heal"); if (S.starter) await ui.say(SAY.coffee[1]); save(); }
     else if (a === "trainer") await chat(o);
+    else if (a === "smoke") { o.dir = OPP[P.dir]; await ui.say(SAY.smoke[+b]); }
+    else if (a === "malcoffee") { await ui.say(SAY.malcoffee[0]); S.hp = stats(S.lvl).max; au.sfx("heal"); if (S.starter) await ui.say(SAY.malcoffee[1]); save(); }
     else if (a === "goat") { au.sfx("baa"); await ui.say(SAY.goat); }
     else if (a === "hole") {
       if (S.flags.crawler) { await ui.say(SAY.holeDone); return; }
@@ -268,6 +284,7 @@ async function stefan() {
   if (!S.flags.intro) { S.flags.intro = 1; await speak("stefan", SAY.intro, who); return; }
   if (!S.starter) { await speak("stefan", SAY.noPick, who); return; }
   const n = S.won.length;
+  if (n >= PROJECTS.length && !S.flags.badge) { await speak("stefan", ["That's all eight. You've seen everything I've made.", "Which means the MAL office has opened its doors for you. It's just east of the square.", "Tim's at the top, in the glass office. Good luck."], who); return; }
   if (n >= PROJECTS.length) { await speak("stefan", SAY.ending, who); S.flags.end = 1; save(); await endCard(); return; }
   const next = PROJECTS.find((p) => !S.won.includes(p.slug)), left = 5 - S.beat.filter((b) => !TRAINERS[b].boss).length;
   await speak("stefan", [`${n} of ${PROJECTS.length} found.`, `${next.title} is at ${FOES[next.slug].zone}.`, ...(S.beat.includes("cmo") ? [] : left > 0 ? [`There are still ${left} people out on the roads who want a quick chat.`] : ["The CMO is waiting at the top of the north road."])], who);
@@ -280,9 +297,9 @@ async function speak(port, lines, who) {
   const t = talk; await tween(180, (k) => t && (t.k = 1 - k)); talk = null;
 }
 // ---------- the people on the roads ----------
-const trainerObjs = () => maps.world.objs.filter((o) => o.tr);
-const beatCount = () => S.beat.filter((b) => !TRAINERS[b].boss).length;
-const ready = (id) => !S.beat.includes(id) && !(TRAINERS[id].boss && beatCount() < 5);
+const trainerObjs = () => map.objs.filter((o) => o.tr);
+const beatCount = () => S.beat.filter((b) => !TRAINERS[b].map && !TRAINERS[b].boss).length;
+const ready = (id) => !S.beat.includes(id) && (TRAINERS[id].needs || []).every((b) => S.beat.includes(b));
 function spotted() {
   for (const o of trainerObjs()) {
     if (!ready(o.tr)) continue;
@@ -302,7 +319,7 @@ async function challenge(o) {
     const opts = Math.abs(ex) >= Math.abs(ey) ? [[Math.sign(ex), 0], [0, Math.sign(ey)]] : [[0, Math.sign(ey)], [Math.sign(ex), 0]];
     const mv = opts.find(([x, y]) => (x || y) && !blocked(o.x + x, o.y + y) && !(o.x + x === P.x && o.y + y === P.y)); if (!mv) break;
     o.dir = mv[0] > 0 ? "right" : mv[0] < 0 ? "left" : mv[1] > 0 ? "down" : "up";
-    await tween(170, (k) => { o.dx = mv[0] * 16 * k; o.dy = mv[1] * 16 * k; o.step = k > .5 ? 1 : 0; }); o.x += mv[0]; o.y += mv[1]; o.dx = o.dy = 0; o.step = 0;
+    await tween(170, (k) => { o.dx = mv[0] * 16 * k; o.dy = mv[1] * 16 * k; o.step = k < .55 ? 1 + (n % 2) : 0; }); o.x += mv[0]; o.y += mv[1]; o.dx = o.dy = 0; o.step = 0;
   }
   const ex = P.x - o.x, ey = P.y - o.y; o.dir = Math.abs(ex) >= Math.abs(ey) ? (ex > 0 ? "right" : "left") : ey > 0 ? "down" : "up"; P.dir = OPP[o.dir];
   await duel(o);
@@ -318,7 +335,12 @@ async function duel(o) {
   const t = TRAINERS[o.tr], pk = t.port.slice(2);
   await speak(pk, t.intro, `${t.name} · ${t.role}`);
   const r = await fight(null, null, o.tr);
-  if (r === "win") { await speak(pk, t.win, t.name); if (t.boss) toast("THE CLIENT SIGNED IT OFF", 4000); else if (beatCount() === 5) toast("THE CMO WANTS A WORD. NORTH ROAD.", 4500); }
+  if (r === "win") {
+    await speak(pk, t.win, t.name);
+    if (o.tr === "tim") { S.flags.badge = 1; save(); hud(); au.sfx("win"); await ui.say(SAY.badge); toast("MAL BADGE. GO BACK AND SEE STEFAN.", 5000); }
+    else if (o.tr === "cmo") toast("THE CLIENT SIGNED IT OFF", 4000);
+    else { const u = Object.values(TRAINERS).find((x) => x.needs && x.needs.includes(o.tr) && x.needs.every((b) => S.beat.includes(b))); if (u) toast(u.unlock, 4500); }
+  }
 }
 
 // ---------- a fight ----------
@@ -326,7 +348,7 @@ const TCOL = { AI: "#57c9b5", IMAGE: "#6ea4f2", FILM: "#b79cff", NONE: "#ff2d4a"
 const BG = { corp: ["#e8edf5", "#9fb4d9", "#ffd76a"],  "la-croisiere": ["#bfeaf7", "#ffe9b8", "#ff9dbb"], "ai-commissions": ["#b7f3e4", "#57c9b5", "#b79cff"], "3d-explorations": ["#e0d4ff", "#a58cf0", "#86d2ec"], "ai-experiments": ["#ffc4f1", "#e772cf", "#ffd76a"], "summer-of-sport": ["#c4f0b0", "#ffd76a", "#f2907f"], relax: ["#a5e8cf", "#86d2ec", "#fff4e0"], "coca-cola": ["#ffd9a6", "#e6a25a", "#f0546a"], gumtree: ["#ffd0e3", "#ff86b6", "#a9dcbc"], x: ["#e9e4f0", "#b79cff", "#ffb38a"] };
 async function fight(def, slug, trId) {
   const tr = trId ? TRAINERS[trId] : null, team = tr ? tr.team.map((k) => CORP[k]) : [def]; def = team[0];
-  const mine = STARTERS[S.starter], st = stats(S.lvl), boss = tr ? tr.boss || 0 : def.boss || 0;
+  const mine = formOf(S.starter, S.lvl), st = stats(S.lvl), boss = tr ? tr.boss || 0 : def.boss || 0;
   const L = tr ? 3 + tr.lv + Math.floor((S.won.length + S.beat.length) / 2) : (slug ? 2 : boss ? 2 + boss : 1) + S.won.length;
   const me = { ...mine, lvl: S.lvl, max: st.max, hp: clamp(S.hp ?? st.max, 1, st.max), atk: st.atk, def: st.def, am: 1, dm: 1, ox: -200, oy: 0, a: 1, fl: 0 };
   const mk = (d) => { const f = { ...d, lvl: L, max: Math.round((20 + L * 6) * (tr ? (boss ? 1.5 : 1.15) : boss ? 2 : 1.6)), atk: 6 + L, def: 9 + L, am: 1, dm: 1, ox: 200, oy: 0, a: 1, fl: 0 }; f.hp = f.max; return f; };
@@ -387,11 +409,11 @@ async function fight(def, slug, trId) {
     au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is ${tr ? "dealt with" : "beaten"}.`);
     au.music(null); au.sfx("win");
     if (tr) {
-      S.beat.push(trId); S.lvl = Math.min(18, S.lvl + 1); S.hp = stats(S.lvl).max; me.hp = me.max; bars(); save(); hud();
-      await ui.line(`You got through ${tr.name}'s quick chat.`); au.sfx("level"); await ui.line(`${me.name} grew to level ${S.lvl}!`);
+      S.beat.push(trId); S.lvl = Math.min(18, S.lvl + 1); S.hp = stats(S.lvl).max; me.lvl = S.lvl; me.hp = me.max; bars(); save(); hud();
+      await ui.line(`You got through ${tr.name}'s quick chat.`); au.sfx("level"); await ui.line(`${me.name} grew to level ${S.lvl}!`); await evolve(me);
     } else if (slug) {
-      S.won.push(slug); S.lvl = Math.min(18, S.lvl + 1); S.hp = stats(S.lvl).max; me.hp = me.max; bars(); save(); hud();
-      await ui.line(`${me.name} grew to level ${S.lvl}!`); au.sfx("level");
+      S.won.push(slug); S.lvl = Math.min(18, S.lvl + 1); S.hp = stats(S.lvl).max; me.lvl = S.lvl; me.hp = me.max; bars(); save(); hud();
+      await ui.line(`${me.name} grew to level ${S.lvl}!`); au.sfx("level"); await evolve(me);
       await ui.line(`${def.name} is in your folio.`);
     } else { S.hp = stats(S.lvl).max; save(); await ui.line(`${me.name} is back to full health.`); }
   } else if (result === "lose") {
@@ -403,8 +425,19 @@ async function fight(def, slug, trId) {
   if (result !== "win") S.hp = result === "run" ? Math.max(1, Math.round(me.hp)) : S.hp;
   au.music("world"); await fadeTo(0, 300);
   if (result === "lose") await ui.say(SAY.lost);
-  if (result === "win" && slug) { await card(slug); if (S.won.length === PROJECTS.length) toast("ALL EIGHT FOUND. GO BACK AND SEE STEFAN.", 5000); }
+  if (result === "win" && slug) { await card(slug); if (S.won.length === PROJECTS.length) toast("ALL EIGHT FOUND. THE MAL OFFICE IS OPEN.", 5000); }
   return result;
+}
+// your tool grows up: it flickers between old and new, then the new one stays
+async function evolve(me) {
+  const to = formOf(S.starter, S.lvl); if (to.art === me.art) return;
+  const old = me.art, oldName = me.name; au.music(null);
+  await ui.line(`What? ${oldName} is evolving!`, {});
+  ui.hide(); au.sfx("secret");
+  for (let k = 0; k < 14; k++) { me.art = k % 2 ? to.art : old; bt.flash = .7; await sleep(Math.max(60, 260 - k * 16)); }
+  me.art = to.art; me.name = to.name; const st = stats(S.lvl); me.max = st.max; me.hp = st.max; me.atk = st.atk; me.def = st.def; bt.flash = 1; bars(); au.sfx("level");
+  for (let k = 0; k < 30; k++) { const a = rnd(0, 6.28), sp = rnd(40, 160); bt.parts.push({ x: 84, y: 100, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, t: 0, col: k % 2 ? "#ffd76a" : "#fff8ec" }); }
+  await ui.line(`Congratulations! ${oldName} evolved into ${to.name}!`);
 }
 function qteStep(dt) {
   const q = bt.qte; q.t += dt; const hit = took("a");
@@ -465,7 +498,7 @@ function card(slug) {
 let busyCard = null, folioOpen = false, wipe = 0;
 function folio() {
   if (!S.starter || busy) return; folioOpen = true; au.sfx("ok");
-  const el = $("folio"), m = STARTERS[S.starter];
+  const el = $("folio"), m = formOf(S.starter, S.lvl);
   el.innerHTML = `<div class="sheet"><div class="fh"><h2>FOLIO</h2><span>${S.won.length} of ${PROJECTS.length} beaten</span><button type="button" id="fclose">Close</button></div>
     <div class="grid">${PROJECTS.map((p, i) => { const got = S.won.includes(p.slug), f = FOES[p.slug]; return `<button type="button" class="slot${got ? " got" : ""}" data-s="${p.slug}" ${got ? "" : "disabled"}><img src="${monImg(f.art)}" alt=""><b>${got ? esc(p.title) : "? ? ?"}</b><i>${got ? esc(p.client) : esc(f.zone)}</i></button>`; }).join("")}</div>
     <p class="with"><img src="${monImg(m.art)}" alt=""><span>With you: <b>${m.name}</b>, level ${S.lvl}.</span></p></div>`;
@@ -484,7 +517,7 @@ function endCard() {
     $("cclose").addEventListener("click", () => busyCard && busyCard());
   });
 }
-function hud() { $("bfolio").textContent = `FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8 · CLIENTS ${S.beat.length}/6`; $("hud").hidden = mode !== "world"; $("bfolio").hidden = !S.starter; }
+function hud() { $("bfolio").textContent = `FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8 · CHATS ${S.beat.length}/${Object.keys(TRAINERS).length}${S.flags.badge ? " · ★ BADGE" : ""}`; $("hud").hidden = mode !== "world"; $("bfolio").hidden = !S.starter; }
 $("bfolio").addEventListener("click", () => { if (folioOpen) closeFolio(); else if (mode === "world") folio(); });
 $("bsnd").addEventListener("click", () => { au.on = !au.on; $("bsnd").textContent = au.on ? "SOUND ON" : "SOUND OFF"; if (au.on) au.unlock(); au.toggle(); });
 
@@ -501,7 +534,7 @@ function drawWorld(now) {
     if (t === TT.water) g.drawImage(A.tile.glint[(f4 + x + y * 2) % 4], x * 16 - cx, y * 16 - cy); else if (t === TT.fizz) g.drawImage(A.tile.bubble[(f4 + x * 3 + y) % 4], x * 16 - cx, y * 16 - cy);
     if (map.tg[i]) g.drawImage(A.grass[map.tg[i]][(f2 + x + y) % 2], x * 16 - cx, y * 16 - cy);
   }
-  const spr = (o) => o.k === "npc" ? A.who[o.who][o.dir || "down"][(o.step || 0) % 2] : o.k === "wallart" ? A.obj[o.art] : Array.isArray(A.obj[o.k]) ? A.obj[o.k][o.k === "geyser" ? Math.floor(now / 300 + o.x) % 3 : f2] : A.obj[o.k];
+  const spr = (o) => o.k === "npc" ? pose(A.who[o.who] || A.who.stefan, o.dir || "down", o.step || 0) : o.k === "wallart" ? A.obj[o.art] : Array.isArray(A.obj[o.k]) ? A.obj[o.k][o.k === "geyser" ? Math.floor(now / 300 + o.x) % 3 : f2] : A.obj[o.k];
   const put = (o) => {
     if (o.gone) return; if (o.k === "wire") return wire(o, cx, cy, now);
     if (o.k === "reel") { if (!S.reels.includes(o.n)) reel(o.x * 16 - cx + 8, o.y * 16 - cy + 8 + Math.round(Math.sin(now / 260 + o.n) * 1.5), now); return; }
@@ -511,12 +544,13 @@ function drawWorld(now) {
     if (o.k === "npc") g.drawImage(A.sh[12], Math.round(bx - 6), by - 4);
     g.drawImage(s, Math.round(bx - s.width / 2), by - s.height - (o.flat ? 4 : o.k === "npc" ? 1 : 0));
     if (o.bang && now - o.bang < 900) bang(Math.round(bx), by - s.height - 4, now - o.bang);
+    if (o.puff) puffs(o, Math.round(bx), by - s.height + 8, now);
     if (o.k === "stand" && S.starter !== o.pick) { const it = A.obj["pick_" + o.pick]; g.drawImage(it, Math.round(bx - it.width / 2), by - 12 - it.height + Math.round(Math.sin(now / 300 + o.x) * 1.2)); }
   };
   map.flat.forEach(put);
   // everything standing up, back to front, with you in among it
   const row = map.tall.filter((o) => !o.gone && o.y >= y0 - 2 && o.y <= y1 + 3).sort((a, b) => a.y - b.y); let drawn = false;
-  const me = () => { const s = A.who.you[P.dir][P.moving ? Math.floor(P.t * 2 + P.steps) % 2 : 0], x = Math.round(P.px - cx), y = Math.round(P.py - cy); g.drawImage(A.sh[12], x + 2, y + 12); g.drawImage(s, x - 1, y + 16 - s.height); drawn = true; };
+  const me = () => { const s = pose(A.who.you, P.dir, P.moving && P.t < .55 ? 1 + (P.steps % 2) : 0), x = Math.round(P.px - cx), y = Math.round(P.py - cy); g.drawImage(A.sh[12], x + 2, y + 12); g.drawImage(s, Math.round(x + 8 - s.width / 2), y + 16 - s.height); drawn = true; };
   const py = P.py / 16;
   row.forEach((o) => { if (!drawn && o.y > py) me(); put(o); }); if (!drawn) me();
   // standing in long grass, it comes up over your feet
@@ -545,6 +579,14 @@ function ambience(now, cx, cy) {
     if (night) { const a = .5 + Math.sin(t * 3 + m.p * 5) * .5; g.fillStyle = `rgba(255,236,140,${a})`; g.fillRect(Math.round(m.x), Math.round(m.y), 1, 1); g.fillStyle = `rgba(255,236,140,${a * .25})`; g.fillRect(Math.round(m.x) - 1, Math.round(m.y) - 1, 3, 3); }
     else { g.fillStyle = m.s > .5 ? "rgba(255,157,187,.85)" : "rgba(255,255,255,.85)"; g.fillRect(Math.round(m.x), Math.round(m.y), m.s > .8 ? 2 : 1, 1); }
   });
+}
+// a person's frame: 0 standing, 1 and 2 each foot (the old drawn people only have two)
+const pose = (who, dir, i) => { const f = who[dir] || who.down; return f[i] || f[1] || f[0]; };
+// smoke and vape clouds drifting up off the people round the side of the office
+function puffs(o, x, y, now) {
+  for (let k = 0; k < 4; k++) { const t = ((now / 1000 + k * .55 + o.puff * .3) % 2.2) / 2.2, big = o.puff === 2;
+    const px = x + (o.dir === "left" ? -6 : 6) + Math.sin(t * 6 + k) * 3 + t * 4, py = y - t * 22, r = (big ? 2.5 : 1.5) + t * (big ? 5 : 3);
+    g.fillStyle = `rgba(${big ? "245,240,255" : "225,225,230"},${(1 - t) * (big ? .75 : .55)})`; g.beginPath(); g.arc(px, py, r, 0, 7); g.fill(); }
 }
 // the ! over someone's head when they spot you
 function bang(x, y, t) {
@@ -617,7 +659,7 @@ async function start(fresh) {
   au.music("world");
   await fadeTo(0, 300);
   if (!S.flags.look) await script(async () => {
-    const pic = (k) => `<img class="pk" src="${A.who[k].down[0].toDataURL()}" alt="">`;
+    const pic = (k) => `<img class="pk" src="${A.who[k].down[0].toDataURL()}" alt="">`;   // (their standing frame)
     ui.show("Before we start: are you a boy or a girl?");
     const c = await ui.choose([{ html: `${pic("boy")}BOY` }, { html: `${pic("girl")}GIRL` }], { cls: "yn look", cols: 2 }); ui.hide();
     S.look = c === 1 ? "girl" : "boy"; S.flags.look = 1; A.who.you = A.who[S.look]; save();

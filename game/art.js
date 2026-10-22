@@ -75,6 +75,13 @@ export function buildArt() {
   A.tile.rug = [px(16, 16, (R) => { R(0, 0, 16, 16, "#f6a6bd"); for (let i = 0; i < 16; i += 4) { R(i, (i * 3) % 16, 2, 2, "#b79cff"); R((i + 2) % 16, (i * 5 + 8) % 16, 2, 2, "#ffe08a"); } })];
   A.tile.mat = [px(16, 16, (R) => { R(0, 0, 16, 16, "#ecc9a0"); R(2, 4, 12, 9, "#8fc7a4"); R(3, 5, 10, 7, "#a9dcbc"); R(5, 8, 6, 1, "#6aa784"); })];
   A.tile.void = [px(16, 16, (R) => R(0, 0, 16, 16, "#2b1f3b"))];
+  // ---- the MAL office: tired carpet tiles, kitchen lino, glass walls, stairs ----
+  A.tile.carpet = [0, 1].map((k) => px(16, 16, (R) => { R(0, 0, 16, 16, "#5d6170"); speck(R, 10, ["#535766", "#676b7a"]); R(k ? 0 : 15, 0, 1, 16, "#565a69"); R(0, 15, 16, 1, "#565a69"); }));
+  A.tile.kitchen = [0, 1].map((k) => px(16, 16, (R) => { R(0, 0, 16, 16, "#e9e6df"); R(0, 0, 8, 8, k ? "#dcd8cf" : "#e9e6df"); R(8, 8, 8, 8, k ? "#dcd8cf" : "#e9e6df"); R(0, 0, 8, 8, k ? "#dcd8cf" : "#e9e6df"); R(8, 0, 8, 8, k ? "#e9e6df" : "#dcd8cf"); R(0, 8, 8, 8, k ? "#e9e6df" : "#dcd8cf"); }));
+  A.tile.glass = [px(16, 16, (R) => { R(0, 0, 16, 16, "#5d6170"); R(0, 0, 16, 16, "rgba(190,230,255,.55)"); R(0, 0, 16, 2, "#9aa0b5"); R(0, 14, 16, 2, "#9aa0b5"); R(7, 0, 2, 16, "#9aa0b5"); R(2, 4, 4, 1, "#ffffff"); R(3, 5, 2, 1, "#ffffff"); R(10, 9, 3, 1, "#ffffff"); })];
+  const stairs = (up) => px(16, 16, (R) => { R(0, 0, 16, 16, "#3b3e4a"); for (let i = 0; i < 4; i++) { const y = up ? i * 4 : 12 - i * 4, sh = up ? 4 + i * 1 : 7 - i; R(0, y, 16, 3, ["#9aa0b5", "#868ca1", "#72788d", "#5e6479"][up ? 3 - i : i]); R(0, y + 3, 16, 1, "#2b2836"); } R(1, 0, 1, 16, "#c9ccd8"); R(14, 0, 1, 16, "#c9ccd8"); });
+  A.tile.stairsU = [stairs(1)]; A.tile.stairsD = [stairs(0)];
+  A.tile.paving = [0, 1].map((k) => px(16, 16, (R) => { R(0, 0, 16, 16, "#c9c6c0"); R(0, 7, 16, 1, "#aeaba4"); R(0, 15, 16, 1, "#aeaba4"); R(k ? 4 : 11, 0, 1, 7, "#aeaba4"); R(k ? 12 : 6, 8, 1, 7, "#aeaba4"); speck(R, 4, ["#b9b6af"]); }));
   // the ragged edge where one ground meets another: little bites of the neighbour's colour along a side
   A.fringe = (g, x, y, side, col, seed) => {
     const q = rng(seed * 7 + side * 131 + 3); g.fillStyle = col;
@@ -180,6 +187,30 @@ export function buildArt() {
   A.mon.gum = mon((g) => { box(g, 20, 28, 8, 18, "#8d5d45"); inside(g, () => box(g, 25, 28, 3, 18, "#6f4533")); ell(g, 24, 17, 17, 14, "#5fb089"); ell(g, 13, 22, 8, 7, "#5fb089"); ell(g, 36, 22, 8, 7, "#5fb089"); inside(g, () => { ell(g, 18, 10, 9, 5, "#93d9a8"); ell(g, 30, 25, 12, 6, "#43917a"); }); eye(g, 21, 35, 2); eye(g, 27, 35, 2); line(g, 21, 40, 27, 40, INK, 1.2); const tag = (x, y, c) => { line(g, x + 2, y - 5, x + 2, y, INK, 1); box(g, x, y, 5, 6, c); box(g, x + 1, y + 2, 3, 1, INK); }; tag(9, 24, "#ffd76a"); tag(33, 26, "#ff9dbb"); tag(22, 6, "#fff4e0"); });
   // THE CRAWLER, from the other site
   A.mon.crawler = mon((g) => { [[-1, -1], [1, -1], [-1, 1], [1, 1], [-1, 0], [1, 0], [0, 1]].forEach(([sx, sy], i) => { const kx = 24 + sx * 12 + (i % 2) * 2, ky = 22 + sy * 8 - 6, fx = 24 + sx * (19 + (i % 3) * 2), fy = 24 + sy * 14 + 8; line(g, 24, 24, kx, ky, INK, 1.4); line(g, kx, ky, fx, fy, INK, 1.4); ell(g, kx, ky, 1.8, 1.8, "#fff4e0"); ell(g, fx, fy, 1.6, 1.6, INK); }); ell(g, 24, 24, 9, 9, "#fff4e0"); ell(g, 25, 25, 4, 4, "#f0546a"); ell(g, 24, 24, 1.3, 1.3, "#fff"); ell(g, 33, 16, 3, 3, "#fff4e0"); }, INK);
+  // ---- the MAL office ----
+  const PUR = "#8a5ad6", PUR2 = "#6e43b8", PUR3 = "#a97df0";
+  // a black desk, a black monitor glowing blue, a keyboard: the same thing forty times over
+  A.obj.bdesk = shape(16, 22, (g) => { box(g, 0, 10, 16, 8, "#2a2830"); box(g, 0, 10, 16, 2, "#3d3a45"); box(g, 1, 18, 2, 4, "#1d1b22"); box(g, 13, 18, 2, 4, "#1d1b22"); box(g, 2, 0, 12, 9, "#1d1b22"); box(g, 3, 1, 10, 7, "#5fa8e8"); box(g, 4, 2, 5, 1, "#cfe8ff"); box(g, 4, 4, 7, 1, "#9cc8f2"); box(g, 7, 9, 2, 2, "#1d1b22"); box(g, 4, 13, 7, 2, "#4a4753"); box(g, 12, 12, 2, 2, "#e9e4f0"); });
+  // purple sofas, the L-shaped ones and the long ones
+  A.obj.sofaL = shape(32, 26, (g) => { box(g, 0, 4, 32, 10, PUR2); box(g, 0, 12, 32, 8, PUR); box(g, 0, 12, 32, 2, PUR3); box(g, 22, 12, 10, 14, PUR); box(g, 22, 12, 10, 2, PUR3); box(g, 0, 4, 4, 16, PUR2); box(g, 28, 4, 4, 22, PUR2); box(g, 6, 7, 6, 4, PUR3); box(g, 14, 7, 6, 4, PUR3); });
+  A.obj.sofaLf = flip(A.obj.sofaL);
+  A.obj.sofa = shape(48, 22, (g) => { box(g, 0, 2, 48, 10, PUR2); box(g, 0, 10, 48, 8, PUR); box(g, 0, 10, 48, 2, PUR3); box(g, 0, 2, 4, 16, PUR2); box(g, 44, 2, 4, 16, PUR2); box(g, 2, 18, 3, 4, "#2b1f3b"); box(g, 43, 18, 3, 4, "#2b1f3b"); box(g, 16, 10, 1, 8, PUR2); box(g, 31, 10, 1, 8, PUR2); });
+  A.obj.ctable = shape(32, 14, (g) => { box(g, 0, 0, 32, 8, "#e9e4f0"); box(g, 0, 6, 32, 2, "#c9c2d3"); box(g, 3, 8, 2, 6, "#9aa0b5"); box(g, 27, 8, 2, 6, "#9aa0b5"); box(g, 6, 2, 4, 3, "#ffd76a"); box(g, 20, 2, 5, 3, "#ff9dbb"); });
+  A.obj.counter = shape(16, 22, (g) => { box(g, 0, 0, 16, 6, "#f4f1ea"); box(g, 0, 5, 16, 1, "#c9c2d3"); box(g, 0, 6, 16, 16, "#d8d2c6"); box(g, 7, 6, 1, 16, "#bdb6a8"); box(g, 3, 10, 2, 1, "#9aa0b5"); box(g, 11, 10, 2, 1, "#9aa0b5"); });
+  A.obj.ktable = shape(48, 18, (g) => { box(g, 0, 0, 48, 10, "#d6a877"); box(g, 0, 8, 48, 2, "#b98758"); box(g, 3, 10, 3, 8, "#3a3350"); box(g, 42, 10, 3, 8, "#3a3350"); box(g, 8, 2, 3, 3, "#fff"); box(g, 22, 3, 6, 3, "#f0546a"); box(g, 36, 2, 3, 3, "#fff"); });
+  A.obj.rdesk = shape(48, 20, (g) => { box(g, 0, 4, 48, 16, "#2a2830"); box(g, 0, 4, 48, 3, "#e9e4f0"); box(g, 14, 9, 20, 5, PUR); box(g, 34, 0, 8, 6, "#1d1b22"); box(g, 35, 1, 6, 4, "#5fa8e8"); });
+  A.obj.printer = shape(16, 18, (g) => { box(g, 0, 4, 16, 14, "#c9c2d3"); box(g, 0, 4, 16, 3, "#e9e4f0"); box(g, 3, 0, 10, 5, "#fff"); box(g, 2, 10, 12, 2, "#2a2830"); box(g, 12, 7, 2, 1, "#5fc98a"); });
+  A.obj.bin = shape(10, 16, (g) => { box(g, 1, 4, 8, 12, "#4a4753"); box(g, 0, 2, 10, 3, "#6c7088"); box(g, 3, 0, 4, 2, "#9aa0b5"); box(g, 3, 8, 4, 1, "#6c7088"); });
+  A.obj.screen = px(34, 20, (R) => { R(0, 0, 34, 20, "#1d1b22"); R(1, 1, 32, 18, "#2f2a44"); R(1, 1, 32, 18, "#6e43b8"); R(4, 4, 14, 3, "#fff8ec"); R(4, 9, 22, 2, "#c9b6ff"); R(4, 13, 18, 2, "#c9b6ff"); });
+  A.obj.board = px(30, 18, (R) => { R(0, 0, 30, 18, "#9aa0b5"); R(1, 1, 28, 16, "#fff"); [["#ffd76a", 3, 3], ["#ff9dbb", 10, 4], ["#86d2ec", 18, 3], ["#a9dcbc", 5, 10], ["#ffd76a", 14, 10], ["#ff9dbb", 22, 9]].forEach(([c, x, y]) => R(x, y, 5, 5, c)); });
+  // the office from outside: a big dark block with a purple sign
+  A.obj.mal = px(112, 88, (R, g) => {
+    R(2, 8, 108, 80, "#3d3a45"); R(2, 8, 108, 3, "#55515e"); R(0, 4, 112, 6, "#2a2830");
+    for (let fl = 0; fl < 3; fl++) for (let w = 0; w < 6; w++) { const x = 8 + w * 17, y = 16 + fl * 20; R(x, y, 13, 13, "#1d1b22"); R(x + 1, y + 1, 11, 11, fl === 2 && w > 3 ? "#ffe9b8" : "#7fb3dc"); R(x + 1, y + 1, 4, 3, "#cfe8ff"); }
+    R(40, 66, 32, 22, "#1d1b22"); R(42, 68, 13, 20, "#9cc8f2"); R(57, 68, 13, 20, "#9cc8f2"); R(42, 68, 4, 6, "#d5f0ff"); R(55, 68, 2, 20, "#1d1b22");
+    R(42, 56, 28, 9, "#8a5ad6"); R(42, 56, 28, 1, "#a97df0"); g.fillStyle = "#fff8ec"; g.font = "bold 8px monospace"; g.textAlign = "center"; g.fillText("MAL", 56, 63); g.textAlign = "left";
+    g.strokeStyle = INK; g.lineWidth = 1; g.strokeRect(2.5, 8.5, 107, 79);
+  });
   // a soft oval of shade to stand things on
   A.shadow = (w) => { const c = cv(w, Math.max(4, Math.round(w * .34))), g = c.getContext("2d"); ell(g, w / 2, c.height / 2, w / 2, c.height / 2, "rgba(43,31,59,.22)"); return c; };
   A.sh = { 12: A.shadow(12), 16: A.shadow(16), 22: A.shadow(22), 40: A.shadow(40) };
