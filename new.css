@@ -352,3 +352,27 @@ html.crawling .row .tt,html.flying .row .tt,html.crawling .row .c2,html.flying .
 .idx.fl.hov .fi:not(:hover){opacity:.22}
 .fi{position:relative}
 @media (max-width:820px){ .idx.fl{min-height:0;padding-top:96px;font-size:clamp(20px,6.4vw,36px);line-height:.98} }
+
+/* project pages, tighter: small header, section names sit to the left of their work */
+.pj{padding-top:84px}
+.pj-meta{margin-bottom:10px}
+.pj-t{font-size:clamp(34px,4.6vw,76px)!important;line-height:.9}
+.pj-lead{margin:18px 0 44px}
+.pj-lead:empty{margin:0 0 30px}
+.pj-lead p{font-size:clamp(17px,1.4vw,22px);grid-column:1 / span 6}
+.grp{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,9fr);gap:var(--gap);margin-bottom:clamp(36px,6vh,72px);align-items:start}
+.grp>.gh{grid-column:1;display:block;border:0;padding:0;margin:0;position:sticky;top:84px}
+.grp>.gh h2{font-size:clamp(18px,1.5vw,24px);letter-spacing:-.03em;line-height:1.05}
+.grp>.gh p{font-size:14px;margin-top:8px;color:#5a5955}
+.grp>.gm{grid-column:2}
+.grp>.gm:first-child{grid-column:1 / -1}
+.gm.solo .tile{width:min(100%,calc(var(--a) * 78svh))}
+.gm.solo{justify-content:flex-start}
+.nxp{padding:36px 0 60px;margin-top:20px}
+.nxp .t{font-size:clamp(34px,4.6vw,76px)}
+@media (max-width:820px){
+  .pj{padding-top:76px}
+  .grp{grid-template-columns:1fr}
+  .grp>.gh{position:static;margin-bottom:12px}
+  .grp>.gm{grid-column:1}
+}
