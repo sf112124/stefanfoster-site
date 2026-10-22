@@ -387,3 +387,20 @@ html.crawling .row .tt,html.flying .row .tt,html.crawling .row .c2,html.flying .
 .fi:hover .sc{animation:wob .6s cubic-bezier(.3,1.9,.4,1)}
 @keyframes wob{0%{rotate:0deg}40%{rotate:-10deg}100%{rotate:0deg}}
 .fi .sc{display:inline-block}
+
+/* one static screen: no footer, the toys tucked in the bottom corner */
+.corner{position:fixed;left:var(--gut);bottom:14px;z-index:55;display:flex;gap:16px}
+.corner .toys{display:flex;gap:16px}
+.corner .hole,.corner .pad{font:inherit;letter-spacing:inherit;color:var(--mute)}
+.corner .hole:hover,.corner .pad:hover{color:var(--ink)}
+body.viewing .corner{display:none}
+#home{min-height:100svh}
+.ct-g{grid-template-columns:repeat(4,1fr)}
+/* wide type for every main title */
+.pj-t,.nxp .t,.ct-n{font-family:"Anybody",var(--sans);font-stretch:150%;font-weight:620;letter-spacing:-.03em;text-transform:uppercase}
+.pj-t{font-size:clamp(28px,3.8vw,62px)!important;line-height:.95}
+.nxp .t{font-size:clamp(28px,3.8vw,62px)}
+.ct-n{font-size:clamp(30px,5vw,64px);line-height:.92}
+.ct-r{font-family:"Anybody",var(--sans);font-stretch:130%;font-weight:600;font-size:12px;letter-spacing:.02em}
+.ct-g a,.ct-g span{font-family:"Anybody",var(--sans);font-stretch:120%;font-weight:560;font-size:12px;letter-spacing:.01em}
+@media (max-width:820px){ .ct-g{grid-template-columns:1fr 1fr} .corner{bottom:10px} }
