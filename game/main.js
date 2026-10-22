@@ -4,7 +4,8 @@ import { PROJECTS as ALLP, ABOUT } from "../projects.js";
 const PROJECTS = ALLP.filter((p) => !p.page); // pages of their own (and locked ones) stay out of the game
 import MEDIA from "../media.js";
 import { buildArt, C } from "./art.js";
-import { buildWorld, buildHouse, STARTERS, FOES, EXTRA, SAY, ZONES, TT, TNAME, eff } from "./data.js";
+import { buildWorld, buildHouse, STARTERS, FOES, EXTRA, CORP, TRAINERS, SAY, ZONES, TT, TNAME, eff } from "./data.js";
+import { person, LOOKS } from "./people.js";
 
 // each patch of long grass belongs to one project, by name, so the site's order can change without moving them
 const GRASSOF = ["la-croisiere", "ai-commissions", "3d-explorations", "ai-experiments", "summer-of-sport", "relax", "coca-cola", "gumtree"];
@@ -19,12 +20,17 @@ const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
 document.documentElement.classList.toggle("touch", touch);
 
 const A = buildArt();
+// people are drawn from outfit recipes; every creature and portrait is a painted sprite in game/art
+for (const k in LOOKS) A.who[k] = person(LOOKS[k]);
+A.who.you = A.who.boy; A.port = {}; A.monF = {};
+const ART = ["ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo"];
+await Promise.all(ART.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => { if (k.startsWith("t_")) A.port[k.slice(2)] = im; else { A.mon[k] = im; A.monF[k] = A.flip(im); } res(); }; im.onerror = res; im.src = `game/art/${k}.png`; })));
 const cv = $("cv"), g = cv.getContext("2d"); g.imageSmoothingEnabled = false;
 
 // ---------- what's remembered between visits ----------
-const S = { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [] };
+const S = { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [], beat: [], look: "boy" };
 const save = () => { try { localStorage.setItem("foster-valley", JSON.stringify(S)); } catch (e) {} };
-const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; return true; } } catch (e) {} return false; };
+const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; S.beat = S.beat || []; S.look = S.look || "boy"; A.who.you = A.who[S.look] || A.who.boy; return true; } } catch (e) {} return false; };
 const stats = (lvl) => ({ max: 30 + lvl * 6 + (S.reels || []).length * 2, atk: 10 + lvl + (S.reels || []).length, def: 10 + lvl });
 
 // ---------- sound: a few square waves, like an old handheld ----------
@@ -61,6 +67,7 @@ const au = {
     else if (k === "level") seq([659, 784, 988, 1319], .09, { vol: .055 });
     else if (k === "lose") seq([392, 349, 311, 262, 196], .16, { type: "triangle", vol: .07 });
     else if (k === "secret") seq([784, 740, 622, 440, 415, 659, 831, 1047], .08);
+    else if (k === "spot") seq([988, 1319, 0, 1319], .07, { vol: .05 });
     else if (k === "baa") { N(420, .12, { type: "sawtooth", vol: .04 }); N(380, .3, { type: "sawtooth", vol: .04, at: t + .12, to: 330 }); }
   },
   // two short tunes of my own: a slow one for walking about, a quick one for a fight
@@ -205,6 +212,7 @@ function arrive() {
     const rl = map.objs.find((o) => o.k === "reel" && o.x === P.x && o.y === P.y && !S.reels.includes(o.n));
     if (rl) { S.reels.push(rl.n); const st = stats(S.lvl); S.hp = Math.min(st.max, (S.hp ?? st.max) + 2); save(); hud(); au.sfx("level"); script(async () => { await ui.say([`You found a film reel! (${S.reels.length} of 8)`, SAY.reels[rl.n], "Your tool feels stronger."]); }); return; }
     if (P.x === 35 && P.y === 36) { warp(maps.house, 6, 7, "up"); return; }
+    const sp = spotted(); if (sp) { P.grass = 0; script(() => challenge(sp)); return; }
     const z = ZONES.find((q) => P.x >= q.r[0] && P.x <= q.r[2] && P.y >= q.r[1] && P.y <= q.r[3]); const zn = z ? z.n : "";
     if (zn && zn !== zoneNow) toast(zn.toUpperCase(), 1800); zoneNow = zn;
     const tg = map.tg[i];
@@ -222,6 +230,7 @@ async function run(act, o) {
     else if (a === "pick") await choosePick(b);
     else if (a === "stefan") await stefan();
     else if (a === "coffee") { await ui.say(SAY.coffee[0]); S.hp = stats(S.lvl).max; au.sfx("heal"); if (S.starter) await ui.say(SAY.coffee[1]); save(); }
+    else if (a === "trainer") await chat(o);
     else if (a === "goat") { au.sfx("baa"); await ui.say(SAY.goat); }
     else if (a === "hole") {
       if (S.flags.crawler) { await ui.say(SAY.holeDone); return; }
@@ -244,27 +253,86 @@ async function choosePick(id) {
 }
 async function stefan() {
   const who = "STEFAN";
-  if (!S.flags.intro) { S.flags.intro = 1; await ui.say(SAY.intro, { who }); return; }
-  if (!S.starter) { await ui.say(SAY.noPick, { who }); return; }
+  if (!S.flags.intro) { S.flags.intro = 1; await speak("stefan", SAY.intro, who); return; }
+  if (!S.starter) { await speak("stefan", SAY.noPick, who); return; }
   const n = S.won.length;
-  if (n >= PROJECTS.length) { await ui.say(SAY.ending, { who }); S.flags.end = 1; save(); await endCard(); return; }
-  const next = PROJECTS.find((p) => !S.won.includes(p.slug));
-  await ui.say([`${n} of ${PROJECTS.length} found.`, `${next.title} is at ${FOES[next.slug].zone}.`], { who });
+  if (n >= PROJECTS.length) { await speak("stefan", SAY.ending, who); S.flags.end = 1; save(); await endCard(); return; }
+  const next = PROJECTS.find((p) => !S.won.includes(p.slug)), left = 5 - S.beat.filter((b) => !TRAINERS[b].boss).length;
+  await speak("stefan", [`${n} of ${PROJECTS.length} found.`, `${next.title} is at ${FOES[next.slug].zone}.`, ...(S.beat.includes("cmo") ? [] : left > 0 ? [`There are still ${left} people out on the roads who want a quick chat.`] : ["The CMO is waiting at the top of the north road."])], who);
+}
+// a face slides in beside the words while someone talks
+let talk = null;
+async function speak(port, lines, who) {
+  talk = { img: A.port[port], k: 0 }; await tween(220, (k) => talk && (talk.k = k));
+  await ui.say(lines, { who });
+  const t = talk; await tween(180, (k) => t && (t.k = 1 - k)); talk = null;
+}
+// ---------- the people on the roads ----------
+const trainerObjs = () => maps.world.objs.filter((o) => o.tr);
+const beatCount = () => S.beat.filter((b) => !TRAINERS[b].boss).length;
+const ready = (id) => !S.beat.includes(id) && !(TRAINERS[id].boss && beatCount() < 5);
+function spotted() {
+  for (const o of trainerObjs()) {
+    if (!ready(o.tr)) continue;
+    const [dx, dy] = DIRS[o.dir], along = (P.x - o.x) * dx + (P.y - o.y) * dy, across = dx ? P.y - o.y : P.x - o.x;
+    if (along < 1 || along > 4 || Math.abs(across) > 1) continue;
+    let clear = true; for (let s = 1; s < along; s++) { const x = o.x + dx * s + (dy ? across : 0), y = o.y + dy * s + (dx ? across : 0); if (blocked(x, y)) clear = false; }
+    if (clear) return o;
+  }
+  return null;
+}
+const OPP = { up: "down", down: "up", left: "right", right: "left" };
+async function challenge(o) {
+  au.sfx("spot"); o.bang = performance.now(); await sleep(800);
+  // they walk over to you
+  for (let n = 0; n < 6; n++) {
+    const ex = P.x - o.x, ey = P.y - o.y; if (Math.abs(ex) + Math.abs(ey) <= 1) break;
+    const opts = Math.abs(ex) >= Math.abs(ey) ? [[Math.sign(ex), 0], [0, Math.sign(ey)]] : [[0, Math.sign(ey)], [Math.sign(ex), 0]];
+    const mv = opts.find(([x, y]) => (x || y) && !blocked(o.x + x, o.y + y) && !(o.x + x === P.x && o.y + y === P.y)); if (!mv) break;
+    o.dir = mv[0] > 0 ? "right" : mv[0] < 0 ? "left" : mv[1] > 0 ? "down" : "up";
+    await tween(170, (k) => { o.dx = mv[0] * 16 * k; o.dy = mv[1] * 16 * k; o.step = k > .5 ? 1 : 0; }); o.x += mv[0]; o.y += mv[1]; o.dx = o.dy = 0; o.step = 0;
+  }
+  const ex = P.x - o.x, ey = P.y - o.y; o.dir = Math.abs(ex) >= Math.abs(ey) ? (ex > 0 ? "right" : "left") : ey > 0 ? "down" : "up"; P.dir = OPP[o.dir];
+  await duel(o);
+}
+async function chat(o) {
+  const t = TRAINERS[o.tr]; o.dir = OPP[P.dir];
+  if (S.beat.includes(o.tr)) { await speak(t.port.slice(2), t.after, t.name); return; }
+  if (!S.starter) { await speak(t.port.slice(2), ["Oh, you haven't got a tool yet? Come back when you have."], t.name); return; }
+  if (!ready(o.tr)) { await speak(t.port.slice(2), t.gate, t.name); return; }
+  await duel(o);
+}
+async function duel(o) {
+  const t = TRAINERS[o.tr], pk = t.port.slice(2);
+  await speak(pk, t.intro, `${t.name} · ${t.role}`);
+  const r = await fight(null, null, o.tr);
+  if (r === "win") { await speak(pk, t.win, t.name); if (t.boss) toast("THE CLIENT SIGNED IT OFF", 4000); else if (beatCount() === 5) toast("THE CMO WANTS A WORD. NORTH ROAD.", 4500); }
 }
 
 // ---------- a fight ----------
 const TCOL = { AI: "#57c9b5", IMAGE: "#6ea4f2", FILM: "#b79cff", NONE: "#ff2d4a" };
-const BG = { "la-croisiere": ["#bfeaf7", "#ffe9b8", "#ff9dbb"], "ai-commissions": ["#b7f3e4", "#57c9b5", "#b79cff"], "3d-explorations": ["#e0d4ff", "#a58cf0", "#86d2ec"], "ai-experiments": ["#ffc4f1", "#e772cf", "#ffd76a"], "summer-of-sport": ["#c4f0b0", "#ffd76a", "#f2907f"], relax: ["#a5e8cf", "#86d2ec", "#fff4e0"], "coca-cola": ["#ffd9a6", "#e6a25a", "#f0546a"], gumtree: ["#ffd0e3", "#ff86b6", "#a9dcbc"], x: ["#e9e4f0", "#b79cff", "#ffb38a"] };
-async function fight(def, slug) {
-  const mine = STARTERS[S.starter], st = stats(S.lvl), boss = def.boss || 0, L = (slug ? 2 : boss ? 2 + boss : 1) + S.won.length;
+const BG = { corp: ["#e8edf5", "#9fb4d9", "#ffd76a"],  "la-croisiere": ["#bfeaf7", "#ffe9b8", "#ff9dbb"], "ai-commissions": ["#b7f3e4", "#57c9b5", "#b79cff"], "3d-explorations": ["#e0d4ff", "#a58cf0", "#86d2ec"], "ai-experiments": ["#ffc4f1", "#e772cf", "#ffd76a"], "summer-of-sport": ["#c4f0b0", "#ffd76a", "#f2907f"], relax: ["#a5e8cf", "#86d2ec", "#fff4e0"], "coca-cola": ["#ffd9a6", "#e6a25a", "#f0546a"], gumtree: ["#ffd0e3", "#ff86b6", "#a9dcbc"], x: ["#e9e4f0", "#b79cff", "#ffb38a"] };
+async function fight(def, slug, trId) {
+  const tr = trId ? TRAINERS[trId] : null, team = tr ? tr.team.map((k) => CORP[k]) : [def]; def = team[0];
+  const mine = STARTERS[S.starter], st = stats(S.lvl), boss = tr ? tr.boss || 0 : def.boss || 0;
+  const L = tr ? 3 + tr.lv + Math.floor((S.won.length + S.beat.length) / 2) : (slug ? 2 : boss ? 2 + boss : 1) + S.won.length;
   const me = { ...mine, lvl: S.lvl, max: st.max, hp: clamp(S.hp ?? st.max, 1, st.max), atk: st.atk, def: st.def, am: 1, dm: 1, ox: -200, oy: 0, a: 1, fl: 0 };
-  const foe = { ...def, lvl: L, max: Math.round((20 + L * 6) * (boss ? 2 : 1.6)), atk: 6 + L, def: 9 + L, am: 1, dm: 1, ox: 200, oy: 0, a: 1, fl: 0 }; foe.hp = foe.max;
+  const mk = (d) => { const f = { ...d, lvl: L, max: Math.round((20 + L * 6) * (tr ? (boss ? 1.5 : 1.15) : boss ? 2 : 1.6)), atk: 6 + L, def: 9 + L, am: 1, dm: 1, ox: 200, oy: 0, a: 1, fl: 0 }; f.hp = f.max; return f; };
+  let foe = mk(def), ti = 0;
   au.sfx("encounter"); au.music(null);
   for (let k = 0; k < 2; k++) { fade = .9; await sleep(60); fade = 0; await sleep(60); }
   await tween(420, (k) => (wipe = k)); fade = 1; wipe = 0;
-  bt = { me, foe, bg: BG[slug] || BG.x, shake: 0, t: 0, pops: [], parts: [], flash: 0, qte: null }; mode = "battle"; hud(); au.music("battle"); bars(); $("sfoe").hidden = $("sme").hidden = false;
-  await fadeTo(0, 200); await tween(420, (k) => { foe.ox = 200 * (1 - k); me.ox = -200 * (1 - k); });
-  await ui.line(def.intro || `${def.name} appears!`, {});
+  bt = { me, foe, bg: BG[slug] || (tr ? BG.corp : BG.x), shake: 0, t: 0, pops: [], parts: [], flash: 0, qte: null, port: tr ? { img: A.port[tr.port.slice(2)], ox: 200 } : null }; mode = "battle"; hud(); au.music("battle"); bars(); $("sme").hidden = $("sfoe").hidden = !!tr;
+  if (tr) {
+    await fadeTo(0, 200); await tween(420, (k) => { bt.port.ox = 200 * (1 - k); me.ox = -200 * (1 - k); });
+    await ui.line(`${tr.role} ${tr.name} wants a quick chat!`, {});
+    await tween(300, (k) => (bt.port.ox = 200 * k)); bt.port = null; $("sfoe").hidden = $("sme").hidden = false; bars();
+    await tween(380, (k) => (foe.ox = 200 * (1 - k)));
+    await ui.line(`${tr.name} brings up ${def.name}!`, {});
+  } else {
+    await fadeTo(0, 200); await tween(420, (k) => { foe.ox = 200 * (1 - k); me.ox = -200 * (1 - k); });
+    await ui.line(def.intro || `${def.name} appears!`, {});
+  }
   let result = null;
   const tell = (t) => ui.line(t, { auto: 1.15 });
   // action commands: a bar sweeps when you attack (press A on the gold for a perfect hit), and a ! flashes when they attack (press A on it to block)
@@ -282,7 +350,7 @@ async function fight(def, slug) {
     const pw = Array.isArray(mv.p) ? rnd(mv.p[0], mv.p[1]) : mv.p, e = isMe ? eff(mv.t, dfn.type) : eff(att.type, dfn.type), crit = isMe && q === "perfect";
     const qm = isMe ? (q === "perfect" ? 1.4 : q === "good" ? 1.1 : .9) : (q === "block" ? .4 : 1);
     const n = Math.max(1, Math.round(pw * ((att.atk * att.am) / (dfn.def * dfn.dm)) * (.55 + att.lvl * .09) * e * qm * rnd(.9, 1.06)));
-    const tx = isMe ? 238 : 84, ty = isMe ? 66 : 118;
+    const tx = isMe ? 238 : 84, ty = isMe ? 56 : 100;
     if (isMe && q !== "miss") pop(q === "perfect" ? "PERFECT!" : "GOOD", tx, ty - 34, q === "perfect" ? "#ffd76a" : "#fff8ec", q === "perfect");
     if (!isMe && q === "block") pop("BLOCKED!", tx, ty - 34, "#a9dcbc", true);
     const dir = isMe ? 1 : -1; await tween(150, (k) => { att.ox = dir * 26 * Math.sin(k * Math.PI); att.oy = -dir * 10 * Math.sin(k * Math.PI); });
@@ -293,19 +361,29 @@ async function fight(def, slug) {
   while (!result) {
     ui.show(`What will ${me.name} do?`);
     const c = await ui.choose(["FIGHT", "RUN"], { cls: "cmd", cols: 2 });
-    if (c === 1) { if (boss) { await ui.line(SAY.cantRun[0]); continue; } result = "run"; break; }
+    if (c === 1) { if (boss || tr) { await ui.line(tr ? "You can't walk out of a meeting." : SAY.cantRun[0]); continue; } result = "run"; break; }
     const mi = await ui.choose(me.moves.map((m) => ({ html: `<b>${esc(m.n)}</b><i>${m.kind ? (m.kind === "heal" ? "HEAL" : m.kind === "buff" ? "BOOST" : "WEAKEN") : m.t}</i>` })), { cls: "moves", cols: 2, cancel: true });
     if (mi < 0) continue;
     await act(me, foe, me.moves[mi], true);
-    if (foe.hp <= 0) { result = "win"; break; }
+    if (foe.hp <= 0) {
+      if (tr && ti < team.length - 1) {
+        au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is dealt with.`);
+        ti++; foe = mk(team[ti]); bt.foe = foe; bars(); await tween(380, (k) => (foe.ox = 200 * (1 - k)));
+        await ui.line(`${tr.name} brings up ${foe.name}!`, {}); continue;
+      }
+      result = "win"; break;
+    }
     await act(foe, me, pick(foe.moves), false);
     if (me.hp <= 0) { result = "lose"; break; }
   }
   if (result === "win") {
-    au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${def.name} is beaten.`);
+    au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is ${tr ? "dealt with" : "beaten"}.`);
     au.music(null); au.sfx("win");
-    if (slug) {
-      S.won.push(slug); S.lvl = Math.min(14, S.lvl + 1); S.hp = stats(S.lvl).max; me.hp = me.max; bars(); save(); hud();
+    if (tr) {
+      S.beat.push(trId); S.lvl = Math.min(18, S.lvl + 1); S.hp = stats(S.lvl).max; me.hp = me.max; bars(); save(); hud();
+      await ui.line(`You got through ${tr.name}'s quick chat.`); au.sfx("level"); await ui.line(`${me.name} grew to level ${S.lvl}!`);
+    } else if (slug) {
+      S.won.push(slug); S.lvl = Math.min(18, S.lvl + 1); S.hp = stats(S.lvl).max; me.hp = me.max; bars(); save(); hud();
       await ui.line(`${me.name} grew to level ${S.lvl}!`); au.sfx("level");
       await ui.line(`${def.name} is in your folio.`);
     } else { S.hp = stats(S.lvl).max; save(); await ui.line(`${me.name} is back to full health.`); }
@@ -365,7 +443,7 @@ const thumbs = (p) => {
   (p.items || []).forEach((it) => { const m = it.file && lib[it.file]; if (m) out.push(`media/${p.slug}/${m.node || m.poster || m.sm}`); });
   return out.slice(0, 6);
 };
-const monImg = (k) => { const c = document.createElement("canvas"); c.width = c.height = 48; c.getContext("2d").drawImage(A.mon[k], 0, 0); return c.toDataURL(); };
+const monImg = (k) => `game/art/${k}.png`;
 function card(slug) {
   return new Promise((res) => {
     const p = PROJECTS.find((q) => q.slug === slug), f = FOES[slug], i = PROJECTS.indexOf(p), el = $("card");
@@ -399,7 +477,7 @@ function endCard() {
     $("cclose").addEventListener("click", () => busyCard && busyCard());
   });
 }
-function hud() { $("bfolio").textContent = `FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8`; $("hud").hidden = mode !== "world"; $("bfolio").hidden = !S.starter; }
+function hud() { $("bfolio").textContent = `FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8 · CLIENTS ${S.beat.length}/6`; $("hud").hidden = mode !== "world"; $("bfolio").hidden = !S.starter; }
 $("bfolio").addEventListener("click", () => { if (folioOpen) closeFolio(); else if (mode === "world") folio(); });
 $("bsnd").addEventListener("click", () => { au.on = !au.on; $("bsnd").textContent = au.on ? "SOUND ON" : "SOUND OFF"; if (au.on) au.unlock(); });
 
@@ -420,11 +498,12 @@ function drawWorld(now) {
   const put = (o) => {
     if (o.gone) return; if (o.k === "wire") return wire(o, cx, cy, now);
     if (o.k === "reel") { if (!S.reels.includes(o.n)) reel(o.x * 16 - cx + 8, o.y * 16 - cy + 8 + Math.round(Math.sin(now / 260 + o.n) * 1.5), now); return; }
-    const s = spr(o); if (!s) return; const bx = (o.x + o.w / 2) * 16 - cx, by = (o.y + 1) * 16 - cy;
+    const s = spr(o); if (!s) return; const bx = (o.x + o.w / 2) * 16 - cx + (o.dx || 0), by = (o.y + 1) * 16 - cy + (o.dy || 0);
     if (bx < -60 || bx > VW + 60 || by < -10 || by > VH + 90) return;
     if (o.k === "wallart") { g.drawImage(s, Math.round(bx - s.width / 2), by - s.height - 6); return; }
     if (o.k === "npc") g.drawImage(A.sh[12], Math.round(bx - 6), by - 4);
     g.drawImage(s, Math.round(bx - s.width / 2), by - s.height - (o.flat ? 4 : o.k === "npc" ? 1 : 0));
+    if (o.bang && now - o.bang < 900) bang(Math.round(bx), by - s.height - 4, now - o.bang);
     if (o.k === "stand" && S.starter !== o.pick) { const it = A.obj["pick_" + o.pick]; g.drawImage(it, Math.round(bx - it.width / 2), by - 12 - it.height + Math.round(Math.sin(now / 300 + o.x) * 1.2)); }
   };
   map.flat.forEach(put);
@@ -460,6 +539,12 @@ function ambience(now, cx, cy) {
     else { g.fillStyle = m.s > .5 ? "rgba(255,157,187,.85)" : "rgba(255,255,255,.85)"; g.fillRect(Math.round(m.x), Math.round(m.y), m.s > .8 ? 2 : 1, 1); }
   });
 }
+// the ! over someone's head when they spot you
+function bang(x, y, t) {
+  const up = Math.round(Math.max(0, 1 - t / 120) * 6); y -= up;
+  g.fillStyle = "#2b1f3b"; g.fillRect(x - 5, y - 14, 10, 13); g.fillRect(x - 1, y - 1, 2, 2); g.fillStyle = "#fff8ec"; g.fillRect(x - 4, y - 13, 8, 11);
+  g.fillStyle = "#f0546a"; g.fillRect(x - 1, y - 12, 2, 6); g.fillRect(x - 1, y - 5, 2, 2);
+}
 function reel(x, y, now) {
   x = Math.round(x); y = Math.round(y);
   const glow = .35 + Math.sin(now / 200) * .15; g.fillStyle = `rgba(255,215,106,${glow})`; g.beginPath(); g.arc(x, y, 8, 0, 7); g.fill();
@@ -478,14 +563,15 @@ function drawBattle(now) {
   // the same soft heat as the real site, in big pixels
   const blob = (x, y, r, c) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, c); gr.addColorStop(1, c + "00"); g.fillStyle = gr; g.fillRect(0, 0, VW, VH); };
   blob(70 + Math.sin(now / 1900) * 30, 40, 150, c1); blob(250 + Math.cos(now / 2300) * 30, 150, 160, c2); blob(170, 90 + Math.sin(now / 1500) * 20, 90, "#ffffff");
-  g.fillStyle = "rgba(43,31,59,.14)"; g.beginPath(); g.ellipse(238 + sh, 91, 54, 11, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(84 + sh, 144, 60, 12, 0, 0, 7); g.fill();
-  const fig = (m, x, y, sc, bob) => {
-    const s = A.mon[m.art], w = 48 * sc, h = 48 * sc; g.globalAlpha = m.a;
+  g.fillStyle = "rgba(43,31,59,.14)"; g.beginPath(); g.ellipse(238 + sh, 86, 54, 11, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(84 + sh, 130, 60, 12, 0, 0, 7); g.fill();
+  const fig = (m, x, y, mirror, bob) => {
+    const s = (mirror && A.monF[m.art]) || A.mon[m.art], w = s.width, h = s.height; g.globalAlpha = m.a;
     g.drawImage(s, Math.round(x - w / 2 + m.ox + sh), Math.round(y - h + m.oy + bob), w, h);
     if (m.fl > 0) { g.globalAlpha = m.fl * .6; g.fillStyle = "#b7f3c8"; g.beginPath(); g.ellipse(x + m.ox, y - h / 2, w * .5, h * .5, 0, 0, 7); g.fill(); }
     g.globalAlpha = 1;
   };
-  fig(b.foe, 238, 96, 2, Math.round(Math.sin(now / 420) * 2)); fig(b.me, 84, 150, 2, Math.round(Math.sin(now / 480 + 1) * 2));
+  if (b.port && b.port.img) { const p = b.port.img; g.drawImage(p, Math.round(238 - p.width / 2 + b.port.ox), 102 - p.height); }
+  fig(b.foe, 238, 92, false, Math.round(Math.sin(now / 420) * 2)); fig(b.me, 84, 136, true, Math.round(Math.sin(now / 480 + 1) * 2));
   // sparks, numbers, the white flash of a big hit, and the action command on top
   for (let i = b.parts.length - 1; i >= 0; i--) { const p = b.parts[i]; p.t += 1 / 60; p.x += p.vx / 60; p.y += p.vy / 60; p.vy += 260 / 60; if (p.t > .6) { b.parts.splice(i, 1); continue; } g.fillStyle = p.col; g.globalAlpha = 1 - p.t / .6; g.fillRect(Math.round(p.x), Math.round(p.y), 2, 2); g.globalAlpha = 1; }
   g.textAlign = "center";
@@ -503,6 +589,7 @@ function frame(now) {
   else { ui.update(dt); if (mode === "world") walk(dt); }
   if (took("m")) $("bsnd").click();
   if (mode === "battle" && bt) drawBattle(now); else drawWorld(now);
+  if (talk && talk.img && mode !== "battle") { const p = talk.img, e = 1 - Math.pow(1 - talk.k, 3); g.drawImage(p, Math.round(VW - 14 - p.width + (1 - e) * 140), 126 - p.height); }
   if (fade > 0) { g.fillStyle = `rgba(255,248,236,${fade})`; g.fillRect(0, 0, VW, VH); }
   if (wipe > 0) { g.fillStyle = "#2b1f3b"; for (let k = -6; k < 14; k++) { const w = 26 * wipe; g.beginPath(); g.moveTo(k * 26, 0); g.lineTo(k * 26 + w, 0); g.lineTo(k * 26 + w - 90, VH); g.lineTo(k * 26 - 90, VH); g.fill(); } }
   for (const k in tap) tap[k] = false;   // a press counts for the frame it lands in and no longer
@@ -517,10 +604,16 @@ function fit() {
 addEventListener("resize", fit); fit();
 async function start(fresh) {
   au.unlock(); au.sfx("ok");
-  if (fresh) { Object.assign(S, { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [] }); save(); }
+  if (fresh) { Object.assign(S, { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [], beat: [], look: "boy" }); save(); }
   await fadeTo(1, 250); $("title").hidden = true; mode = "world"; hud(); au.music("world");
   if (S.starter) place(maps.world, 35, 37, "down"); else place(maps.house, 3, 4, "right");
   await fadeTo(0, 300);
+  if (!S.flags.look) await script(async () => {
+    const pic = (k) => `<img class="pk" src="${A.who[k].down[0].toDataURL()}" alt="">`;
+    ui.show("Before we start: are you a boy or a girl?");
+    const c = await ui.choose([{ html: `${pic("boy")}BOY` }, { html: `${pic("girl")}GIRL` }], { cls: "yn look", cols: 2 }); ui.hide();
+    S.look = c === 1 ? "girl" : "boy"; S.flags.look = 1; A.who.you = A.who[S.look]; save();
+  });
   if (!S.flags.intro) { await sleep(350); P.dir = "right"; script(() => stefan()); }
 }
 const had = load();

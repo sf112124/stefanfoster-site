@@ -44,10 +44,43 @@ export const EXTRA = {
     moves: [{ n: "LASER", p: 10 }, { n: "GRAB", p: 8 }, { n: "SKITTER", p: 6 }] },
 };
 
+// ---- the creatures the clients carry around with them ----
+export const CORP = {
+  brief: { name: "THE BRIEF", type: "NONE", art: "brief", moves: [{ n: "DUE YESTERDAY", p: 9 }, { n: "SCOPE CREEP", p: 7 }, { n: "QUICK TWEAK", p: 6 }] },
+  kpi: { name: "KPI", type: "FILM", art: "kpi", moves: [{ n: "MOVE THE NEEDLE", p: 9 }, { n: "NORTH STAR", p: 7 }, { n: "DASHBOARD", p: 6 }] },
+  roi: { name: "ROI", type: "AI", art: "roi", moves: [{ n: "SHOW ME THE ROI", p: 9 }, { n: "COST PER VIEW", p: 7 }, { n: "BUDGET CUT", p: 8 }] },
+  mediaplan: { name: "MEDIA PLAN", type: "IMAGE", art: "mediaplan", moves: [{ n: "FLIGHTING", p: 9 }, { n: "REACH & FREQUENCY", p: 7 }, { n: "ALWAYS ON", p: 6 }] },
+  vertical: { name: "VERTICAL", type: "FILM", art: "vertical", moves: [{ n: "MAKE IT 9:16", p: 9 }, { n: "FIRST 3 SECONDS", p: 7 }, { n: "SOUND OFF", p: 6 }] },
+  stakeholder: { name: "STAKEHOLDER", type: "AI", art: "stakeholder", moves: [{ n: "ONE MORE OPINION", p: 9 }, { n: "LOOP IN LEGAL", p: 7 }, { n: "CIRCLE BACK", p: 6 }] },
+  deck: { name: "THE DECK", type: "IMAGE", art: "deck", moves: [{ n: "80 SLIDES", p: 9 }, { n: "APPENDIX", p: 7 }, { n: "TAKE IT OFFLINE", p: 6 }] },
+};
+// ---- the people out on the roads who want "a quick chat" ----
+export const TRAINERS = {
+  darren: { name: "DARREN", role: "ACCOUNT DIRECTOR", look: "ad", port: "t_ad", x: 24, y: 27, dir: "right", lv: 0, team: ["brief"],
+    intro: ["You work with Stefan, right? Quick one.", "Client's sent over a brief. Well. It's more of a vibe.", "They want it to go viral. By Friday. Can you jump on it?"],
+    win: ["Okay, love that. Let's do a WIP on Thursday?"], after: ["I've put a hold in your calendar. Just a placeholder."] },
+  priya: { name: "PRIYA", role: "MARKETING MANAGER", look: "mm", port: "t_mm", x: 46, y: 28, dir: "left", lv: 1, team: ["vertical", "kpi"],
+    intro: ["Hi! Huge fan of the work.", "Before we brief, can we align on the verticals?", "And I'll need KPIs for each one. Per platform. Per week."],
+    win: ["Fine. I'll tell the team the KPI is vibes."], after: ["We're seeing really strong engagement on this chat."] },
+  gary: { name: "GARY", role: "MEDIA PLANNER", look: "mp", port: "t_mp", x: 28, y: 42, dir: "right", lv: 1, team: ["mediaplan", "roi"],
+    intro: ["Got a sec? I've built the media plan.", "It's fourteen tabs. The ROI is on tab nine.", "Can the film be a 6, a 15, a 30, in 9:16, 4:5 and 1:1?"],
+    win: ["Right. I'll just... reforecast."], after: ["Tab nine is looking a lot healthier now."] },
+  jules: { name: "JULES", role: "BRAND STRATEGIST", look: "bs", port: "t_bs", x: 36, y: 15, dir: "down", lv: 2, team: ["deck", "stakeholder"],
+    intro: ["Let's zoom out for a second.", "What does the brand actually believe? What's its purpose?", "I've done a deck. It's only eighty slides."],
+    win: ["Hm. I suppose the work does speak for itself."], after: ["I'm moving the purpose slide to the appendix."] },
+  mia: { name: "MIA", role: "SOCIAL LEAD", look: "sl", port: "t_sl", x: 55, y: 11, dir: "left", lv: 2, team: ["vertical", "deck"],
+    intro: ["Omg hiii. Can it be a trend?", "Like, vertical, but it has to feel organic.", "And can we hook them in the first half a second?"],
+    win: ["Okay that's actually so good. Posting it now."], after: ["It's doing numbers. Like, real numbers."] },
+  cmo: { name: "RICHARD", role: "CMO", look: "cmo", port: "t_cmo", x: 35, y: 9, dir: "down", lv: 4, boss: 1, team: ["roi", "kpi", "stakeholder"],
+    gate: ["My team speaks for me.", "Deal with all five of them first, then we'll talk."],
+    intro: ["So. You're the one who's been getting past my team.", "Let's talk numbers. Then stakeholders. Then numbers again."],
+    win: ["...Fine. It's approved.", "Don't change a thing."], after: ["Approved. Go and make it."] },
+};
+
 // ---- what people and things say ----
 export const SAY = {
   intro: ["Hi, I'm Stefan. This is my portfolio.", "My eight projects are out in the long grass around the valley.", "Find one and beat it, and you get to see the work.", "First, pick a tool to take with you: AI, Photoshop or Premiere. They're on the stands behind me."],
-  after: ["The door is at the bottom of the room. Walk into long grass to find a project.", "AI beats FILM, PHOTOSHOP beats AI, PREMIERE beats IMAGE.", "In a fight, press A as the bar hits the gold for a perfect hit. When they wind up, press A on the ! to block.", "There are eight film reels hidden around the valley too. Each one makes your tool stronger.", "The coffee machine in here brings your tool back to full health."],
+  after: ["The door is at the bottom of the room. Walk into long grass to find a project.", "AI beats FILM, PHOTOSHOP beats AI, PREMIERE beats IMAGE.", "In a fight, press A as the bar hits the gold for a perfect hit. When they wind up, press A on the ! to block.", "There are eight film reels hidden around the valley too. Each one makes your tool stronger.", "Watch out on the roads. Agency people and clients hang about out there, and they all want a quick chat. If one spots you, you'll have to fight their way through it.", "The coffee machine in here brings your tool back to full health."],
   ending: ["That's all eight. Thanks for playing through my work.", "If you'd like to work together, my details are on the next screen."],
   needPick: ["Pick a tool from the stands first."],
   noPick: ["Pick one of the three tools on the stands."],
@@ -150,6 +183,8 @@ export function buildWorld() {
     if (near) return;
     const q = r(); if (q < .085) objs.push({ k: kind(x, y), x, y, solid: 1, w: 1 }); else if (q < .1) objs.push({ k: "rock", x, y, solid: 1, w: 1 });
   });
+  // the clients, standing about on the roads
+  for (const id in TRAINERS) { const t = TRAINERS[id]; objs.push({ k: "npc", who: t.look, x: t.x, y: t.y, w: 1, solid: 1, dir: t.dir, act: "trainer:" + id, tr: id }); }
   objs.forEach((o) => { if (o.solid && o.k !== "npc" && o.k !== "house") for (let k = 0; k < (o.w || 1); k++) solid[I(o.x + k, o.y)] = 1; });   // (people are checked as you walk)
   for (let i = 0; i < N; i++) if (SOLID.has(base[i])) solid[i] = 1;
   solid[I(35, 36)] = 0;
