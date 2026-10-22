@@ -27,12 +27,14 @@ const ART = ["ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget",
 // walking sprites: one strip per person, nine frames (front, left, back; standing then each foot), right is the left mirrored
 const WALK = ["stefan", "boy", "girl", "ad", "mm", "mp", "bs", "sl", "cmo", "tim", "pat", "chris", "jeremy", "jimi", "smoker", "vaper"];
 await Promise.all(WALK.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => {
-  const fw = im.width / 9, fh = im.height, cut = (i) => { const c = document.createElement("canvas"); c.width = fw; c.height = fh; c.getContext("2d").drawImage(im, i * fw, 0, fw, fh, 0, 0, fw, fh); return c; };
-  const f = [...Array(9)].map((_, i) => cut(i)); A.who[k] = { down: f.slice(0, 3), left: f.slice(3, 6), up: f.slice(6, 9) }; A.who[k].right = A.who[k].left.map((c) => A.flip(c)); res(); };
+  const fw = im.width / 9, fh = im.height, cut = (i) => { const c = document.createElement("canvas"); c.width = fw; c.height = fh; c.getContext("2d").drawImage(im, i * fw, 0, fw, fh, 0, 0, fw, fh); c._s = 2; return c; };
+  const f = [...Array(9)].map((_, i) => cut(i)); A.who[k] = { down: f.slice(0, 3), left: f.slice(3, 6), up: f.slice(6, 9) }; A.who[k].right = A.who[k].left.map((c) => { const f = A.flip(c); f._s = 2; return f; }); res(); };
   im.onerror = res; im.src = `game/art/w_${k}.png`; })));
 A.who.you = A.who.boy;
-await Promise.all(ART.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => { if (k.startsWith("t_")) A.port[k.slice(2)] = im; else { A.mon[k] = im; A.monF[k] = A.flip(im); } res(); }; im.onerror = res; im.src = `game/art/${k}.png`; })));
-const cv = $("cv"), g = cv.getContext("2d"); g.imageSmoothingEnabled = false;
+await Promise.all(ART.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => { im._s = 2; if (k.startsWith("t_")) A.port[k.slice(2)] = im; else { A.mon[k] = im; const f = A.flip(im); f._s = 2; A.monF[k] = f; } res(); }; im.onerror = res; im.src = `game/art/${k}.png`; })));
+// the screen is 320 by 180 game pixels, drawn at double density so the painted sprites keep their detail
+const cv = $("cv"), g = cv.getContext("2d"); cv.width = 640; cv.height = 360; g.imageSmoothingEnabled = false;
+const iw = (s) => s.width / (s._s || 1), ih = (s) => s.height / (s._s || 1);
 
 // ---------- what's remembered between visits ----------
 const S = { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [], beat: [], look: "boy" };
@@ -409,7 +411,8 @@ async function fight(def, slug, trId) {
     if (me.hp <= 0) { result = "lose"; break; }
   }
   if (result === "win") {
-    au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is ${tr ? "dealt with" : "beaten"}.`);
+    if (slug) await catchIt(foe);
+    else { au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is ${tr ? "dealt with" : "beaten"}.`); }
     au.music(null); au.sfx("win");
     if (tr) {
       S.beat.push(trId); S.lvl = Math.min(18, S.lvl + 1); S.hp = stats(S.lvl).max; me.lvl = S.lvl; me.hp = me.max; bars(); save(); hud();
@@ -430,6 +433,30 @@ async function fight(def, slug, trId) {
   if (result === "lose") await ui.say(SAY.lost);
   if (result === "win" && slug) { await card(slug); if (S.won.length === 4) toast("FOUR FOUND. THE MAL OFFICE IS OPEN, EAST OF THE SQUARE.", 5000); if (S.won.length === PROJECTS.length) toast("ALL EIGHT FOUND. GO BACK AND SEE STEFAN.", 5000); }
   return result;
+}
+// a beaten project gets caught: throw a Folio Ball, it swallows the project, wobbles three times, and clicks shut
+async function catchIt(foe) {
+  await ui.line(`${foe.name} is worn out!`); await ui.line("You throw a FOLIO BALL!", { auto: .5 }); ui.hide();
+  const b = bt.ball = { x: 60, y: 130, rot: 0, open: 0, shut: false }; au.sfx("blip");
+  await tween(620, (k) => { b.x = 60 + (238 - 60) * k; b.y = 130 - Math.sin(k * Math.PI) * 95 + (40 - 130) * k * .9; b.rot = k * 12; });
+  au.sfx("buff"); b.open = 1; bt.flash = .8;
+  await tween(380, (k) => { foe.sc = 1 - k; foe.a = 1 - k * .7; foe.oy = -k * 30; });
+  foe.a = 0; b.open = 0; au.sfx("bump");
+  await tween(360, (k) => { b.y = 49 + Math.pow(k, 2) * 36; b.rot = 0; });
+  for (let n = 0; n < 3; n++) { await sleep(300); au.sfx("blip"); await tween(380, (k) => (b.rot = Math.sin(k * Math.PI * 2) * .45)); }
+  await sleep(250); b.shut = true; au.sfx("level");
+  for (let k = 0; k < 18; k++) { const a = rnd(0, 6.28), sp = rnd(30, 100); bt.parts.push({ x: b.x, y: b.y - 4, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, t: 0, col: k % 2 ? "#ffd76a" : "#fff8ec" }); }
+  await ui.line(`Gotcha! ${foe.name} was caught!`);
+}
+function drawBall(b) {
+  g.save(); g.translate(b.x, b.y); g.rotate(b.rot);
+  const r = 6; g.fillStyle = "#2b1f3b"; g.beginPath(); g.arc(0, 0, r + 1, 0, 7); g.fill();
+  g.fillStyle = "#fff4e0"; g.beginPath(); g.arc(0, 0, r, 0, Math.PI); g.fill();
+  g.fillStyle = "#8a5ad6"; g.beginPath(); g.arc(0, -(b.open ? 3 : 0), r, Math.PI, 0); g.fill(); g.fillStyle = "#a97df0"; g.fillRect(-3, -5 - (b.open ? 3 : 0), 2, 2);
+  g.fillStyle = "#2b1f3b"; g.fillRect(-r, -1, r * 2, 2); g.beginPath(); g.arc(0, 0, 2.6, 0, 7); g.fill();
+  g.fillStyle = b.shut ? "#ffd76a" : "#fff8ec"; g.beginPath(); g.arc(0, 0, 1.6, 0, 7); g.fill();
+  if (b.open) { g.fillStyle = "rgba(255,255,255,.7)"; g.beginPath(); g.moveTo(-5, -3); g.lineTo(5, -3); g.lineTo(14, -40); g.lineTo(-14, -40); g.fill(); }
+  g.restore();
 }
 // your tool grows up: it flickers between old and new, then the new one stays
 async function evolve(me) {
@@ -543,17 +570,17 @@ function drawWorld(now) {
     if (o.k === "reel") { if (!S.reels.includes(o.n)) reel(o.x * 16 - cx + 8, o.y * 16 - cy + 8 + Math.round(Math.sin(now / 260 + o.n) * 1.5), now); return; }
     const s = spr(o); if (!s) return; const bx = (o.x + o.w / 2) * 16 - cx + (o.dx || 0), by = (o.y + 1) * 16 - cy + (o.dy || 0);
     if (bx < -60 || bx > VW + 60 || by < -10 || by > VH + 90) return;
-    if (o.k === "wallart") { g.drawImage(s, Math.round(bx - s.width / 2), by - s.height - 6); return; }
+    if (o.k === "wallart") { g.drawImage(s, Math.round(bx - iw(s) / 2), by - ih(s) - 6, iw(s), ih(s)); return; }
     if (o.k === "npc") g.drawImage(A.sh[12], Math.round(bx - 6), by - 4);
-    g.drawImage(s, Math.round(bx - s.width / 2), by - s.height - (o.flat ? 4 : o.k === "npc" ? 1 : 0));
-    if (o.bang && now - o.bang < 900) bang(Math.round(bx), by - s.height - 4, now - o.bang);
-    if (o.puff) puffs(o, Math.round(bx), by - s.height + 8, now);
+    g.drawImage(s, Math.round(bx - iw(s) / 2), by - ih(s) - (o.flat ? 4 : o.k === "npc" ? 1 : 0), iw(s), ih(s));
+    if (o.bang && now - o.bang < 900) bang(Math.round(bx), by - ih(s) - 4, now - o.bang);
+    if (o.puff) puffs(o, Math.round(bx), by - ih(s) + 6, now);
     if (o.k === "stand" && S.starter !== o.pick) { const it = A.obj["pick_" + o.pick]; g.drawImage(it, Math.round(bx - it.width / 2), by - 12 - it.height + Math.round(Math.sin(now / 300 + o.x) * 1.2)); }
   };
   map.flat.forEach(put);
   // everything standing up, back to front, with you in among it
   const row = map.tall.filter((o) => !o.gone && o.y >= y0 - 2 && o.y <= y1 + 3).sort((a, b) => a.y - b.y); let drawn = false;
-  const me = () => { const s = pose(A.who.you, P.dir, P.moving && P.t < .55 ? 1 + (P.steps % 2) : 0), x = Math.round(P.px - cx), y = Math.round(P.py - cy); g.drawImage(A.sh[12], x + 2, y + 12); g.drawImage(s, Math.round(x + 8 - s.width / 2), y + 16 - s.height); drawn = true; };
+  const me = () => { const s = pose(A.who.you, P.dir, P.moving && P.t < .55 ? 1 + (P.steps % 2) : 0), x = Math.round(P.px - cx), y = Math.round(P.py - cy); g.drawImage(A.sh[12], x + 2, y + 12); g.drawImage(s, Math.round(x + 8 - iw(s) / 2), y + 16 - ih(s), iw(s), ih(s)); drawn = true; };
   const py = P.py / 16;
   row.forEach((o) => { if (!drawn && o.y > py) me(); put(o); }); if (!drawn) me();
   // standing in long grass, it comes up over your feet
@@ -617,13 +644,14 @@ function drawBattle(now) {
   blob(70 + Math.sin(now / 1900) * 30, 40, 150, c1); blob(250 + Math.cos(now / 2300) * 30, 150, 160, c2); blob(170, 90 + Math.sin(now / 1500) * 20, 90, "#ffffff");
   g.fillStyle = "rgba(43,31,59,.14)"; g.beginPath(); g.ellipse(238 + sh, 86, 54, 11, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(84 + sh, 130, 60, 12, 0, 0, 7); g.fill();
   const fig = (m, x, y, mirror, bob) => {
-    const s = (mirror && A.monF[m.art]) || A.mon[m.art], w = s.width, h = s.height; g.globalAlpha = m.a;
+    const s = (mirror && A.monF[m.art]) || A.mon[m.art], w = iw(s) * (m.sc ?? 1), h = ih(s) * (m.sc ?? 1); g.globalAlpha = m.a;
     g.drawImage(s, Math.round(x - w / 2 + m.ox + sh), Math.round(y - h + m.oy + bob), w, h);
     if (m.fl > 0) { g.globalAlpha = m.fl * .6; g.fillStyle = "#b7f3c8"; g.beginPath(); g.ellipse(x + m.ox, y - h / 2, w * .5, h * .5, 0, 0, 7); g.fill(); }
     g.globalAlpha = 1;
   };
-  if (b.port && b.port.img) { const p = b.port.img; g.drawImage(p, Math.round(238 - p.width / 2 + b.port.ox), 102 - p.height); }
+  if (b.port && b.port.img) { const p = b.port.img; g.drawImage(p, Math.round(238 - iw(p) / 2 + b.port.ox), 102 - ih(p), iw(p), ih(p)); }
   fig(b.foe, 238, 92, false, Math.round(Math.sin(now / 420) * 2)); fig(b.me, 84, 136, true, Math.round(Math.sin(now / 480 + 1) * 2));
+  if (b.ball) drawBall(b.ball);
   // sparks, numbers, the white flash of a big hit, and the action command on top
   for (let i = b.parts.length - 1; i >= 0; i--) { const p = b.parts[i]; p.t += 1 / 60; p.x += p.vx / 60; p.y += p.vy / 60; p.vy += 260 / 60; if (p.t > .6) { b.parts.splice(i, 1); continue; } g.fillStyle = p.col; g.globalAlpha = 1 - p.t / .6; g.fillRect(Math.round(p.x), Math.round(p.y), 2, 2); g.globalAlpha = 1; }
   g.textAlign = "center";
@@ -633,7 +661,7 @@ function drawBattle(now) {
   drawQte(now);
 }
 function frame(now) {
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frame); g.setTransform(2, 0, 0, 2, 0, 0); g.imageSmoothingEnabled = false;
   const dt = clamp((now - t0) / 1000, 0, .05); t0 = now;
   if (busyCard) { if (took("a") || took("b")) busyCard(); }
   else if (folioOpen) { if (took("b") || took("f") || took("a")) closeFolio(); }
@@ -641,7 +669,7 @@ function frame(now) {
   else { ui.update(dt); if (mode === "world") walk(dt); }
   if (took("m")) $("bsnd").click();
   if (mode === "battle" && bt) drawBattle(now); else drawWorld(now);
-  if (talk && talk.img && mode !== "battle") { const p = talk.img, e = 1 - Math.pow(1 - talk.k, 3); g.drawImage(p, Math.round(VW - 14 - p.width + (1 - e) * 140), 126 - p.height); }
+  if (talk && talk.img && mode !== "battle") { const p = talk.img, e = 1 - Math.pow(1 - talk.k, 3); g.drawImage(p, Math.round(VW - 14 - iw(p) + (1 - e) * 140), 126 - ih(p), iw(p), ih(p)); }
   if (fade > 0) { g.fillStyle = `rgba(255,248,236,${fade})`; g.fillRect(0, 0, VW, VH); }
   if (wipe > 0) { g.fillStyle = "#2b1f3b"; for (let k = -6; k < 14; k++) { const w = 26 * wipe; g.beginPath(); g.moveTo(k * 26, 0); g.lineTo(k * 26 + w, 0); g.lineTo(k * 26 + w - 90, VH); g.lineTo(k * 26 - 90, VH); g.fill(); } }
   for (const k in tap) tap[k] = false;   // a press counts for the frame it lands in and no longer
