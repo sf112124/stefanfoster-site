@@ -415,3 +415,24 @@ body.viewing .corner{display:none}
 .tm .pf svg{width:10px;height:10px}
 .tile:hover .tm .pf{background:var(--acc);color:#fff;transform:scale(1.06)}
 .tile .play{display:none}
+
+/* ===== project pages, final pass: one centred column, work at its own shape, nothing floating ===== */
+.pj{max-width:1440px;margin:0 auto;padding:88px var(--gut) 0;text-align:center}
+.pj-meta{display:block;color:var(--mute);margin-bottom:14px}
+.pj-meta span{display:inline!important}
+.pj-t{margin:0 auto}
+.pj-lead{display:block;margin:20px auto 56px;max-width:36em}
+.pj-lead:empty{margin:0 0 40px}
+.pj-lead p{font-size:clamp(16px,1.25vw,19px);line-height:1.4;letter-spacing:-.01em;color:#2a2a28}
+.grp{display:block;margin:0 0 clamp(64px,10vh,110px)}
+.grp>.gh{position:static;display:block;margin:0 auto 22px;max-width:40em}
+.grp>.gh h2{font-family:"Anybody",var(--sans);font-stretch:140%;font-weight:650;text-transform:uppercase;font-size:clamp(15px,1.15vw,18px);letter-spacing:.01em}
+.grp>.gh p{font-size:14px;line-height:1.45;margin-top:8px;color:#5a5955}
+.gm.big{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+.gm.big .tile{flex:none;max-width:100%;text-align:left}
+.tile figcaption{margin-top:8px}
+.tm .veil{background:rgba(12,12,12,.22)}
+.tm .pf{background:#fff}
+.nxp{text-align:center;border-top:1px solid var(--line);padding:44px 0 64px;margin-top:0}
+.nxp .t{justify-content:center}
+@media (max-width:820px){ .pj{padding-top:80px} .gm.big .tile{width:100%!important} .pj-lead{margin-bottom:36px} }

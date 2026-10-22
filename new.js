@@ -213,7 +213,7 @@ function renderProject(i) {
     const solo = g.items.length === 1, even = !solo && p.layout === "gallery-2", cols = !solo && g.items.every((x) => x.w / x.h < .8);
     return `<section class="grp">
       ${g.sec ? `<div class="gh"><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p>${esc(g.sec.text)}</p>` : ""}</div>` : ""}
-      <div class="gm${p.layout ? " big" : solo ? " solo" : ""}${!p.layout && cols ? " cols" : ""}" style="--n:${Math.min(g.items.length, 4)}">${g.items.map((it) => tileHTML(it, n++)).join("")}</div></section>`;
+      <div class="gm big">${g.items.map((it) => tileHTML(it, n++)).join("")}</div></section>`;
   }).join("");
   view.innerHTML = `<article class="pj" id="pj">
     <div class="pj-meta mono"><span>${esc(p.client)}</span></div>
@@ -259,7 +259,7 @@ function justify() {
     const A = (t) => +t.style.getPropertyValue("--a"), hOf = (ts) => (W - gap * (ts.length - 1) - 1) / ts.reduce((a, t) => a + A(t), 0);
     const size = (t, h) => { t.style.width = `${(A(t) * h).toFixed(1)}px`; };
     if (innerWidth < 820) { tiles.forEach((t) => (t.style.width = "100%")); return; }
-    const maxH = innerHeight * .8;
+    const maxH = innerHeight * .78;
     for (let k = 0; k < tiles.length;) {
       const line = [tiles[k++]];
       while (k < tiles.length && hOf(line) > maxH && hOf([...line, tiles[k]]) >= maxH * .6) line.push(tiles[k++]);
