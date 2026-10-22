@@ -27,6 +27,7 @@ function draw(s, dir, f) {
     const lx = 8 - lw, rx = 8, la = f ? 4 : 5, ra = f ? 5 : 4;   // one leg lifts on each step
     R(lx, 17, lw, la, s.legs); R(rx, 17, lw, ra, s.legs); R(7, 17, 2, 3, legs2);
     if (s.baggy) { R(lx, 19, 1, 2, legs2); R(rx + lw - 1, 19, 1, 2, legs2); R(lx + 1, 18, 1, 1, legs2); R(rx + lw - 2, 18, 1, 1, legs2); }
+    if (s.cuff) { R(lx, 16 + la, lw, 1, legs2); R(rx, 16 + ra, lw, 1, legs2); }
     R(lx, 17 + la, lw, 2, s.shoes); R(rx, 17 + ra, lw, 2, s.shoes);
     R(lx, 18 + la, lw, 1, dark(s.shoes, .72)); R(rx, 18 + ra, lw, 1, dark(s.shoes, .72));
   }
@@ -41,6 +42,7 @@ function draw(s, dir, f) {
     if (s.hem) R(4, 16, 8, 2, s.hem); else R(4, 16, 8, 1, s.top);
     R(2, 11 + sw, 1, 5, s.top); R(13, 11 + (1 - sw), 1, 5, s.top); R(2, 16 + sw, 1, 1, s.skin); R(13, 16 + 1 - sw, 1, 1, s.skin);
     if (dir === "down") {
+      if (s.hood) { R(4, 10, 8, 1, top2); R(6, 12, 1, 2, "#e9e4f0"); R(9, 12, 1, 2, "#e9e4f0"); R(5, 14, 6, 1, top2); }
       if (s.tie) { R(7, 12, 2, 4, s.tie); R(6, 11, 1, 2, "#fff"); R(9, 11, 1, 2, "#fff"); }
       if (s.lanyard) { R(5, 11, 1, 3, s.lanyard); R(10, 11, 1, 3, s.lanyard); R(6, 14, 4, 1, s.lanyard); R(7, 15, 2, 2, "#fff"); }
       if (s.item === "clip") { R(11, 13, 3, 4, "#d6a877"); R(11, 13, 3, 1, "#96683f"); }
@@ -87,8 +89,8 @@ export function person(s) {
   const o = {}; ["down", "up", "left"].forEach((d) => (o[d] = [outline(draw(s, d, 0)), outline(draw(s, d, 1))])); o.right = o.left.map(flip); return o;
 }
 export const LOOKS = {
-  // Stefan: beige cap, black sweater with a longer white tee under it, black baggy cargos, beige sneakers
-  stefan: { skin: "#e2b08e", hair: "#3a2a24", cut: "short", hat: { col: "#d9c3a0", kind: "cap" }, top: "#1f1b24", hem: "#f6f3ee", legs: "#26222b", baggy: true, shoes: "#e3d2b4", stubble: true },
+  // Stefan: stone cap, washed charcoal hoodie with a white tee hem under it, matching cuffed joggers, grey runners
+  stefan: { skin: "#f0c2a2", hair: "#8a6a4e", cut: "short", hat: { col: "#e6dfd0", kind: "cap" }, top: "#3a383f", hood: true, hem: "#f6f3ee", legs: "#3a383f", baggy: true, cuff: true, shoes: "#cfcac2" },
   boy: { skin: "#f2c3a5", hair: "#4b3a8a", cut: "short", top: "#86d2ec", legs: "#3a3350", shoes: "#ffffff" },
   girl: { skin: "#f2c3a5", hair: "#7a3f5c", cut: "long", top: "#ff9dbb", legs: "#3a3350", shoes: "#ffffff" },
   ad: { skin: "#eab99a", hair: "#3a2a24", cut: "slick", top: "#2f3d6b", tie: "#f0546a", legs: "#2f3d6b", shoes: "#2b1f3b", item: "clip" },

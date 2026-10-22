@@ -75,8 +75,20 @@ const au = {
     world: { bpm: 96, lead: [76, 0, 79, 0, 81, 79, 76, 0, 74, 0, 76, 79, 74, 0, 72, 0, 76, 0, 79, 0, 84, 81, 79, 0, 81, 0, 79, 76, 74, 0, 72, 0], bass: [48, 0, 55, 0, 45, 0, 52, 0, 41, 0, 48, 0, 43, 0, 50, 0] },
     battle: { bpm: 152, lead: [69, 72, 76, 81, 76, 72, 69, 72, 67, 71, 74, 79, 74, 71, 67, 71, 65, 69, 72, 77, 72, 69, 65, 69, 64, 68, 71, 76, 80, 76, 71, 68], bass: [45, 45, 57, 45, 43, 43, 55, 43, 41, 41, 53, 41, 40, 40, 52, 40] },
   },
-  music(name) { if (this.tune === name) return; this.tune = name; this.step = 0; if (this.ctx) this.next = this.ctx.currentTime + .1; },
-  pump() {
+  // the soundtrack: three proper tracks, one for outside, one for the studio, one for a fight
+  tracks: {}, vol: .42,
+  fadeTo(a, v, ms, done) { clearInterval(a._f); const from = a.volume, s = performance.now(); a._f = setInterval(() => { const k = Math.min(1, (performance.now() - s) / ms); a.volume = from + (v - from) * k; if (k >= 1) { clearInterval(a._f); done && done(); } }, 30); },
+  music(name) {
+    if (name === "world" && map && map.id === "house") name = "studio";
+    if (this.tune === name) return; const prev = this.tracks[this.tune]; this.tune = name;
+    if (prev) this.fadeTo(prev, 0, 400, () => prev.pause());
+    if (!name || !this.on) return;
+    const a = this.tracks[name] || (this.tracks[name] = Object.assign(new Audio(`game/music/${name}.mp3`), { loop: true, volume: 0, preload: "auto" }));
+    if (name === "battle") a.currentTime = 0;
+    a.play().catch(() => {}); this.fadeTo(a, this.vol, 600);
+  },
+  toggle() { const a = this.tracks[this.tune]; if (!a) { if (this.on && this.tune) { const t = this.tune; this.tune = null; this.music(t); } return; } if (this.on) { a.play().catch(() => {}); this.fadeTo(a, this.vol, 300); } else this.fadeTo(a, 0, 200, () => a.pause()); },
+  pump() { return;
     if (!this.on || !this.ctx || this.ctx.state !== "running" || !this.tune) return;
     const T = this.TUNES[this.tune], d = 60 / T.bpm / 2, hz = (m) => (m ? 440 * Math.pow(2, (m - 69) / 12) : 0);
     if (this.next < this.ctx.currentTime) this.next = this.ctx.currentTime + .05;
@@ -181,7 +193,7 @@ const P = { x: 3, y: 4, fx: 3, fy: 4, px: 48, py: 64, dir: "down", moving: false
 const objAt = (x, y) => map.objs.find((o) => !o.gone && y === o.y && x >= o.x && x < o.x + o.w && (o.solid || o.act));
 const blocked = (x, y) => x < 0 || y < 0 || x >= map.W || y >= map.H || map.solid[map.I(x, y)] || map.objs.some((o) => o.k === "npc" && !o.gone && y === o.y && x >= o.x && x < o.x + o.w);
 function place(m, x, y, dir) { map = m; P.x = P.fx = x; P.y = P.fy = y; P.px = x * 16; P.py = y * 16; P.moving = false; if (dir) P.dir = dir; P.grass = 0; }
-async function warp(m, x, y, dir) { busy = true; au.sfx("door"); await fadeTo(1, 220); place(m, x, y, dir); zoneNow = ""; await fadeTo(0, 220); busy = false; }
+async function warp(m, x, y, dir) { busy = true; au.sfx("door"); await fadeTo(1, 220); place(m, x, y, dir); au.music("world"); zoneNow = ""; await fadeTo(0, 220); busy = false; }
 function fadeTo(v, ms) { return new Promise((res) => { const a = fade, s = performance.now(); const step = (n) => { const k = clamp((n - s) / ms, 0, 1); fade = a + (v - a) * k; if (k < 1) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); }); }
 function night() { nightOn = !nightOn; au.sfx("secret"); toast(nightOn ? "NIGHT MODE" : "DAY MODE"); }
 
@@ -335,9 +347,6 @@ async function fight(def, slug, trId) {
   }
   let result = null;
   const tell = (t) => ui.line(t, { auto: 1.15 });
-  // action commands: a bar sweeps when you attack (press A on the gold for a perfect hit), and a ! flashes when they attack (press A on it to block)
-  const qteAttack = () => new Promise((res) => { took("a"); bt.qte = { kind: "atk", t: 0, dur: .95, zone: [.72, .86], res, done: false }; });
-  const qteBlock = () => new Promise((res) => { took("a"); bt.qte = { kind: "blk", t: 0, at: rnd(.45, 1.05), win: .26, res, done: false }; });
   const pop = (txt, x, y, col, big) => bt.pops.push({ txt, x, y, col, big, t: 0 });
   const burst = (x, y, col, n = 14) => { for (let k = 0; k < n; k++) { const a = rnd(0, 6.28), sp = rnd(40, 140); bt.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30, t: 0, col }); } };
   const hurt = async (who, n, e) => { au.sfx(e > 1 ? "super" : "hit"); bt.shake = e > 1 ? 7 : 4; for (let k = 0; k < 4; k++) { who.a = .15; await sleep(55); who.a = 1; await sleep(55); } const from = who.hp, to = Math.max(0, who.hp - n); await tween(380, (k) => { who.hp = from + (to - from) * k; bars(); }); who.hp = to; bars(); };
@@ -346,13 +355,11 @@ async function fight(def, slug, trId) {
     if (mv.kind === "heal") { const to = Math.min(att.max, att.hp + Math.round(att.max * .45)), from = att.hp; au.sfx("heal"); att.fl = 1; await tween(450, (k) => { att.hp = from + (to - from) * k; att.fl = 1 - k; bars(); }); await tell(`${att.name} got some health back.`); return; }
     if (mv.kind === "buff") { att.am = Math.min(1.75, att.am * 1.3); au.sfx("buff"); await tween(300, (k) => (att.oy = -Math.sin(k * Math.PI) * 8)); await tell(`${att.name}'s attack rose.`); return; }
     if (mv.acc && Math.random() > mv.acc) { au.sfx("miss"); await tell("It missed."); return; }
-    const q = isMe ? await qteAttack() : await qteBlock();
-    const pw = Array.isArray(mv.p) ? rnd(mv.p[0], mv.p[1]) : mv.p, e = isMe ? eff(mv.t, dfn.type) : eff(att.type, dfn.type), crit = isMe && q === "perfect";
-    const qm = isMe ? (q === "perfect" ? 1.4 : q === "good" ? 1.1 : .9) : (q === "block" ? .4 : 1);
+    const crit = Math.random() < .12, pw = Array.isArray(mv.p) ? rnd(mv.p[0], mv.p[1]) : mv.p, e = isMe ? eff(mv.t, dfn.type) : eff(att.type, dfn.type);
+    const qm = crit ? 1.5 : 1;
     const n = Math.max(1, Math.round(pw * ((att.atk * att.am) / (dfn.def * dfn.dm)) * (.55 + att.lvl * .09) * e * qm * rnd(.9, 1.06)));
     const tx = isMe ? 238 : 84, ty = isMe ? 56 : 100;
-    if (isMe && q !== "miss") pop(q === "perfect" ? "PERFECT!" : "GOOD", tx, ty - 34, q === "perfect" ? "#ffd76a" : "#fff8ec", q === "perfect");
-    if (!isMe && q === "block") pop("BLOCKED!", tx, ty - 34, "#a9dcbc", true);
+    if (crit) pop("CRITICAL!", tx, ty - 34, "#ffd76a", true);
     const dir = isMe ? 1 : -1; await tween(150, (k) => { att.ox = dir * 26 * Math.sin(k * Math.PI); att.oy = -dir * 10 * Math.sin(k * Math.PI); });
     bt.flash = crit ? 1 : .6; burst(tx, ty, TCOL[isMe ? mv.t : att.type] || "#fff8ec", crit ? 26 : 14); pop(String(n), tx + rnd(-10, 10), ty - 10, "#fff8ec", false);
     await hurt(dfn, n, e);
@@ -479,7 +486,7 @@ function endCard() {
 }
 function hud() { $("bfolio").textContent = `FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8 · CLIENTS ${S.beat.length}/6`; $("hud").hidden = mode !== "world"; $("bfolio").hidden = !S.starter; }
 $("bfolio").addEventListener("click", () => { if (folioOpen) closeFolio(); else if (mode === "world") folio(); });
-$("bsnd").addEventListener("click", () => { au.on = !au.on; $("bsnd").textContent = au.on ? "SOUND ON" : "SOUND OFF"; if (au.on) au.unlock(); });
+$("bsnd").addEventListener("click", () => { au.on = !au.on; $("bsnd").textContent = au.on ? "SOUND ON" : "SOUND OFF"; if (au.on) au.unlock(); au.toggle(); });
 
 // ---------- drawing ----------
 function drawWorld(now) {
@@ -605,8 +612,9 @@ addEventListener("resize", fit); fit();
 async function start(fresh) {
   au.unlock(); au.sfx("ok");
   if (fresh) { Object.assign(S, { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [], beat: [], look: "boy" }); save(); }
-  await fadeTo(1, 250); $("title").hidden = true; mode = "world"; hud(); au.music("world");
+  await fadeTo(1, 250); $("title").hidden = true; mode = "world"; hud();
   if (S.starter) place(maps.world, 35, 37, "down"); else place(maps.house, 3, 4, "right");
+  au.music("world");
   await fadeTo(0, 300);
   if (!S.flags.look) await script(async () => {
     const pic = (k) => `<img class="pk" src="${A.who[k].down[0].toDataURL()}" alt="">`;
