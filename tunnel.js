@@ -14,7 +14,7 @@ float hd(float d){ float x = d * d / (ls * ls); return 1. - la * exp(-x) * (1. -
 // screen y (-1..1) to a position in the stack, and how many screen pixels one texel takes there
 float rowAt(float y){ return mix(off - C * sign(y) * (1. - exp(-B * abs(y))), N * .5 - C1 * (lm + hf(y - lm)), flt); }
 float sa(float y){ return sqrt(y * y + .016) - .1265; }   // a soft |y|: flt through the middle line so it stays straight
-float scaleAt(float y){ return mix(S0 * exp(B * sa(y)), S1 / pow(hd(y - lm), .55), flt); }
+float scaleAt(float y){ return mix(S0 * exp(B * sa(y)), S1 / pow(hd(y - lm), .3), flt); }
 vec4 sampleAt(vec2 q){
   float r = rowAt(q.y), s = scaleAt(q.y), e = (1. - exp(-B * sa(q.y))) * (1. - flt);
   float stretch = 1. + .5 * e;                       // the far lines widen more than they grow
@@ -152,7 +152,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     const yOf = (r) => { let lo = -1.6, hi = 1.6; for (let k = 0; k < 30; k++) { const mid = (lo + hi) / 2, rr = N * .5 - C1 * (lensY + hf(mid - lensY, lensA, s2)); if (rr > r) lo = mid; else hi = mid; } return (lo + hi) / 2; };
     lst.querySelectorAll("a").forEach((a, i) => {
       const y0 = yOf(i), y1 = yOf(i + 1), top = (1 - y0) / 2 * Hc, bot = (1 - y1) / 2 * Hc, yc = (y0 + y1) / 2;
-      const half = (T.w ? T.w[i] : T.widest) * S1 / Math.pow(hd(yc - lensY, lensA, s2), .55) / dpr / 2;
+      const half = (T.w ? T.w[i] : T.widest) * S1 / Math.pow(hd(yc - lensY, lensA, s2), .3) / dpr / 2;
       a.style.top = `${top.toFixed(1)}px`; a.style.height = `${(bot - top).toFixed(1)}px`; a.style.setProperty("--half", `${half.toFixed(1)}px`);
     });
   };
@@ -179,8 +179,8 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     if (opening && flatK < .12 && !going) { go(LIST[opening.i]); opening = null; }
     const S1 = Math.min((h * .74) / (N * rowH), (w * (mob ? .86 : .56)) / T.widest), C1 = (h * .5) / (rowH * S1);
     // the lens drifts after the pointer and relaxes away when it leaves
-    const LA = mob ? .32 : .5, LS = mob ? .2 : .24;
-    if (mouseY != null) { lensY += (Math.max(-.95, Math.min(.95, mouseY)) - lensY) * (1 - Math.pow(.0005, rdt)); lensA += (LA - lensA) * (1 - Math.pow(.004, rdt)); }
+    const LA = mob ? .14 : .22, LS = mob ? .26 : .3;
+    if (mouseY != null) { lensY += (Math.max(-.95, Math.min(.95, mouseY)) - lensY) * (1 - Math.pow(.02, rdt)); lensA += (LA - lensA) * (1 - Math.pow(.004, rdt)); }
     else lensA += (0 - lensA) * (1 - Math.pow(.01, rdt));
     gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1f(U.lm, lensY); gl.uniform1f(U.la, lensA); gl.uniform1f(U.ls, LS);
     if (flatK > .5) placeList(S1, C1, LS, h);
