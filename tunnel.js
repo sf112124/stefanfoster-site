@@ -136,7 +136,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
 
   let outK = 0, going = null, wasHidden = false;
   // fly into the chosen name, then hand over to the page
-  const go = (p) => { if (going) return; going = { p, t: performance.now() }; lab.classList.add("gone"); };
+  const go = (p) => { if (going) return; onOpen(p); };   // straight in: no waiting on an animation
   const frame = (now) => {
     requestAnimationFrame(frame);
     if (mount.closest("[hidden]")) { wasHidden = true; return; }

@@ -496,8 +496,8 @@ body[data-tunnel] #idx:active{cursor:grabbing}
 body[data-tunnel] .top{z-index:70}
 .tun-lab.gone{opacity:0!important;transition:opacity .2s}
 /* pages arrive out of the paper the tunnel washes to */
-body[data-tunnel] #view:not([hidden]){animation:pageIn .32s var(--ease) both}
-@keyframes pageIn{from{opacity:0;transform:translateY(12px) scale(.992);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+body[data-tunnel] #view:not([hidden]){animation:pageIn .22s ease-out both}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* the quick index rail */
 .tun-rail{position:absolute;right:var(--gut);top:50%;translate:0 -50%;display:flex;flex-direction:column;gap:2px;z-index:3}
