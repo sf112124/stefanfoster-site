@@ -7,14 +7,25 @@ in vec2 p; out vec2 v; void main(){ v = p; gl_Position = vec4(p, 0., 1.); }`;
 const FS = `#version 300 es
 precision highp float;
 in vec2 v; out vec4 o;
-uniform sampler2D T; uniform vec2 R; uniform float off, N, rowH, texW, texH, S0, B, C, hov, fly, flt, S1, C1, hrow, lm, la, ls;
-// the list's lens: rows near the pointer swell, the ones just past it tuck in, the far ones stay put
-float hf(float d){ return d * (1. - la * exp(-d * d / (ls * ls))); }
-float hd(float d){ float x = d * d / (ls * ls); return 1. - la * exp(-x) * (1. - 2. * x); }
+uniform sampler2D T; uniform vec2 R; uniform float off, N, rowH, texW, texH, S0, B, C, hov, fly, flt, S1, C1, hrow;
 // screen y (-1..1) to a position in the stack, and how many screen pixels one texel takes there
-float rowAt(float y){ return mix(off - C * sign(y) * (1. - exp(-B * abs(y))), N * .5 - C1 * (lm + hf(y - .05 - lm)), flt); }
+// in the list, only the line under the pointer grows (G per line), swelling over its own spot without nudging the others
+uniform float G[16];
+vec2 flatAt(float y){
+  float rb = N * .5 - C1 * (y - .05), rr = rb, g = 0.;
+  for (int k = -1; k <= 1; k++) {
+    float h = floor(rb) + float(k);
+    if (h < 0. || h >= N) continue;
+    float gh = G[int(h)];
+    if (gh < .001) continue;
+    float rm = h + .5 + (rb - h - .5) / (1. + gh);
+    if (floor(rm) == h) { rr = rm; g = gh; }
+  }
+  return vec2(rr, S1 * (1. + g));
+}
+float rowAt(float y){ return mix(off - C * sign(y) * (1. - exp(-B * abs(y))), flatAt(y).x, flt); }
 float sa(float y){ return sqrt(y * y + .016) - .1265; }   // a soft |y|: flt through the middle line so it stays straight
-float scaleAt(float y){ return mix(S0 * exp(B * sa(y)), S1 / pow(hd(y - .05 - lm), .3), flt); }
+float scaleAt(float y){ return mix(S0 * exp(B * sa(y)), flatAt(y).y, flt); }
 vec4 sampleAt(vec2 q){
   float r = rowAt(q.y), s = scaleAt(q.y), e = (1. - exp(-B * sa(q.y))) * (1. - flt);
   float stretch = 1. + .5 * e;                       // the far lines widen more than they grow
@@ -69,7 +80,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "lm", "la", "ls"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
+  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "G"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
   draw(); document.fonts.ready.then(draw);
 
   // the label beside the line in the middle: who it was for, what it is, and a little moving picture in brackets
@@ -91,7 +102,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const sw = document.createElement("button"); sw.type = "button"; sw.className = "tun-sw mono"; sw.innerHTML = `<i></i><span>LIST</span>`; mount.appendChild(sw);
   // the list's own hit areas, numbers and clients, laid over the flat names
   const lst = document.createElement("div"); lst.className = "tun-list"; lst.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-i="${i}"><span class="n mono">${String(i + 1).padStart(2, "0")}</span><span class="c">${esc(p.client)}</span></a>`).join(""); mount.appendChild(lst);
-  let flatK = 1, flatT = 1, hrow = -1, opening = null, lensY = 0, lensA = 0, mouseY = null;
+  let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null; const gs = new Float32Array(16);
   mount.classList.add("is-list"); sw.querySelector("span").textContent = "TUNNEL";
   mount.addEventListener("pointermove", (e) => { const a = e.target.closest && e.target.closest(".tun-list a"); if (!a || e.target !== a) { mouseY = null; return; } const r = mount.getBoundingClientRect(); mouseY = 1 - 2 * (e.clientY - r.top) / r.height - .05; });
   mount.addEventListener("pointerleave", () => (mouseY = null));
@@ -145,14 +156,12 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
 
   let outK = 0, going = null, wasHidden = false;
   // fly into the chosen name, then hand over to the page
-  // where each name lands on screen in the list, solved backwards through the lens
-  const hf = (d, a, s2) => d * (1 - a * Math.exp(-d * d / s2)), hd = (d, a, s2) => { const xx = d * d / s2; return 1 - a * Math.exp(-xx) * (1 - 2 * xx); };
-  const placeList = (S1, C1, LS, h) => {
-    const s2 = LS * LS, dpr = Math.min(1.5, devicePixelRatio || 1), Hc = H();
-    const yOf = (r) => { let lo = -1.6, hi = 1.6; for (let k = 0; k < 30; k++) { const mid = (lo + hi) / 2, rr = N * .5 - C1 * (lensY + hf(mid - lensY, lensA, s2)); if (rr > r) lo = mid; else hi = mid; } return (lo + hi) / 2 + .05; };
+  // where each name lands on screen in the list (straight stack; the hovered one just grows in place)
+  const placeList = (S1, C1) => {
+    const dpr = Math.min(1.5, devicePixelRatio || 1), Hc = H(), yOf = (r) => .05 + (N * .5 - r) / C1;
     lst.querySelectorAll("a").forEach((a, i) => {
-      const y0 = yOf(i), y1 = yOf(i + 1), top = (1 - y0) / 2 * Hc, bot = (1 - y1) / 2 * Hc, yc = (y0 + y1) / 2;
-      const half = (T.w ? T.w[i] : T.widest) * S1 / Math.pow(hd(yc - .05 - lensY, lensA, s2), .3) / dpr / 2;
+      const top = (1 - yOf(i)) / 2 * Hc, bot = (1 - yOf(i + 1)) / 2 * Hc;
+      const half = (T.w ? T.w[i] : T.widest) * S1 * (1 + gs[i]) / dpr / 2;
       a.style.top = `${top.toFixed(1)}px`; a.style.height = `${(bot - top).toFixed(1)}px`; a.style.setProperty("--half", `${half.toFixed(1)}px`);
     });
   };
@@ -179,11 +188,10 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     if (opening && flatK < .12 && !going) { go(LIST[opening.i]); opening = null; }
     const S1 = Math.min((h * .58) / (N * rowH), (w * (mob ? .8 : .4)) / T.widest), C1 = (h * .5) / (rowH * S1);
     // the lens drifts after the pointer and relaxes away when it leaves
-    const LA = mob ? .1 : .16, LS = mob ? .2 : .22;
-    if (mouseY != null) { lensY += (Math.max(-.95, Math.min(.95, mouseY)) - lensY) * (1 - Math.pow(.02, rdt)); lensA += (LA - lensA) * (1 - Math.pow(.004, rdt)); }
-    else lensA += (0 - lensA) * (1 - Math.pow(.01, rdt));
-    gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1f(U.lm, lensY); gl.uniform1f(U.la, lensA); gl.uniform1f(U.ls, LS);
-    if (flatK > .5) placeList(S1, C1, LS, h);
+    const GA = mob ? .08 : .12;
+    for (let i = 0; i < N; i++) gs[i] += ((i === hrow ? GA : 0) - gs[i]) * (1 - Math.pow(.0005, rdt));
+    gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1fv(U.G, gs);
+    if (flatK > .5) placeList(S1, C1);
     lst.style.setProperty("--row", `${(rowH * S1) / Math.min(1.5, devicePixelRatio || 1)}px`); lst.style.setProperty("--wide", `${(T.widest * S1) / Math.min(1.5, devicePixelRatio || 1)}px`);
     gl.uniform2f(U.R, w, h); gl.uniform1f(U.off, off); gl.uniform1f(U.N, N); gl.uniform1f(U.rowH, rowH); gl.uniform1f(U.texW, texW); gl.uniform1f(U.texH, texH);
     gl.uniform1f(U.S0, S0); gl.uniform1f(U.B, B); gl.uniform1f(U.C, C); gl.uniform1f(U.hov, hover); gl.uniform1f(U.fly, outK);
