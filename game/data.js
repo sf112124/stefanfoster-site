@@ -156,9 +156,8 @@ export const SAY = {
     "Nobody upstairs gets past the person on their floor. It's the closest thing we have to a process.",
     "The sofas are purple because of a brand workshop in 2019. We don't talk about the workshop.",
   ],
-  dock: ["A rack of lime-green hire e-bikes. The screen says: UNLOCK FOR 1 FILM REEL."],
-  dockNone: ["You need a film reel to unlock one. There are eight hidden round the valley."],
-  dockBack: ["You park the bike back in the rack."],
+  lime: ["A lime-green hire e-bike, abandoned on the pavement like they always are.", "The screen says: UNLOCK FOR 1 FILM REEL."],
+  limeNone: ["You need a film reel to unlock it. There are eight hidden round the valley."],
   floorLocked: (who) => [`${who} isn't letting anyone upstairs until you've had a quick chat.`],
   malLocked: ["The doors are locked. A note on the glass says:", "\"By appointment only. Come back once you've found four of Stefan's projects.\""],
   malcoffee: ["Free coffee from the office machine. It's fine.", "Your whole folio is back to full health."],
@@ -252,8 +251,8 @@ export function buildWorld() {
   road(41, 36, 46, 37); road(46, 36, 46, 41); clear(41, 29, 53, 41); put("sign", 44, 37, { act: "sign:malout" });
   // Cappadocia: three balloons on the open grass east of the north road
   clear(37, 13, 46, 19); put("balloon0", 39, 16, { act: "balloons" }); put("balloon1", 42, 15, { act: "balloons" }); put("balloon2", 45, 16, { act: "balloons" }); put("sign", 41, 18, { act: "sign:cappa" }); rect(37, 13, 46, 14, (x, y) => (tg[I(x, y)] = 9));
-  // hire bikes: tap one with a film reel and ride
-  put("dock", 31, 38, { w: 2, act: "dock" }); put("dock", 47, 39, { w: 2, act: "dock" });
+  // hire bikes, dumped wherever the last rider left them, like London
+  [[31, 37], [14, 29], [24, 26], [44, 29], [57, 26], [37, 15], [34, 40], [23, 44], [48, 41], [30, 10], [54, 13], [65, 10], [41, 32]].forEach(([x, y]) => put("lime", x, y, { act: "lime" }));
   // a bench by the paddock road, with something left on it
   clear(51, 14, 54, 16); put("bench", 52, 15, { w: 2, act: "grow" });
   // round the corner: the smoking area

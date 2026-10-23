@@ -38,7 +38,7 @@ await Promise.all(["boy", "girl"].map((k) => new Promise((res) => { const im = n
   const f = [...Array(6)].map((_, i) => cut(i)); A.bike[k] = { down: f.slice(0, 2), left: f.slice(2, 4), up: f.slice(4, 6) }; A.bike[k].right = A.bike[k].left.map((c) => A.flip(c)); res(); };
   im.onerror = res; im.src = `game/art/b_${k}.png`; })));
 // map objects drawn in the same handheld style
-await Promise.all([["balloon0", "g_balloon2"], ["balloon1", "g_balloon0"], ["balloon2", "g_balloon1"], ["dock", "g_dock"]].map(([k, f]) => new Promise((res) => { const im = new Image(); im.onload = () => { A.obj[k] = im; res(); }; im.onerror = res; im.src = `game/art/${f}.png`; })));
+await Promise.all([["balloon0", "g_balloon2"], ["balloon1", "g_balloon0"], ["balloon2", "g_balloon1"], ["lime", "g_lime"]].map(([k, f]) => new Promise((res) => { const im = new Image(); im.onload = () => { A.obj[k] = im; res(); }; im.onerror = res; im.src = `game/art/${f}.png`; })));
 A.who.you = A.who.boy;
 await Promise.all(ART.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => { im._s = 2; if (k.startsWith("t_")) A.port[k.slice(2)] = im; else { A.mon[k] = im; const f = A.flip(im); f._s = 2; A.monF[k] = f; } res(); }; im.onerror = res; im.src = `game/art/${k}.png`; })));
 // your own back, for the start of a fight
@@ -193,7 +193,7 @@ const P = { x: 3, y: 4, fx: 3, fy: 4, px: 48, py: 64, dir: "down", moving: false
 const objAt = (x, y) => map.objs.find((o) => !o.gone && y === o.y && x >= o.x && x < o.x + o.w && (o.solid || o.act));
 const blocked = (x, y) => x < 0 || y < 0 || x >= map.W || y >= map.H || map.solid[map.I(x, y)] || map.objs.some((o) => o.k === "npc" && !o.gone && y === o.y && x >= o.x && x < o.x + o.w);
 function place(m, x, y, dir) { map = m; P.x = P.fx = x; P.y = P.fy = y; P.px = x * 16; P.py = y * 16; P.moving = false; if (dir) P.dir = dir; P.grass = 0; }
-async function warp(m, x, y, dir) { busy = true; if (S.bike && m.id !== "world") { bike(false); toast("YOU PARK THE BIKE OUTSIDE.", 2500); } au.sfx("door"); await fadeTo(1, 220); place(m, x, y, dir); au.music("world"); zoneNow = ""; await fadeTo(0, 220); busy = false; }
+async function warp(m, x, y, dir) { busy = true; if (S.bike && m.id !== "world") { dropBike(map, P.fx, P.fy); bike(false); } au.sfx("door"); await fadeTo(1, 220); place(m, x, y, dir); au.music("world"); zoneNow = ""; await fadeTo(0, 220); busy = false; }
 function fadeTo(v, ms) { return new Promise((res) => { const a = fade, s = performance.now(); const step = (n) => { const k = clamp((n - s) / ms, 0, 1); fade = a + (v - a) * k; if (k < 1) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); }); }
 function night() { nightOn = !nightOn; au.sfx("secret"); toast(nightOn ? "NIGHT MODE" : "DAY MODE"); }
 
@@ -223,7 +223,7 @@ function walk(dt) {
   }
   if (P.moving || busy) return;
   if (took("f")) { folio(); return; }
-  if (took("a")) { const [dx, dy] = DIRS[P.dir], o = objAt(P.x + dx, P.y + dy); if (o && o.act) { run(o.act, o); return; } }
+  if (took("a")) { const [dx, dy] = DIRS[P.dir], o = objAt(P.x + dx, P.y + dy); if (o && o.act) { run(o.act, o); return; } if (S.bike && map.id === "world") { script(hopOff); return; } }
   for (const d of ["up", "down", "left", "right"]) if (keys[d]) {
     const [dx, dy] = DIRS[d]; P.dir = d;
     if (blocked(P.x + dx, P.y + dy)) { if (tap[d]) au.sfx("bump"); tap[d] = false; return; }
@@ -271,14 +271,13 @@ async function run(act, o) {
     else if (a === "stefan") await stefan();
     else if (a === "coffee") { await ui.say(SAY.coffee[0]); healAll(); au.sfx("heal"); if (S.starter) await ui.say(SAY.coffee[1]); save(); }
     else if (a === "trainer") await chat(o);
-    else if (a === "dock") {
-      if (S.bike) { await ui.say(SAY.dockBack); bike(false); save(); return; }
-      if (!A.bike[S.look]) return;
-      await ui.say(SAY.dock, { keep: true });
+    else if (a === "lime") {
+      if (S.bike) return;
+      await ui.say(SAY.lime, { keep: true });
       const free = (S.reels || []).length - (S.spent || 0);
-      if (free < 1) { ui.hide(); await ui.say(SAY.dockNone); return; }
-      const c = await ui.choose([`Unlock (${free} reel${free > 1 ? "s" : ""} left)`, "Walk"], { cls: "yn" }); ui.hide();
-      if (c === 0) { S.spent = (S.spent || 0) + 1; bike(true); au.sfx("level"); save(); toast("RIDING. TALK TO A RACK TO PARK IT.", 3500); }
+      if (free < 1) { ui.hide(); await ui.say(SAY.limeNone); return; }
+      const c = await ui.choose([`Unlock (${free} reel${free > 1 ? "s" : ""} left)`, "Leave it"], { cls: "yn" }); ui.hide();
+      if (c === 0) { S.spent = (S.spent || 0) + 1; o.gone = true; map.solid[map.I(o.x, o.y)] = 0; bike(true); au.sfx("level"); save(); toast(touch ? "RIDING. PRESS A ON OPEN GROUND TO HOP OFF." : "RIDING. PRESS ENTER ON OPEN GROUND TO HOP OFF.", 3500); }
     }
     else if (a === "staff") { o.dir = OPP[P.dir]; o.wt = 3; await ui.say([SAY.staff[+b]]); }
     else if (a === "smoke") { o.dir = OPP[P.dir]; await ui.say(SAY.smoke[+b]); }
@@ -372,6 +371,17 @@ async function duel(o) {
 
 // ---------- the hire bike ----------
 function bike(on) { S.bike = !!on && !!A.bike[S.look]; }
+// drop the bike on a tile: it becomes a parked lime bike anyone can pick up again
+function dropBike(m, x, y) {
+  if (!m || m.id !== "world" || x < 0 || y < 0 || x >= m.W || y >= m.H || m.solid[m.I(x, y)] || m.base[m.I(x, y)] === TT.water || m.objs.some((o) => !o.gone && o.x === x && o.y === y)) return false;
+  const o = { k: "lime", x, y, solid: 1, w: 1, act: "lime" }; m.objs.push(o); m.tall.push(o); m.solid[m.I(x, y)] = 1; return true;
+}
+async function hopOff() {
+  await ui.say(["Hop off and leave the bike here?"], { keep: true }); const c = await ui.choose(["Leave it", "Keep riding"], { cls: "yn" }); ui.hide();
+  if (c !== 0) return;
+  const [dx, dy] = DIRS[P.dir]; if (!dropBike(map, P.x + dx, P.y + dy)) dropBike(map, P.x - dx, P.y - dy);
+  bike(false); au.sfx("bump"); save();
+}
 
 // ---------- a fight ----------
 const TCOL = { AI: "#57c9b5", IMAGE: "#6ea4f2", FILM: "#b79cff", NONE: "#ff2d4a" };
@@ -509,7 +519,7 @@ async function fight(def, slug, trId) {
   } else await ui.line(SAY.ran[0]);
   ui.hide(); await fadeTo(1, 300);
   bt = null; mode = "world"; hud(); $("sfoe").hidden = $("sme").hidden = true;
-  if (result === "lose") { healAll(); save(); bike(false); place(maps.house, 3, 4, "down"); }
+  if (result === "lose") { healAll(); if (S.bike) dropBike(maps.world, P.x, P.y); bike(false); save(); place(maps.house, 3, 4, "down"); }
   save();
   au.music("world"); await fadeTo(0, 300);
   if (result === "lose") await ui.say(SAY.lost);
