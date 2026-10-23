@@ -66,7 +66,7 @@ const LIST = [...PROJECTS].sort((x, y) => (ORDER.indexOf(x.slug) + 1 || 99) - (O
 const TUN = document.body.dataset.tunnel != null;
 const FLOW = !TUN && document.body.dataset.flow != null;
 // the tunnel: the names pulled through a lens, drawn on the GPU (falls back to the plain list without WebGL2)
-if (TUN && !tunnel({ LIST: [...PROJECTS].sort((x, y) => ["ai-commissions", "la-croisiere", "3d-explorations", "les-benjamins", "ai-experiments", "summer-of-sport", "relax", "coca-cola", "gumtree"].indexOf(x.slug) - ["ai-commissions", "la-croisiere", "3d-explorations", "les-benjamins", "ai-experiments", "summer-of-sport", "relax", "coca-cola", "gumtree"].indexOf(y.slug)), mount: idx, media, esc, touch, reduce, onOpen: (p) => { if (p.page) location.href = p.page; else location.hash = p.slug; } })) document.body.removeAttribute("data-tunnel");
+if (TUN && !tunnel({ LIST: [...PROJECTS].sort((x, y) => ["ai-commissions", "la-croisiere", "3d-explorations", "les-benjamins", "ai-experiments", "summer-of-sport", "relax", "coca-cola", "gumtree"].indexOf(x.slug) - ["ai-commissions", "la-croisiere", "3d-explorations", "les-benjamins", "ai-experiments", "summer-of-sport", "relax", "coca-cola", "gumtree"].indexOf(y.slug)), mount: idx, media, esc, touch, reduce, onOpen: (p) => { if (p.page) location.href = p.page; else location.hash = p.slug; }, onTick: () => sound.tick?.(.55, .025) })) document.body.removeAttribute("data-tunnel");
 const TUN_ON = document.body.dataset.tunnel != null;
 // flow layout: the work set like a paragraph, names running into each other with a little moving picture between each
 if (FLOW) {

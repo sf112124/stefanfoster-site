@@ -465,7 +465,6 @@ body.viewing .top{background:var(--bg);mix-blend-mode:normal}
 .corner .pball span{max-width:none}
 
 /* ---------- the tunnel index ---------- */
-html:has(body[data-tunnel]:not(.viewing)){--bg:#0b0b0b;--ink:#ecebe6;--mute:#7d7c77;--line:rgba(236,235,230,.14)}
 body[data-tunnel]:not(.viewing) #home{height:100svh;overflow:hidden}
 body[data-tunnel] .work{height:100svh}
 body[data-tunnel] #idx{position:fixed;inset:0;touch-action:none;cursor:grab;user-select:none}
@@ -494,5 +493,34 @@ body[data-tunnel] #idx:active{cursor:grabbing}
 .tun-hud .x::before{left:4px;top:0;width:1px;height:9px}.tun-hud .x::after{top:4px;left:0;height:1px;width:9px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (max-width:700px){ .tun-lab{top:auto;bottom:86px;left:0;right:0;width:auto;height:auto;display:flex;justify-content:center;gap:10px;align-items:center} .tun-l,.tun-r{position:static;translate:none;font-size:14px} .tun-hit{position:fixed;left:0;right:0;width:auto;top:44vh;height:12vh} .tun-hud .tl,.tun-hud .tr{top:64px} .tun-hud .bl,.tun-hud .br{bottom:126px} }
-body[data-tunnel]:not(.viewing) .top{color:#ecebe6;z-index:60}
-body[data-tunnel]:not(.viewing) .brand canvas{filter:invert(1) brightness(1.15)}
+body[data-tunnel] .top{z-index:70}
+.tun-lab.gone{opacity:0!important;transition:opacity .2s}
+/* pages arrive out of the paper the tunnel washes to */
+body[data-tunnel] #view:not([hidden]){animation:pageIn .7s var(--ease) both}
+@keyframes pageIn{from{opacity:0;transform:translateY(24px) scale(.985);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+
+/* the quick index rail */
+.tun-rail{position:absolute;right:var(--gut);top:50%;translate:0 -50%;display:flex;flex-direction:column;gap:2px;z-index:3}
+.tun-rail button{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:3px 0;color:var(--mute);font:inherit;letter-spacing:.06em}
+.tun-rail b{font-weight:400;width:2.2ch;text-align:right;transition:color .3s}
+.tun-rail .rn{font-family:var(--serif);font-size:15px;letter-spacing:-.01em;text-transform:none;opacity:0;translate:8px 0;transition:opacity .35s var(--ease),translate .35s var(--ease);white-space:nowrap;color:var(--ink)}
+.tun-rail button:hover .rn{opacity:1;translate:0 0}
+.tun-rail button:hover b,.tun-rail button.on b{color:var(--ink)}
+.tun-rail button.on b::before{content:"";display:inline-block;width:14px;height:1px;background:var(--ink);vertical-align:middle;margin-right:8px;translate:0 -1px}
+@media (max-width:700px){ .tun-rail{top:auto;bottom:150px;translate:none;left:var(--gut);right:var(--gut);flex-direction:row;justify-content:space-between} .tun-rail .rn{display:none} .tun-rail button.on b::before{display:none} .tun-rail button.on b{text-decoration:underline;text-underline-offset:4px} }
+
+/* the switch between tunnel and list */
+.tun-sw{position:absolute;right:var(--gut);bottom:44px;display:flex;align-items:center;gap:10px;color:var(--ink);letter-spacing:.08em;z-index:4}
+.tun-sw i{position:relative;width:26px;height:14px;border:1px solid currentColor;border-radius:9px}
+.tun-sw i::after{content:"";position:absolute;left:2px;top:2px;width:8px;height:8px;border-radius:50%;background:currentColor;transition:translate .45s var(--snap)}
+.is-list .tun-sw i::after{translate:12px 0}
+.tun-list{position:absolute;left:50%;top:50%;width:var(--wide);translate:-50% -50%;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .35s}
+.is-list .tun-list{opacity:1;pointer-events:auto;transition-delay:.35s}
+.tun-list a{position:relative;height:var(--row);display:block;cursor:pointer}
+.tun-list .n{position:absolute;right:calc(100% + 2.2vw);top:50%;translate:0 -50%;color:var(--mute)}
+.tun-list .c{position:absolute;left:calc(100% + 2.2vw);top:50%;translate:0 -50%;font-family:var(--serif);font-style:italic;font-size:clamp(14px,1.15vw,18px);white-space:nowrap;color:var(--mute);transition:color .25s}
+.tun-list a:hover .n,.tun-list a:hover .c{color:var(--ink)}
+.is-list .tun-lab,.is-list .tun-rail{opacity:0!important;pointer-events:none;transition:opacity .3s}
+.tun-rail,.tun-lab{transition:opacity .3s}
+@media (max-width:700px){ .tun-sw{bottom:118px} .tun-list .c{display:none} .tun-list .n{right:calc(100% + 8px)} }
+.is-list .tun-hit{pointer-events:none!important}
