@@ -24,13 +24,21 @@ const A = buildArt();
 // people are drawn from outfit recipes; every creature and portrait is a painted sprite in game/art
 for (const k in LOOKS) A.who[k] = person(LOOKS[k]);
 A.who.you = A.who.boy; A.port = {}; A.monF = {};
-const ART = ["balloon", "ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "lion", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo"];
+const ART = ["balloon", "ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "lion", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "t_tora", "t_paris", "t_branco", "t_anna", "t_lucy", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo"];
 // walking sprites: one strip per person, nine frames (front, left, back; standing then each foot), right is the left mirrored
-const WALK = ["stefan", "boy", "girl", "ad", "mm", "mp", "bs", "sl", "cmo", "tim", "pat", "chris", "jeremy", "jimi", "smoker", "vaper"];
+const WALK = ["stefan", "boy", "girl", "ad", "mm", "mp", "bs", "sl", "cmo", "tim", "pat", "chris", "jeremy", "jimi", "smoker", "vaper", "tora", "paris", "branco", "anna", "lucy"];
 await Promise.all(WALK.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => {
-  const fw = im.width / 9, fh = im.height, cut = (i) => { const c = document.createElement("canvas"); c.width = fw; c.height = fh; c.getContext("2d").drawImage(im, i * fw, 0, fw, fh, 0, 0, fw, fh); c._s = 2; return c; };
-  const f = [...Array(9)].map((_, i) => cut(i)); A.who[k] = { down: f.slice(0, 3), left: f.slice(3, 6), up: f.slice(6, 9) }; A.who[k].right = A.who[k].left.map((c) => { const f = A.flip(c); f._s = 2; return f; }); res(); };
-  im.onerror = res; im.src = `game/art/w_${k}.png`; })));
+  const fw = im.width / 9, fh = im.height, cut = (i) => { const c = document.createElement("canvas"); c.width = fw; c.height = fh; c.getContext("2d").drawImage(im, i * fw, 0, fw, fh, 0, 0, fw, fh); return c; };
+  const f = [...Array(9)].map((_, i) => cut(i)); A.who[k] = { down: f.slice(0, 3), left: f.slice(3, 6), up: f.slice(6, 9) }; A.who[k].right = A.who[k].left.map((c) => A.flip(c)); res(); };
+  im.onerror = res; im.src = `game/art/g_${k}.png`; })));
+// the hire bike: six frames, two each for down, left and up
+A.bike = {};
+await Promise.all(["boy", "girl"].map((k) => new Promise((res) => { const im = new Image(); im.onload = () => {
+  const fw = im.width / 6, cut = (i) => { const c = document.createElement("canvas"); c.width = fw; c.height = im.height; c.getContext("2d").drawImage(im, i * fw, 0, fw, im.height, 0, 0, fw, im.height); return c; };
+  const f = [...Array(6)].map((_, i) => cut(i)); A.bike[k] = { down: f.slice(0, 2), left: f.slice(2, 4), up: f.slice(4, 6) }; A.bike[k].right = A.bike[k].left.map((c) => A.flip(c)); res(); };
+  im.onerror = res; im.src = `game/art/b_${k}.png`; })));
+// map objects drawn in the same handheld style
+await Promise.all([["balloon0", "g_balloon2"], ["balloon1", "g_balloon0"], ["balloon2", "g_balloon1"], ["dock", "g_dock"]].map(([k, f]) => new Promise((res) => { const im = new Image(); im.onload = () => { A.obj[k] = im; res(); }; im.onerror = res; im.src = `game/art/${f}.png`; })));
 A.who.you = A.who.boy;
 await Promise.all(ART.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => { im._s = 2; if (k.startsWith("t_")) A.port[k.slice(2)] = im; else { A.mon[k] = im; const f = A.flip(im); f._s = 2; A.monF[k] = f; } res(); }; im.onerror = res; im.src = `game/art/${k}.png`; })));
 // your own back, for the start of a fight
@@ -185,7 +193,7 @@ const P = { x: 3, y: 4, fx: 3, fy: 4, px: 48, py: 64, dir: "down", moving: false
 const objAt = (x, y) => map.objs.find((o) => !o.gone && y === o.y && x >= o.x && x < o.x + o.w && (o.solid || o.act));
 const blocked = (x, y) => x < 0 || y < 0 || x >= map.W || y >= map.H || map.solid[map.I(x, y)] || map.objs.some((o) => o.k === "npc" && !o.gone && y === o.y && x >= o.x && x < o.x + o.w);
 function place(m, x, y, dir) { map = m; P.x = P.fx = x; P.y = P.fy = y; P.px = x * 16; P.py = y * 16; P.moving = false; if (dir) P.dir = dir; P.grass = 0; }
-async function warp(m, x, y, dir) { busy = true; au.sfx("door"); await fadeTo(1, 220); place(m, x, y, dir); au.music("world"); zoneNow = ""; await fadeTo(0, 220); busy = false; }
+async function warp(m, x, y, dir) { busy = true; if (S.bike && m.id !== "world") { bike(false); toast("YOU PARK THE BIKE OUTSIDE.", 2500); } au.sfx("door"); await fadeTo(1, 220); place(m, x, y, dir); au.music("world"); zoneNow = ""; await fadeTo(0, 220); busy = false; }
 function fadeTo(v, ms) { return new Promise((res) => { const a = fade, s = performance.now(); const step = (n) => { const k = clamp((n - s) / ms, 0, 1); fade = a + (v - a) * k; if (k < 1) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); }); }
 function night() { nightOn = !nightOn; au.sfx("secret"); toast(nightOn ? "NIGHT MODE" : "DAY MODE"); }
 
@@ -209,7 +217,7 @@ function mill(dt) {
 function walk(dt) {
   mill(dt);
   if (P.moving) {
-    P.t += dt / (keys.b ? .095 : .165);
+    P.t += dt / (S.bike ? .075 : keys.b ? .095 : .165);
     if (P.t >= 1) { P.moving = false; P.px = P.x * 16; P.py = P.y * 16; arrive(); }
     else { P.px = (P.fx + (P.x - P.fx) * P.t) * 16; P.py = (P.fy + (P.y - P.fy) * P.t) * 16; }
   }
@@ -263,6 +271,15 @@ async function run(act, o) {
     else if (a === "stefan") await stefan();
     else if (a === "coffee") { await ui.say(SAY.coffee[0]); healAll(); au.sfx("heal"); if (S.starter) await ui.say(SAY.coffee[1]); save(); }
     else if (a === "trainer") await chat(o);
+    else if (a === "dock") {
+      if (S.bike) { await ui.say(SAY.dockBack); bike(false); save(); return; }
+      if (!A.bike[S.look]) return;
+      await ui.say(SAY.dock, { keep: true });
+      const free = (S.reels || []).length - (S.spent || 0);
+      if (free < 1) { ui.hide(); await ui.say(SAY.dockNone); return; }
+      const c = await ui.choose([`Unlock (${free} reel${free > 1 ? "s" : ""} left)`, "Walk"], { cls: "yn" }); ui.hide();
+      if (c === 0) { S.spent = (S.spent || 0) + 1; bike(true); au.sfx("level"); save(); toast("RIDING. TALK TO A RACK TO PARK IT.", 3500); }
+    }
     else if (a === "staff") { o.dir = OPP[P.dir]; o.wt = 3; await ui.say([SAY.staff[+b]]); }
     else if (a === "smoke") { o.dir = OPP[P.dir]; await ui.say(SAY.smoke[+b]); }
     else if (a === "malcoffee") { await ui.say(SAY.malcoffee[0]); healAll(); au.sfx("heal"); if (S.starter) await ui.say(SAY.malcoffee[1]); save(); }
@@ -354,7 +371,7 @@ async function duel(o) {
 }
 
 // ---------- the hire bike ----------
-function bike(on) { S.bike = !!on; }
+function bike(on) { S.bike = !!on && !!A.bike[S.look]; }
 
 // ---------- a fight ----------
 const TCOL = { AI: "#57c9b5", IMAGE: "#6ea4f2", FILM: "#b79cff", NONE: "#ff2d4a" };
@@ -698,7 +715,7 @@ function drawWorld(now) {
   map.flat.forEach(put);
   // everything standing up, back to front, with you in among it
   const row = map.tall.filter((o) => !o.gone && o.y >= y0 - 2 && o.y <= y1 + 3).sort((a, b) => a.y - b.y); let drawn = false;
-  const me = () => { const s = pose(A.who.you, P.dir, P.moving && P.t < .55 ? 1 + (P.steps % 2) : 0), x = Math.round(P.px - cx), y = Math.round(P.py - cy); g.drawImage(A.sh[12], x + 2, y + 12); g.drawImage(s, Math.round(x + 8 - iw(s) / 2), y + 16 - ih(s), iw(s), ih(s)); drawn = true; };
+  const me = () => { const s = S.bike && A.bike[S.look] ? A.bike[S.look][P.dir][P.moving ? Math.floor(now / 120) % 2 : 0] : pose(A.who.you, P.dir, P.moving && P.t < .55 ? 1 + (P.steps % 2) : 0), x = Math.round(P.px - cx), y = Math.round(P.py - cy); g.drawImage(A.sh[12], x + 2, y + 12); g.drawImage(s, Math.round(x + 8 - iw(s) / 2), y + 16 - ih(s), iw(s), ih(s)); drawn = true; };
   const py = P.py / 16;
   row.forEach((o) => { if (!drawn && o.y > py) me(); put(o); }); if (!drawn) me();
   // standing in long grass, it comes up over your feet

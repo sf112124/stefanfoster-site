@@ -73,16 +73,16 @@ export const TRAINERS = {
   darren: { name: "JIMI", role: "ACCOUNT DIRECTOR", look: "jimi", port: "t_jimi", x: 16, y: 27, dir: "right", lv: 0, team: ["brief"],
     intro: ["You work with Stefan, right? Quick one.", "Client's sent over a brief. Well. It's more of a vibe.", "They want it to go viral. By Friday. Can you jump on it?"],
     win: ["Okay, love that. Let's do a WIP on Thursday?"], after: ["I've put a hold in your calendar. Just a placeholder."] },
-  priya: { name: "TORA", role: "MARKETING LEAD", look: "mm", port: "t_mm", x: 55, y: 28, dir: "left", lv: 1, team: ["kpi"],
+  priya: { name: "TORA", role: "MARKETING LEAD", look: "tora", port: "t_tora", x: 55, y: 28, dir: "left", lv: 1, team: ["kpi"],
     intro: ["Hi! Huge fan of the work.", "Before we brief, can we align on the verticals?", "And I'll need KPIs for each one. Per platform. Per week."],
     win: ["Fine. I'll tell the team the KPI is vibes."], after: ["We're seeing really strong engagement on this chat."] },
-  gary: { name: "PARIS", role: "OMD MEDIA PLANNER", look: "mp", port: "t_mp", x: 19, y: 42, dir: "right", lv: 1, team: ["mediaplan"],
+  gary: { name: "PARIS", role: "OMD MEDIA PLANNER", look: "paris", port: "t_paris", x: 19, y: 42, dir: "right", lv: 1, team: ["mediaplan"],
     intro: ["Got a sec? I've built the media plan.", "It's fourteen tabs. The ROI is on tab nine.", "Can the film be a 6, a 15, a 30, in 9:16, 4:5 and 1:1?"],
     win: ["Right. I'll just... reforecast."], after: ["Tab nine is looking a lot healthier now."] },
-  jules: { name: "BRANCO", role: "BRAND STRATEGIST", look: "bs", port: "t_bs", x: 25, y: 11, dir: "right", lv: 2, team: ["deck"],
+  jules: { name: "BRANCO", role: "BRAND STRATEGIST", look: "branco", port: "t_branco", x: 25, y: 11, dir: "right", lv: 2, team: ["deck"],
     intro: ["Let's zoom out for a second.", "What does the brand actually believe? What's its purpose?", "I've done a deck. It's only eighty slides."],
     win: ["Hm. I suppose the work does speak for itself."], after: ["I'm moving the purpose slide to the appendix."] },
-  mia: { name: "ANNA", role: "SOCIAL LEAD", look: "sl", port: "t_sl", x: 62, y: 11, dir: "left", lv: 2, team: ["vertical"],
+  mia: { name: "ANNA", role: "SOCIAL LEAD", look: "anna", port: "t_anna", x: 62, y: 11, dir: "left", lv: 2, team: ["vertical"],
     intro: ["Omg hiii. Can it be a trend?", "Like, vertical, but it has to feel organic.", "And can we hook them in the first half a second?"],
     win: ["Okay that's actually so good. Posting it now."], after: ["It's doing numbers. Like, real numbers."] },
   cmo: { name: "TOMMY", role: "CMO", look: "cmo", port: "t_cmo", x: 35, y: 9, dir: "down", lv: 4, boss: 1, team: ["roi"], needs: ["darren", "priya", "gary", "jules", "mia"], unlock: "THE CMO WANTS A WORD. NORTH ROAD.",
@@ -90,9 +90,9 @@ export const TRAINERS = {
     intro: ["So. You're the one who's been getting past my team.", "Let's talk numbers. Then stakeholders. Then numbers again."],
     win: ["...Fine. It's approved.", "Don't change a thing."], after: ["Approved. Go and make it."] },
   // the MAL office: the gym
-  jimi: { name: "THE TIMESHEET POLICE", role: "ACCOUNTS", look: "ad", port: "t_ad", map: "mal1", x: 10, y: 4, dir: "right", lv: 3, team: ["timesheet"],
-    intro: ["Welcome to accounts.", "Nobody goes upstairs until their timesheet is in.", "And we'll need a job number for this conversation."],
-    win: ["Fine. We'll code it to new business."], after: ["We know about the 37 hours you logged as \"thinking\"."] },
+  jimi: { name: "LUCY", role: "DIRECTOR, PROJECT MANAGEMENT", look: "lucy", port: "t_lucy", map: "mal1", x: 10, y: 4, dir: "right", lv: 3, team: ["timesheet"],
+    intro: ["Hi! Have you got a minute? I've got you down for a minute.", "Nobody goes upstairs without a timing plan, a status update and their hours in.", "Let's pop in a quick fifteen to scope the fifteen."],
+    win: ["Okay. Green across the board. You can go up."], after: ["I've moved your next three meetings. You're welcome."] },
   pat: { name: "PAT", role: "MOTION DESIGNER", look: "pat", port: "t_pat", map: "mal0", x: 17, y: 3, dir: "right", lv: 3, team: ["easing"],
     intro: ["Hey. Look at this curve.", "Ease in, ease out. A little overshoot on the end.", "Nothing in this world should ever move linearly."],
     win: ["Okay, that had lovely easing. I'll allow it."], after: ["I've been tweaking one keyframe since nine."] },
@@ -103,7 +103,7 @@ export const TRAINERS = {
     intro: ["Love it. Genuinely.", "Quick question though. How much does it cost?", "And can we shoot the whole thing in one day?"],
     win: ["Right. I'll find the money. Somewhere."], after: ["The eyebrow goes up when the budget goes up."] },
   tim: { name: "TIM", role: "GYM LEADER", look: "tim", port: "t_tim", map: "mal2", x: 18, y: 4, dir: "down", lv: 6, boss: 1, team: ["lion"], needs: ["jimi", "pat", "chris", "jeremy"], unlock: "TIM WILL SEE YOU NOW. THE GLASS OFFICE.",
-    gate: ["Door's open, but get past the floor first.", "Accounts, Pat, Chris and Jeremy. Then come and see me."],
+    gate: ["Door's open, but get past the floor first.", "Pat, Lucy, Chris and Jeremy. Then come and see me."],
     intro: ["So you want to make work here.", "Everyone has an idea. Show me the big one.", "And it had better be on brief."],
     win: ["That's the work.", "Take the badge. You've earned it."], after: ["Good work doesn't need a deck. Mostly."] },
 };
@@ -156,6 +156,9 @@ export const SAY = {
     "Nobody upstairs gets past the person on their floor. It's the closest thing we have to a process.",
     "The sofas are purple because of a brand workshop in 2019. We don't talk about the workshop.",
   ],
+  dock: ["A rack of lime-green hire e-bikes. The screen says: UNLOCK FOR 1 FILM REEL."],
+  dockNone: ["You need a film reel to unlock one. There are eight hidden round the valley."],
+  dockBack: ["You park the bike back in the rack."],
   floorLocked: (who) => [`${who} isn't letting anyone upstairs until you've had a quick chat.`],
   malLocked: ["The doors are locked. A note on the glass says:", "\"By appointment only. Come back once you've found four of Stefan's projects.\""],
   malcoffee: ["Free coffee from the office machine. It's fine.", "Your whole folio is back to full health."],
@@ -169,7 +172,7 @@ export const SAY = {
   arcade: ["An arcade cabinet that says SYNTH-FOLIO.", "It turns all of Stefan's work into a little music machine."],
   guitar: ["You strum Stefan's acoustic.", "Nylon strings. He likes them softer."],
   grow: ["A tiny glass bottle on the bench, labelled \"Grow\" in curly handwriting.", "The film's in Ai Experiments: one tablet, one tube carriage, and a very bad commute.", "You put it back. Some things are better as films."],
-  balloons: ["Three hot air balloons in pink, green and yellow, shaped like the flowers of the valley.", "Stefan's team flew them over Cappadocia for Les Benjamins and Apple.", "The whole story is on its own page."],
+  balloons: ["Three hot air balloons: a spiky green one, a yellow tulip and a pink foxglove.", "Stefan's team flew them over Cappadocia for Les Benjamins and Apple.", "The whole story is on its own page."],
   badge: ["You got the MAL BADGE!"],
   holeDone: ["THE CRAWLER is back in its hole."],
   lost: ["You're back at the studio. Your tool is at full health again."],
@@ -186,8 +189,8 @@ export const SAY = {
     riviera: ["THE BEACH", "La Croisière is in the long grass here."],
     hole: ["DO NOT OPEN"],
     cappa: ["FROM EARTH TO SKY", "Les Benjamins x Apple. Cappadocia.", "Something spiky is floating about in the long grass here."],
-    malout: ["MEDIA ARTS LAB", "Ground floor: kitchen and the all-agency space. First: accounts. Second: creative and production."],
-    mal: ["Reception. There's nobody here, just a bowl of mints and a sign-in iPad.", "Accounts on the first floor. Creative and production on the second. Tim's office is the glass one."],
+    malout: ["MEDIA ARTS LAB", "Ground floor: kitchen and the all-agency space. First: project management and accounts. Second: creative and production."],
+    mal: ["Reception. There's nobody here, just a bowl of mints and a sign-in iPad.", "Project management and accounts on the first floor. Creative and production on the second. Tim's office is the glass one."],
   },
 };
 
@@ -249,6 +252,8 @@ export function buildWorld() {
   road(41, 36, 46, 37); road(46, 36, 46, 41); clear(41, 29, 53, 41); put("sign", 44, 37, { act: "sign:malout" });
   // Cappadocia: three balloons on the open grass east of the north road
   clear(37, 13, 46, 19); put("balloon0", 39, 16, { act: "balloons" }); put("balloon1", 42, 15, { act: "balloons" }); put("balloon2", 45, 16, { act: "balloons" }); put("sign", 41, 18, { act: "sign:cappa" }); rect(37, 13, 46, 14, (x, y) => (tg[I(x, y)] = 9));
+  // hire bikes: tap one with a film reel and ride
+  put("dock", 31, 38, { w: 2, act: "dock" }); put("dock", 47, 39, { w: 2, act: "dock" });
   // a bench by the paddock road, with something left on it
   clear(51, 14, 54, 16); put("bench", 52, 15, { w: 2, act: "grow" });
   // round the corner: the smoking area
@@ -319,15 +324,15 @@ export function buildOffice(f) {
     wall("screen", 14); put("sofaL", 11, 5, { w: 2 }); put("sofaLf", 17, 5, { w: 2 }); put("ctable", 14, 6, { w: 2 }); put("sofa", 13, 9, { w: 3 }); put("plant", 10, 2); put("plant", 21, 4);
     put("rdesk", 10, 11, { w: 3, act: "sign:mal" });
     B(20, 2, TT.stairsU); m.warps.push({ x: 20, y: 2, to: "mal1", tx: 20, ty: 3, dir: "down", needs: ["pat"], who: "PAT" });
-    staff(m, [["mm", 1, 4], ["sl", 5, 4], ["bs", 6, 8], ["mp", 1, 9], ["cmo", 12, 7], ["sl", 19, 10], ["mp", 16, 12], ["bs", 11, 3]]);
+    staff(m, [["mm", 1, 4], ["sl", 5, 4], ["bs", 6, 8], ["mp", 1, 9], ["ad", 12, 7], ["sl", 19, 10], ["mp", 16, 12], ["bs", 11, 3]]);
     B(15, 13, TT.mat); m.warps.push({ x: 15, y: 13, to: "world", tx: 46, ty: 36, dir: "down" });
   } else if (f === 1) {
     // accounts: rows and rows of black desks
     rows([6, 9, 12], [[3, 8], [12, 17]]); wall("board", 6); wall("screen", 14);
     put("sofaL", 19, 8, { w: 2 }); put("plant", 21, 12); put("printer", 20, 12); put("plant", 0, 13);
     B(20, 2, TT.stairsD); m.warps.push({ x: 20, y: 2, to: "mal0", tx: 20, ty: 3, dir: "down" });
-    B(1, 2, TT.stairsU); m.warps.push({ x: 1, y: 2, to: "mal2", tx: 1, ty: 3, dir: "down", needs: ["jimi"], who: "THE TIMESHEET POLICE" });
-    staff(m, [["cmo", 5, 7], ["mm", 14, 8], ["bs", 10, 10], ["sl", 7, 13], ["mp", 15, 11], ["mm", 18, 5], ["bs", 3, 4]]);
+    B(1, 2, TT.stairsU); m.warps.push({ x: 1, y: 2, to: "mal2", tx: 1, ty: 3, dir: "down", needs: ["jimi"], who: "LUCY" });
+    staff(m, [["ad", 5, 7], ["mm", 14, 8], ["bs", 10, 10], ["sl", 7, 13], ["mp", 15, 11], ["mm", 18, 5], ["bs", 3, 4]]);
   } else {
     // creative and production, and Tim's glass box in the corner
     rows([9, 12], [[3, 8], [10, 13]]); wall("board", 6); wall("board", 11);
@@ -335,7 +340,7 @@ export function buildOffice(f) {
     put("desk", 17, 2, { w: 2 }); put("shelf", 20, 2, { w: 2 }); put("plant", 16, 2);
     put("sofaL", 1, 10, { w: 2 }); put("printer", 20, 12); put("plant", 21, 13); put("sofa", 16, 11, { w: 3 });
     B(1, 2, TT.stairsD); m.warps.push({ x: 1, y: 2, to: "mal1", tx: 1, ty: 3, dir: "down" });
-    staff(m, [["sl", 4, 5], ["mp", 7, 11], ["mm", 12, 10], ["bs", 9, 4], ["cmo", 4, 13], ["sl", 16, 9], ["mm", 19, 12]]);
+    staff(m, [["sl", 4, 5], ["mp", 7, 11], ["mm", 12, 10], ["bs", 9, 4], ["ad", 4, 13], ["sl", 16, 9], ["mm", 19, 12]]);
   }
   return seal(m);
 }
