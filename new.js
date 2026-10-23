@@ -165,10 +165,10 @@ function frame(now) {
     FL.forEach((L) => { const d = Math.hypot(L.x - cx, L.y - sy - cy), t = !touch && L.fi === hovFi ? Math.max(0, 1 - d / R) : 0, e = t * t * (3 - 2 * t);
       L.k += (e - L.k) * .22;
       // the breathing: a slow, soft light passing through the words. Opacity only, so nothing reflows or jumps
-      const b = Math.sin(t0w * .35 - L.x * .0028 + L.y * .0035) * .6 + Math.sin(t0w * .22 + L.x * .0013 - L.y * .005) * .4;
+      const b = Math.sin(t0w * .55 - L.x * .0028 + L.y * .0035) * .6 + Math.sin(t0w * .34 + L.x * .0013 - L.y * .005) * .4;
       const w = Math.round(L.k * 100);
       if (L.w !== w) { L.w = w; L.el.style.fontVariationSettings = w ? `"wght" ${Math.min(900, 780 + w * 1.2)}, "wdth" ${108 + w * .28}` : ""; }
-      L.el.style.opacity = (.86 + b * .14).toFixed(3); });
+      L.el.style.opacity = (.74 + b * .26).toFixed(3); L.el.style.transform = `translate3d(0,${(b * -1.6).toFixed(2)}px,0)`; });
   }
   requestAnimationFrame(frame);
 }
