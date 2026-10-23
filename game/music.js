@@ -37,6 +37,16 @@ const TRACKS = {
     chords: ["FM7", "Am7", "Bb", "C", "FM7", "Dm", "Gm", "C"],
     harm: "pad", bass: "walk", drums: "soft",
   },
+  // the title screen: a big bright march, the feeling of switching the console on
+  title: {
+    bpm: 126, swing: 0,
+    lead: [
+      "C5 . . . G4 . C5 . E5 . . . G5 . . .", "A5 . . . G5 . E5 . F5 . . . D5 . . .", "E5 . . . C5 . E5 . G5 . . . C6 . . .", "B5 . . . . . . . G5 . A5 . B5 . . .",
+      "C6 . . . G5 . E5 . A5 . . . F5 . . .", "G5 . . . E5 . C5 . D5 . . . B4 . . .", "C5 . E5 . G5 . C6 . A5 . F5 . D6 . . .", "C6 . . . . . . . G5 . A5 . B5 . . .",
+    ],
+    chords: ["C", "F", "C", "G", "F", "C", "F", "G"],
+    harm: "rise", bass: "march", drums: "march",
+  },
   // a fight: fast, minor, with the rattling arpeggios the old battle themes lived on
   battle: {
     bpm: 168, swing: 0,
@@ -94,15 +104,18 @@ export class Chip {
       // harmony
       if (T.harm === "stab" && s % 4 === 2) { this.voice(this.p25, ch[1] + 24, t, d * 1.6, .018, { sus: .3 }); this.voice(this.p25, ch[2] + 12, t, d * 1.6, .018, { sus: .3 }); }
       if (T.harm === "arp") this.voice(this.p12, ch[s % 3] + 24, t, d * .9, .016, { sus: .5 });
+      if (T.harm === "rise") this.voice(this.p12, [ch[0], ch[1], ch[2], ch[0] + 12][s % 4] + 12, t, d * .9, .014, { sus: .5 });
       if (T.harm === "pad" && s % 8 === 0) ch.forEach((m) => this.voice(this.p25, m + 12, t, d * 7.5, .011, { sus: .9 }));
       // bass
       if (T.bass === "bounce" && s % 2 === 0) this.voice("triangle", [ch[0], ch[0] + 7, ch[0] + 12, ch[0] + 7][(s / 2) % 4] - 12, t, d * 1.8, .11, { sus: .6 });
       if (T.bass === "drive") this.voice("triangle", ch[0] - 12 + (s % 2 ? 12 : 0), t, d * .9, .11, { sus: .6 });
+      if (T.bass === "march" && s % 4 === 0) this.voice("triangle", (s % 8 ? ch[2] - 12 : ch[0]) - 12, t, d * 2.6, .12, { sus: .6 });
       if (T.bass === "walk" && s % 4 === 0) this.voice("triangle", [ch[0], ch[2], ch[0] + 12, ch[1]][s / 4] - 12, t, d * 3.6, .1, { sus: .8 });
       // drums
       const dr = T.drums;
       if (dr === "route") { if (s % 2 === 0) this.hit(t, "hat", .025); if (s === 4 || s === 12) this.hit(t, "snare", .05); if (s === 0 || s === 8 || s === 10) this.voice("triangle", 50, t, .09, .14, { drop: 1, sus: .1 }); }
       if (dr === "battle") { this.hit(t, "hat", s % 2 ? .012 : .022); if (s === 4 || s === 12) this.hit(t, "snare", .06); if (s % 8 === 0 || s === 6 || s === 14) this.voice("triangle", 48, t, .09, .15, { drop: 1, sus: .1 }); }
+      if (dr === "march") { if (s % 4 === 0) this.voice("triangle", 48, t, .09, .14, { drop: 1, sus: .1 }); if (s === 4 || s === 12) this.hit(t, "snare", .055); if (bar % 4 === 3 && s >= 12) this.hit(t, "snare", .03 + (s - 12) * .01); else if (s % 2 === 0) this.hit(t, "hat", .018); }
       if (dr === "soft") { if (s === 4 || s === 12) this.hit(t, "hat", .016); if (s === 0) this.voice("triangle", 48, t, .1, .08, { drop: 1, sus: .1 }); }
       this.step++; this.next += d;
       if (this.step >= 16) { this.step = 0; this.bar++; }

@@ -835,7 +835,7 @@ function frame(now) {
   else if (bt && bt.qte) qteStep(dt);
   else { ui.update(dt); if (mode === "world") walk(dt); }
   if (took("m")) $("bsnd").click();
-  if (mode === "battle" && bt) drawBattle(now); else drawWorld(now);
+  if (mode === "title") drawTitle(now); else if (mode === "battle" && bt) drawBattle(now); else drawWorld(now);
   if (talk && talk.show) { const p = talk.img, e = 1 - Math.pow(1 - talk.k, 3), cx = Math.round(VW * .36), sc = .6 + .4 * e;
     g.globalAlpha = e; g.fillStyle = "rgba(43,31,59,.35)"; g.fillRect(0, 0, VW, VH); g.fillStyle = "#fff8ec"; g.beginPath(); g.arc(cx, 72, 46 * e, 0, 7); g.fill(); g.globalAlpha = 1;
     const w = iw(p) * sc, h = ih(p) * sc; g.drawImage(p, Math.round(cx - w / 2), Math.round(72 - h / 2 + Math.sin(now / 400) * 2), w, h); }
@@ -868,11 +868,55 @@ async function start(fresh) {
   if (!S.flags.intro) { await sleep(350); P.dir = "right"; script(() => stefan()); }
 }
 const had = load();
-$("bcont").hidden = !had; $("bnew").textContent = had ? "New game" : "Start";
-$("bnew").addEventListener("click", () => start(true)); $("bcont").addEventListener("click", () => start(false));
-// the three tools, bobbing on the title screen
-$("tmons").innerHTML = ["ai", "ps", "pr"].map((k, i) => `<img src="${monImg(k)}" alt="" style="animation-delay:${-i * .4}s">`).join("");
-addEventListener("keydown", (e) => { if (mode === "title" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); start(!had); } });
+// ---------- the title screen: a shooting star, the logo drops in, PRESS START ----------
+const T = { stage: "intro", t0: performance.now(), sel: 0, stars: Array.from({ length: 40 }, () => ({ x: Math.random() * VW, y: Math.random() * 70, p: Math.random() * 7 })), trail: [] };
+const tEl = $("title"), tItems = () => [...$("tmenu").querySelectorAll("button:not([hidden]), a")];
+$("bcont").hidden = !had;
+if (had) $("tinfo").innerHTML = `<i>${S.look === "girl" ? "GIRL" : "BOY"}</i><i>FOLIO ${S.won.length}/${PROJECTS.length}</i><i>REELS ${(S.reels || []).length}/8</i><i>BADGES ${S.flags.badge ? 1 : 0}</i>`;
+function toTitle() { if (T.stage !== "intro") return; T.stage = "title"; T.t0 = performance.now(); fade = 1; fadeTo(0, 500); tEl.classList.remove("intro"); au.music("title"); }
+function toMenu() { T.stage = "menu"; au.unlock(); au.sfx("level"); fade = .8; fadeTo(0, 300); tEl.classList.add("menu-on"); $("tmenu").hidden = false; T.sel = 0; markT(); }
+function markT() { tItems().forEach((b, i) => b.classList.toggle("sel", i === T.sel)); }
+function pickT(el) { if (T.stage !== "menu") return; if (el.id === "bcont") start(false); else if (el.id === "bnew") start(true); else location.href = el.href; }
+tItems().forEach((b, i) => { b.addEventListener("pointerenter", () => { T.sel = i; markT(); }); b.addEventListener("click", (e) => { e.stopPropagation(); if (b.tagName === "A") return; pickT(b); }); });
+tEl.addEventListener("click", () => { au.unlock(); if (T.stage === "intro") toTitle(); else if (T.stage === "title") toMenu(); });
+addEventListener("keydown", (e) => {
+  if (mode !== "title") return; const k = e.key;
+  if (T.stage === "menu" && (k === "ArrowDown" || k === "s" || k === "ArrowUp" || k === "w")) { const n = tItems().length; T.sel = (T.sel + (k === "ArrowDown" || k === "s" ? 1 : n - 1)) % n; au.sfx("blip"); markT(); e.preventDefault(); return; }
+  if (k === "Enter" || k === " " || k === "z") { e.preventDefault(); if (T.stage === "intro") toTitle(); else if (T.stage === "title") toMenu(); else pickT(tItems()[T.sel]); }
+});
+setTimeout(() => tEl.querySelector(".tintro").classList.add("on"), 1500);
+setTimeout(toTitle, 3800);
+// the scene behind the logo, drawn in big pixels
+function drawTitle(now) {
+  const t = (now - T.t0) / 1000;
+  if (T.stage === "intro") {
+    g.fillStyle = "#0b0a1f"; g.fillRect(0, 0, VW, VH);
+    // a shooting star crosses the dark and leaves sparkles behind it
+    const k = clamp(t / 1.4, 0, 1), x = -20 + k * 360, y = 40 + Math.sin(k * Math.PI) * -18 + k * 50;
+    if (k < 1 && Math.random() < .9) T.trail.push({ x, y, t: 0, vx: rnd(-10, 10), vy: rnd(-6, 14) });
+    for (let i = T.trail.length - 1; i >= 0; i--) { const p = T.trail[i]; p.t += 1 / 60; p.x += p.vx / 60; p.y += p.vy / 60; if (p.t > 1.2) { T.trail.splice(i, 1); continue; } const a = 1 - p.t / 1.2; g.fillStyle = `rgba(255,${200 + Math.round(a * 55)},${120 + Math.round(a * 120)},${a})`; g.fillRect(Math.round(p.x), Math.round(p.y), p.t < .3 ? 2 : 1, p.t < .3 ? 2 : 1); }
+    if (k < 1) { g.fillStyle = "#fff8ec"; g.fillRect(Math.round(x) - 2, Math.round(y) - 1, 5, 3); g.fillRect(Math.round(x) - 1, Math.round(y) - 2, 3, 5); }
+    if (t > .1 && !T.dinged) { T.dinged = 1; au.sfx("secret"); }
+    return;
+  }
+  // a dawn sky, stars still out up top
+  const sky = g.createLinearGradient(0, 0, 0, VH); sky.addColorStop(0, "#1f2367"); sky.addColorStop(.45, "#6a5bc2"); sky.addColorStop(.75, "#f09bb8"); sky.addColorStop(1, "#ffd9a8"); g.fillStyle = sky; g.fillRect(0, 0, VW, VH);
+  T.stars.forEach((s) => { const a = .3 + .7 * Math.max(0, Math.sin(now / 500 + s.p * 3)); g.fillStyle = `rgba(255,248,236,${a * (1 - s.y / 90)})`; g.fillRect(Math.round(s.x), Math.round(s.y), 1, 1); });
+  // a big soft sun rising behind the logo
+  const sun = g.createRadialGradient(160, 120, 4, 160, 120, 110); sun.addColorStop(0, "rgba(255,240,190,.95)"); sun.addColorStop(.25, "rgba(255,214,150,.55)"); sun.addColorStop(1, "rgba(255,214,150,0)"); g.fillStyle = sun; g.fillRect(0, 0, VW, VH);
+  // clouds drifting
+  const cloud = (x, y, s, c) => { g.fillStyle = c; [[0, 0, 10], [9, -4, 12], [20, 0, 10], [10, 3, 11]].forEach(([dx, dy, r]) => { g.beginPath(); g.arc(Math.round(x + dx * s), Math.round(y + dy * s), r * s, 0, 7); g.fill(); }); };
+  for (let i = 0; i < 5; i++) { const x = ((i * 90 + now / (60 + i * 15)) % (VW + 80)) - 40; cloud(x, 96 + (i % 3) * 9, .7 + (i % 2) * .3, "rgba(255,236,240,.55)"); }
+  // the balloon project floats up through it all
+  const bl = A.mon.balloon; if (bl) { const bx = 262 + Math.sin(now / 1900) * 10, by = 92 - ((t * 4) % 30) * 0 + Math.sin(now / 1300) * 4; g.globalAlpha = .95; g.drawImage(bl, Math.round(bx - iw(bl) * .3), Math.round(by - ih(bl) * .6), iw(bl) * .6, ih(bl) * .6); g.globalAlpha = 1; }
+  // hills: far purple, near green, scrolling at different speeds
+  const hill = (base, amp, len, spd, col) => { g.fillStyle = col; for (let x = 0; x < VW; x += 2) { const h = base + Math.round(Math.sin((x + now / spd) / len) * amp + Math.sin((x + now / spd) / (len * .43)) * amp * .4); g.fillRect(x, h, 2, VH - h); } };
+  hill(132, 7, 30, 90, "#7d6bc4"); hill(146, 5, 22, 45, "#3f9a63"); hill(158, 3, 14, 25, "#2f7a4f");
+  // the three tools hop along the ridge
+  ["ai", "ps", "pr"].forEach((k, i) => { const m = A.mon[k]; if (!m) return; const hop = Math.max(0, Math.sin(now / 260 - i * 1.3)) * 6, w = iw(m) * .42, h = ih(m) * .42, x = 40 + i * 30; g.drawImage(m, Math.round(x - w / 2), Math.round(160 - h - hop), w, h); });
+  // a glint runs across the logo now and then
+  const gt = (t % 4) / 4; if (gt < .2) { const gx = 70 + gt / .2 * 180; g.fillStyle = "rgba(255,255,255,.8)"; [[0, -5], [0, 5], [-5, 0], [5, 0]].forEach(([dx, dy]) => g.fillRect(Math.round(gx + dx * .5), Math.round(38 + dy * .5), 1, 1)); g.fillRect(Math.round(gx) - 1, 37, 3, 3); }
+}
 place(maps.world, 35, 39, "down");
 requestAnimationFrame(frame);
 window.__fv = { S, P, maps, ui, au, A, place, fight, card, folio, script, FOES, EXTRA, get mode() { return mode; }, get busy() { return busy; }, get map() { return map; }, get bt() { return bt; } };

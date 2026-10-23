@@ -43,18 +43,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
 .hud>*{padding:calc(var(--u)*1.5) calc(var(--u)*4);background:rgba(255,248,236,.9);border:calc(var(--u)*1) solid var(--ink);border-radius:calc(var(--u)*8);text-decoration:none}
 .hud>*:hover{background:var(--ink);color:var(--paper)}
 /* the front page */
-.title{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:calc(var(--u)*3);text-align:center;background:linear-gradient(180deg,rgba(255,248,236,.94),rgba(255,233,214,.9) 55%,rgba(226,214,255,.9))}
-.title .kick{margin:0;font-size:.7em;letter-spacing:.3em}
-.title h1{margin:0;font-size:calc(var(--u)*34);line-height:.82;font-weight:700;letter-spacing:.02em;color:var(--ink);text-shadow:calc(var(--u)*1.5) calc(var(--u)*1.5) 0 var(--pink),calc(var(--u)*3) calc(var(--u)*3) 0 var(--violet)}
-.title .tag{margin:calc(var(--u)*2) 0 0;font-size:1em}
-.tmons{display:flex;gap:calc(var(--u)*8);margin:calc(var(--u)*1) 0}
-.tmons img{width:calc(var(--u)*30);height:calc(var(--u)*30);image-rendering:pixelated;animation:hop 1.2s steps(4) infinite}
 @keyframes hop{50%{transform:translateY(calc(var(--u)*-3))}}
-.tb{display:flex;gap:calc(var(--u)*4)}
-.tb button{padding:calc(var(--u)*3) calc(var(--u)*12);background:var(--ink);color:var(--paper);border-radius:calc(var(--u)*10);font-weight:600;letter-spacing:.06em;box-shadow:0 calc(var(--u)*1.5) 0 var(--pink)}
-.tb button:hover{transform:translateY(calc(var(--u)*-1))}
-.tb #bcont{background:var(--paper);color:var(--ink);box-shadow:0 0 0 calc(var(--u)*1.5) var(--ink) inset,0 calc(var(--u)*1.5) 0 var(--violet)}
-.title .skip{font-size:.66em;letter-spacing:.04em;opacity:.75}
 /* the folio and the cards in it */
 .over{position:absolute;inset:0;display:grid;place-items:center;background:rgba(43,31,59,.58);padding:calc(var(--u)*8)}
 .sheet{width:min(100%,calc(var(--u)*262));max-height:100%;overflow:auto;padding:calc(var(--u)*8);background:var(--paper);border:calc(var(--u)*1.5) solid var(--ink);border-radius:calc(var(--u)*5);box-shadow:0 calc(var(--u)*2) 0 var(--ink);animation:pop .28s cubic-bezier(.2,1.5,.4,1)}
@@ -104,11 +93,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
 .ab button{width:66px;height:66px;border-radius:50%;font-weight:700;font-size:22px}
 .ab .a{background:var(--pink)}.ab .b{margin-top:34px}
 .pad button.on{background:var(--ink);color:var(--paper)}
-@media (prefers-reduced-motion:reduce){.tmons img,.dlg i{animation:none}}
-.title .keys{margin:calc(var(--u)*1) 0 0;font-size:.58em;letter-spacing:.08em;opacity:.6}
-.touch .title .keys{display:none}
+@media (prefers-reduced-motion:reduce){.dlg i,.tpress,.tlogo h1 span{animation:none}}
 /* painted sprites aren't square: keep their shape, and let small copies scale smoothly */
-.tmons img,.sheet .mon,.slot img,.with img{object-fit:contain}
 .sheet .mon,.slot img,.with img{image-rendering:auto}
 .menu.look button{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*2);min-width:calc(var(--u)*44);text-align:center}
 .menu .pk{height:calc(var(--u)*30);width:auto;image-rendering:pixelated}
@@ -118,3 +104,32 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
 .menu.party .pm{grid-row:span 2;height:calc(var(--u)*18);width:auto;image-rendering:pixelated}
 .menu.party b{font-weight:600;overflow:hidden;text-overflow:ellipsis}
 .menu.party i{font-style:normal;font-size:.75em;letter-spacing:.06em;opacity:.65}
+
+/* ---------- the title screen: switch-it-on nostalgia ---------- */
+.title{position:absolute;inset:0;text-align:center;color:#fff8ec;cursor:pointer;user-select:none}
+.title .tintro{position:absolute;inset:0;display:grid;place-content:center;gap:calc(var(--u)*2);opacity:0;transition:opacity .6s}
+.title .tintro p{margin:0;font-size:calc(var(--u)*14);font-weight:700;letter-spacing:.18em}
+.title .tintro i{font-style:normal;font-size:calc(var(--u)*6);letter-spacing:.5em;opacity:.7}
+.title.intro .tintro.on{opacity:1}
+.title.intro .tlogo,.title.intro .tpress,.title.intro .tcopy{visibility:hidden}
+.tlogo{position:absolute;left:0;right:0;top:calc(var(--u)*12)}
+.tlogo h1{margin:0;display:flex;flex-direction:column;align-items:center;font-weight:700;line-height:.86;letter-spacing:.03em;color:#ffe066;
+  text-shadow:0 calc(var(--u)*-1) 0 #fff6b8,calc(var(--u)*-1.5) 0 0 #23205e,calc(var(--u)*1.5) 0 0 #23205e,0 calc(var(--u)*-1.5) 0 #23205e,0 calc(var(--u)*1.5) 0 #23205e,calc(var(--u)*-1.5) calc(var(--u)*-1.5) 0 #23205e,calc(var(--u)*1.5) calc(var(--u)*-1.5) 0 #23205e,calc(var(--u)*-1.5) calc(var(--u)*1.5) 0 #23205e,calc(var(--u)*1.5) calc(var(--u)*1.5) 0 #23205e,calc(var(--u)*1) calc(var(--u)*3) 0 #23205e,calc(var(--u)*1.5) calc(var(--u)*4) 0 #5b3aa8,calc(var(--u)*2) calc(var(--u)*5) 0 #5b3aa8,calc(var(--u)*2.5) calc(var(--u)*6.5) 0 #23205e}
+.tlogo h1 .w1{font-size:calc(var(--u)*30)}
+.tlogo h1 .w2{font-size:calc(var(--u)*38)}
+.title:not(.intro) .tlogo h1 span{animation:drop .7s cubic-bezier(.3,1.6,.5,1) both}
+.title:not(.intro) .tlogo h1 .w2{animation-delay:.12s}
+@keyframes drop{from{transform:translateY(calc(var(--u)*-90)) scale(.8);opacity:0}to{transform:none;opacity:1}}
+.tver{display:inline-block;margin:calc(var(--u)*4) 0 0;padding:calc(var(--u)*1) calc(var(--u)*6);background:#f0546a;color:#fff8ec;font-size:calc(var(--u)*6.5);font-weight:700;letter-spacing:.14em;transform:skewX(-12deg);box-shadow:calc(var(--u)*1.5) calc(var(--u)*1.5) 0 #23205e;border:calc(var(--u)*1) solid #23205e}
+.title:not(.intro) .tver{animation:pop .4s .6s both}
+@keyframes pop{from{transform:skewX(-12deg) scale(0)}to{transform:skewX(-12deg) scale(1)}}
+.tpress{position:absolute;left:0;right:0;bottom:calc(var(--u)*24);margin:0;font-size:calc(var(--u)*8);font-weight:700;letter-spacing:.2em;color:#fff8ec;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 #23205e;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.tcopy{position:absolute;left:0;right:0;bottom:calc(var(--u)*6);margin:0;font-size:calc(var(--u)*5);letter-spacing:.12em;opacity:.85;text-shadow:calc(var(--u)*.7) calc(var(--u)*.7) 0 #23205e}
+.title.menu-on .tpress{display:none}
+.tmenu{position:absolute;left:50%;bottom:calc(var(--u)*16);transform:translateX(-50%);display:grid;gap:calc(var(--u)*2);width:calc(var(--u)*150);padding:calc(var(--u)*3);background:#fff8ec;color:#2b1f3b;border:calc(var(--u)*1.5) solid #23205e;border-radius:calc(var(--u)*3);box-shadow:inset 0 0 0 calc(var(--u)*1.5) #8fb4f5,0 calc(var(--u)*2) 0 #23205e;text-align:left;cursor:default}
+.tmenu button,.tmenu a{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:calc(var(--u)*1);padding:calc(var(--u)*2.5) calc(var(--u)*4) calc(var(--u)*2.5) calc(var(--u)*11);border-radius:calc(var(--u)*2);color:inherit;text-decoration:none;position:relative;font-size:calc(var(--u)*7)}
+.tmenu b{font-weight:700;letter-spacing:.08em}
+.tmenu span{font-size:.62em;letter-spacing:.06em;opacity:.75;display:flex;gap:calc(var(--u)*5);flex-wrap:wrap}
+.tmenu .sel{background:#e6eeff}
+.tmenu .sel::before{content:"";position:absolute;left:calc(var(--u)*4);top:calc(var(--u)*4.5);border:calc(var(--u)*2.5) solid transparent;border-left:calc(var(--u)*3.5) solid #23205e;border-right:0}

@@ -26,14 +26,19 @@
       <div class="stat me" id="sme" hidden></div>
       <div class="dlg" id="dlg" hidden><b id="who" hidden></b><p id="txt" aria-live="polite"></p><i id="more" hidden>▼</i></div>
       <div class="menu" id="menu" hidden></div>
-      <div class="title" id="title">
-        <p class="kick">STEFAN FOSTER PRESENTS</p>
-        <h1>FOSTER<br>VALLEY</h1>
-        <p class="tag">My portfolio, as a small adventure.</p>
-        <div class="tmons" id="tmons"></div>
-        <div class="tb"><button id="bcont" type="button" hidden>Continue</button><button id="bnew" type="button">Start</button></div>
-        <p class="keys">Arrows or WASD to walk · hold X to run · Enter to talk · F for your folio</p>
-        <a class="skip" href="./">or skip the game and just see the work →</a>
+      <div class="title intro" id="title">
+        <div class="tintro" aria-hidden="true"><p>STEFAN FOSTER</p><i>PRESENTS</i></div>
+        <div class="tlogo">
+          <h1 aria-label="Foster Valley"><span class="w1">FOSTER</span><span class="w2">VALLEY</span></h1>
+          <p class="tver">PORTFOLIO VERSION</p>
+        </div>
+        <p class="tpress" id="tpress">PRESS START</p>
+        <p class="tcopy">©2026 STEFAN FOSTER</p>
+        <div class="tmenu" id="tmenu" hidden>
+          <button id="bcont" type="button" hidden><b>CONTINUE</b><span id="tinfo"></span></button>
+          <button id="bnew" type="button"><b>NEW GAME</b></button>
+          <a class="tskip" href="./"><b>JUST SEE THE WORK</b></a>
+        </div>
       </div>
       <div class="over" id="folio" hidden></div>
       <div class="over" id="card" hidden></div>
