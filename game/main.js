@@ -1,14 +1,14 @@
 // Foster Valley. The same portfolio as the real site, as a small adventure: the projects are out in the long grass,
 // and you beat each one to see its work. Walk with the arrows or WASD, talk and confirm with Enter, Space or Z.
 import { PROJECTS as ALLP, ABOUT } from "../projects.js";
-const PROJECTS = ALLP.filter((p) => !p.page); // pages of their own (and locked ones) stay out of the game
+const PROJECTS = ALLP.filter((p) => !p.page || p.slug === "les-benjamins"); // pages of their own (and locked ones) stay out of the game
 import MEDIA from "../media.js";
 import { buildArt, C } from "./art.js";
 import { buildWorld, buildHouse, buildOffice, STARTERS, FOES, EXTRA, CORP, TRAINERS, SAY, ZONES, TT, TNAME, eff, formOf, stageOf } from "./data.js";
 import { person, LOOKS } from "./people.js";
 
 // each patch of long grass belongs to one project, by name, so the site's order can change without moving them
-const GRASSOF = ["la-croisiere", "ai-commissions", "3d-explorations", "ai-experiments", "summer-of-sport", "relax", "coca-cola", "gumtree"];
+const GRASSOF = ["la-croisiere", "ai-commissions", "3d-explorations", "ai-experiments", "summer-of-sport", "relax", "coca-cola", "gumtree", "les-benjamins"];
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -23,7 +23,7 @@ const A = buildArt();
 // people are drawn from outfit recipes; every creature and portrait is a painted sprite in game/art
 for (const k in LOOKS) A.who[k] = person(LOOKS[k]);
 A.who.you = A.who.boy; A.port = {}; A.monF = {};
-const ART = ["ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "lion", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo"];
+const ART = ["balloon", "ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "lion", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo"];
 // walking sprites: one strip per person, nine frames (front, left, back; standing then each foot), right is the left mirrored
 const WALK = ["stefan", "boy", "girl", "ad", "mm", "mp", "bs", "sl", "cmo", "tim", "pat", "chris", "jeremy", "jimi", "smoker", "vaper"];
 await Promise.all(WALK.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => {
@@ -289,7 +289,7 @@ async function stefan() {
   if (!S.flags.intro) { S.flags.intro = 1; await speak("stefan", SAY.intro, who); return; }
   if (!S.starter) { await speak("stefan", SAY.noPick, who); return; }
   const n = S.won.length;
-  if (n >= PROJECTS.length && !S.flags.badge) { await speak("stefan", ["That's all eight. You've seen everything I've made.", "Which means the MAL office has opened its doors for you. It's just east of the square.", "Tim's at the top, in the glass office. Good luck."], who); return; }
+  if (n >= PROJECTS.length && !S.flags.badge) { await speak("stefan", ["That's all of them. You've seen everything I've made.", "Which means the MAL office has opened its doors for you. It's just east of the square.", "Tim's at the top, in the glass office. Good luck."], who); return; }
   if (n >= PROJECTS.length) { await speak("stefan", SAY.ending, who); S.flags.end = 1; save(); await endCard(); return; }
   const next = PROJECTS.find((p) => !S.won.includes(p.slug)), left = 5 - S.beat.filter((b) => !TRAINERS[b].boss).length;
   await speak("stefan", [`${n} of ${PROJECTS.length} found.`, `${next.title} is at ${FOES[next.slug].zone}.`, ...(S.beat.includes("cmo") ? [] : left > 0 ? [`There are still ${left} people out on the roads who want a quick chat.`] : ["The CMO is waiting at the top of the north road."])], who);
@@ -350,7 +350,7 @@ async function duel(o) {
 
 // ---------- a fight ----------
 const TCOL = { AI: "#57c9b5", IMAGE: "#6ea4f2", FILM: "#b79cff", NONE: "#ff2d4a" };
-const BG = { corp: ["#e8edf5", "#9fb4d9", "#ffd76a"],  "la-croisiere": ["#bfeaf7", "#ffe9b8", "#ff9dbb"], "ai-commissions": ["#b7f3e4", "#57c9b5", "#b79cff"], "3d-explorations": ["#e0d4ff", "#a58cf0", "#86d2ec"], "ai-experiments": ["#ffc4f1", "#e772cf", "#ffd76a"], "summer-of-sport": ["#c4f0b0", "#ffd76a", "#f2907f"], relax: ["#a5e8cf", "#86d2ec", "#fff4e0"], "coca-cola": ["#ffd9a6", "#e6a25a", "#f0546a"], gumtree: ["#ffd0e3", "#ff86b6", "#a9dcbc"], x: ["#e9e4f0", "#b79cff", "#ffb38a"] };
+const BG = { "les-benjamins": ["#bfe3ff", "#9be15d", "#ff9dbb"], corp: ["#e8edf5", "#9fb4d9", "#ffd76a"],  "la-croisiere": ["#bfeaf7", "#ffe9b8", "#ff9dbb"], "ai-commissions": ["#b7f3e4", "#57c9b5", "#b79cff"], "3d-explorations": ["#e0d4ff", "#a58cf0", "#86d2ec"], "ai-experiments": ["#ffc4f1", "#e772cf", "#ffd76a"], "summer-of-sport": ["#c4f0b0", "#ffd76a", "#f2907f"], relax: ["#a5e8cf", "#86d2ec", "#fff4e0"], "coca-cola": ["#ffd9a6", "#e6a25a", "#f0546a"], gumtree: ["#ffd0e3", "#ff86b6", "#a9dcbc"], x: ["#e9e4f0", "#b79cff", "#ffb38a"] };
 async function fight(def, slug, trId) {
   const tr = trId ? TRAINERS[trId] : null, team = tr ? tr.team.map((k) => CORP[k]) : [def]; def = team[0];
   const mine = formOf(S.starter, S.lvl), st = stats(S.lvl), boss = tr ? tr.boss || 0 : def.boss || 0;
@@ -431,7 +431,7 @@ async function fight(def, slug, trId) {
   if (result !== "win") S.hp = result === "run" ? Math.max(1, Math.round(me.hp)) : S.hp;
   au.music("world"); await fadeTo(0, 300);
   if (result === "lose") await ui.say(SAY.lost);
-  if (result === "win" && slug) { await card(slug); if (S.won.length === 4) toast("FOUR FOUND. THE MAL OFFICE IS OPEN, EAST OF THE SQUARE.", 5000); if (S.won.length === PROJECTS.length) toast("ALL EIGHT FOUND. GO BACK AND SEE STEFAN.", 5000); }
+  if (result === "win" && slug) { await card(slug); if (S.won.length === 4) toast("FOUR FOUND. THE MAL OFFICE IS OPEN, EAST OF THE SQUARE.", 5000); if (S.won.length === PROJECTS.length) toast("EVERY PROJECT FOUND. GO BACK AND SEE STEFAN.", 5000); }
   return result;
 }
 // a beaten project gets caught: throw a Folio Ball, it swallows the project, wobbles three times, and clicks shut
@@ -508,6 +508,7 @@ function bars() {
 
 // ---------- the folio: what you've beaten, and the work it showed you ----------
 const thumbs = (p) => {
+  if (p.page) return ["banner-poster.jpg", "car-green-1.jpg", "car-pink-2.jpg", "car-yellow-5.jpg", "car-green-3.jpg", "car-pink-4.jpg"].map((f) => `media/${p.slug}/${f}`);
   const lib = MEDIA[p.slug] || {}, out = [];
   (p.youtube || []).forEach((y) => out.push(y.thumb ? `media/${p.slug}/${y.thumb}` : `https://i.ytimg.com/vi/${y.id}/hqdefault.jpg`));
   (p.items || []).forEach((it) => { const m = it.file && lib[it.file]; if (m) out.push(`media/${p.slug}/${m.node || m.poster || m.sm}`); });
@@ -541,7 +542,7 @@ function endCard() {
   return new Promise((res) => {
     const el = $("card");
     el.innerHTML = `<div class="sheet end"><span class="no">THE END</span><h2>${esc(ABOUT.name)}</h2><p class="meta">${esc(ABOUT.role)}</p>
-      <p class="blurb">You found all eight projects. Thanks for playing.</p>
+      <p class="blurb">You found every project. Thanks for playing.</p>
       <div class="btns col"><a class="go" href="mailto:${esc(ABOUT.email)}">${esc(ABOUT.email)}</a>${(ABOUT.socials || []).map((s) => `<a class="go alt" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)}</a>`).join("")}<a class="go alt" href="./">See the proper site →</a><button type="button" id="cclose">Keep wandering</button></div></div>`;
     el.hidden = false; au.sfx("win"); busyCard = () => { el.hidden = true; busyCard = null; res(); };
     $("cclose").addEventListener("click", () => busyCard && busyCard());

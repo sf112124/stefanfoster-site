@@ -31,6 +31,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
 .stat.foe{left:calc(var(--u)*10);top:calc(var(--u)*12)}
 .stat.me{right:calc(var(--u)*10);bottom:calc(var(--u)*54)}
 .stat .nm{display:flex;justify-content:space-between;gap:calc(var(--u)*4);font-weight:600;white-space:nowrap}
+.stat .nm b{overflow:hidden;text-overflow:ellipsis;min-width:0;letter-spacing:-.02em}
 .stat .nm span{font-weight:400;opacity:.7}
 .stat .hp{height:calc(var(--u)*4);margin-top:calc(var(--u)*2);background:#e6dccb;border:calc(var(--u)*1) solid var(--ink);border-radius:calc(var(--u)*3);overflow:hidden}
 .stat .hp i{display:block;height:100%}

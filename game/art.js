@@ -47,6 +47,7 @@ export const GRASS = {
   6: ["#3fa98a", "#237a66", "#a5e8cf"],   // Relax Lagoon
   7: ["#e6a25a", "#b46a2c", "#ffd9a6"],   // Fizz Springs
   8: ["#ff86b6", "#d9558c", "#ffd0e3"],   // Gum Tree Grove
+  9: ["#9be15d", "#5fae34", "#e2ffb8"],   // Cappadocia, balloon green
 };
 
 export function buildArt() {

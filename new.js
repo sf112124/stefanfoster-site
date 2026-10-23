@@ -273,7 +273,8 @@ addEventListener("resize", () => { if (!view.hidden) justify(); });
 // ---------- lightbox ----------
 const lb = $("#lb"), lbs = $("#lbs");
 let lbp = null, lbk = -1;
-function lbOpen(p, k) { lbp = p; lbk = k; lb.hidden = false; lbShow(); }
+// opening the viewer adds a step to history, so Esc, the close button, the back button and a back swipe all just close it
+function lbOpen(p, k) { lbp = p; lbk = k; lb.hidden = false; lbShow(); history.pushState({ lb: 1 }, "", location.href); }
 function lbShow() {
   const it = lbp.pieces[lbk];
   lbs.innerHTML = it.yt ? `<iframe src="https://www.youtube-nocookie.com/embed/${it.yt.id}?autoplay=1&rel=0" allow="autoplay; fullscreen" allowfullscreen></iframe>`
@@ -281,10 +282,13 @@ function lbShow() {
   $("#lbn").textContent = `${pad(lbk + 1)} / ${pad(lbp.pieces.length)}`;
   $("#lbc").textContent = [it.caption, it.stat].filter(Boolean).join("  ·  ");
 }
-const lbClose = () => { lb.hidden = true; lbs.innerHTML = ""; };
+const lbHide = () => { lb.hidden = true; lbs.innerHTML = ""; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); };
+const lbClose = () => { if (lb.hidden) return; if (history.state && history.state.lb) history.back(); else lbHide(); };
+addEventListener("popstate", () => { if (!lb.hidden) lbHide(); });
+lb.addEventListener("click", (e) => { if (e.target === lb || e.target === lbs) lbClose(); });
 const lbStep = (d) => { const n = lbp.pieces.length; let k = lbk; do { k = (k + d + n) % n; } while (lbp.pieces[k].play && k !== lbk); lbk = k; lbShow(); };
 $("#lbx").onclick = lbClose; $("#lbp").onclick = () => lbStep(-1); $("#lbnx").onclick = () => lbStep(1);
-addEventListener("keydown", (e) => { if (lb.hidden) return; if (e.key === "Escape") lbClose(); if (e.key === "ArrowRight") lbStep(1); if (e.key === "ArrowLeft") lbStep(-1); });
+addEventListener("keydown", (e) => { if (lb.hidden) return; if (e.key === "Escape") { if (!document.fullscreenElement) lbClose(); return; } if (e.key === "ArrowRight") lbStep(1); if (e.key === "ArrowLeft") lbStep(-1); });
 
 // ---------- the thing in the hole, and the ship ----------
 const crawler = new Crawler({

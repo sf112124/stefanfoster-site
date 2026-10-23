@@ -35,6 +35,8 @@ export const FOES = {
     moves: [{ n: "TUMBLE", p: 9 }, { n: "DUAL CAPTURE", p: 7 }, { n: "CAMERA REMOTE", p: 6 }] },
   "coca-cola": { name: "COCA-COLA", type: "FILM", art: "fizz", zone: "The Springs",
     moves: [{ n: "AHHH", p: 9 }, { n: "OOOH", p: 7 }, { n: "YEAH", p: 6 }] },
+  "les-benjamins": { name: "FROM EARTH TO SKY", type: "IMAGE", art: "balloon", zone: "Cappadocia",
+    moves: [{ n: "SKETCH TO SKY", p: 9 }, { n: "SILK CANVAS", p: 7 }, { n: "LIFT OFF", p: 6 }] },
   gumtree: { name: "GUMTREE", type: "FILM", art: "gum", zone: "The Grove",
     moves: [{ n: "GOOD FIND", p: 9 }, { n: "NO SALESPEOPLE", p: 7 }, { n: "NO FANFARE", p: 6 }] },
 };
@@ -108,9 +110,9 @@ export const TRAINERS = {
 
 // ---- what people and things say ----
 export const SAY = {
-  intro: ["Hi, I'm Stefan. This is my portfolio.", "My eight projects are out in the long grass around the valley.", "Find one and beat it, and you get to see the work.", "First, pick a tool to take with you: AI, Photoshop or Premiere. They're on the stands behind me."],
+  intro: ["Hi, I'm Stefan. This is my portfolio.", "My projects are out in the long grass around the valley.", "Find one and beat it, and you get to see the work.", "First, pick a tool to take with you: AI, Photoshop or Premiere. They're on the stands behind me."],
   after: ["The door is at the bottom of the room. Walk into long grass to find a project.", "AI beats FILM, PHOTOSHOP beats AI, PREMIERE beats IMAGE.", "There are eight film reels hidden around the valley too. Each one makes your tool stronger.", "Watch out on the roads. Agency people and clients hang about out there, and they all want a quick chat. If one spots you, you'll have to fight their way through it.", "The coffee machine in here brings your tool back to full health."],
-  ending: ["That's all eight. Thanks for playing through my work.", "If you'd like to work together, my details are on the next screen."],
+  ending: ["That's all of them. Thanks for playing through my work.", "If you'd like to work together, my details are on the next screen."],
   needPick: ["Pick a tool from the stands first."],
   noPick: ["Pick one of the three tools on the stands."],
   desk: ["Stefan's desk."],
@@ -158,7 +160,7 @@ export const SAY = {
     relax: ["THE LAGOON", "#RELAX is in the long grass here."],
     riviera: ["THE BEACH", "La Croisière is in the long grass here."],
     hole: ["DO NOT OPEN"],
-    cappa: ["FROM EARTH TO SKY", "Les Benjamins x Apple. Cappadocia."],
+    cappa: ["FROM EARTH TO SKY", "Les Benjamins x Apple. Cappadocia.", "Something spiky is floating about in the long grass here."],
     malout: ["MEDIA ARTS LAB", "Ground floor: kitchen and the all-agency space. First: accounts. Second: creative and production."],
     mal: ["Reception. There's nobody here, just a bowl of mints and a sign-in iPad.", "Accounts on the first floor. Creative and production on the second. Tim's office is the glass one."],
   },
@@ -169,7 +171,7 @@ export const SAY = {
 export const ZONES = [
   { n: "The Stadium", r: [2, 2, 23, 17] }, { n: "The Farm", r: [26, 2, 46, 10] }, { n: "The Paddock", r: [48, 2, 69, 17] },
   { n: "The Grove", r: [2, 22, 13, 33] }, { n: "The Springs", r: [58, 22, 69, 33] }, { n: "The Lagoon", r: [2, 35, 19, 49] }, { n: "The Beach", r: [50, 35, 69, 49] },
-  { n: "Foster Valley", r: [28, 29, 42, 41] },
+  { n: "Foster Valley", r: [28, 29, 42, 41] }, { n: "Cappadocia", r: [37, 13, 46, 19] },
 ];
 export function buildWorld() {
   const W = 72, H = 52, N = W * H, base = new Uint8Array(N), vr = new Uint8Array(N), tg = new Uint8Array(N), solid = new Uint8Array(N), keep = new Uint8Array(N), objs = [];
@@ -221,7 +223,7 @@ export function buildWorld() {
   put("mal", 43, 35, { w: 7 }); rect(43, 31, 49, 35, (x, y) => { solid[I(x, y)] = 1; keep[I(x, y)] = 1; });
   road(41, 36, 46, 37); road(46, 36, 46, 41); clear(41, 29, 53, 41); put("sign", 44, 37, { act: "sign:malout" });
   // Cappadocia: three balloons on the open grass east of the north road
-  clear(37, 13, 46, 19); put("balloon0", 39, 16, { act: "balloons" }); put("balloon1", 42, 15, { act: "balloons" }); put("balloon2", 45, 16, { act: "balloons" }); put("sign", 41, 18, { act: "sign:cappa" });
+  clear(37, 13, 46, 19); put("balloon0", 39, 16, { act: "balloons" }); put("balloon1", 42, 15, { act: "balloons" }); put("balloon2", 45, 16, { act: "balloons" }); put("sign", 41, 18, { act: "sign:cappa" }); rect(37, 13, 46, 14, (x, y) => (tg[I(x, y)] = 9));
   // a bench by the paddock road, with something left on it
   clear(51, 14, 54, 16); put("bench", 52, 15, { w: 2, act: "grow" });
   // round the corner: the smoking area
