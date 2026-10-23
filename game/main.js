@@ -6,6 +6,7 @@ import MEDIA from "../media.js";
 import { buildArt, C } from "./art.js";
 import { buildWorld, buildHouse, buildOffice, STARTERS, FOES, EXTRA, CORP, TRAINERS, SAY, ZONES, TT, TNAME, eff, formOf, stageOf } from "./data.js";
 import { person, LOOKS } from "./people.js";
+import { Chip } from "./music.js";
 
 // each patch of long grass belongs to one project, by name, so the site's order can change without moving them
 const GRASSOF = ["la-croisiere", "ai-commissions", "3d-explorations", "ai-experiments", "summer-of-sport", "relax", "coca-cola", "gumtree", "les-benjamins"];
@@ -32,6 +33,9 @@ await Promise.all(WALK.map((k) => new Promise((res) => { const im = new Image();
   im.onerror = res; im.src = `game/art/w_${k}.png`; })));
 A.who.you = A.who.boy;
 await Promise.all(ART.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => { im._s = 2; if (k.startsWith("t_")) A.port[k.slice(2)] = im; else { A.mon[k] = im; const f = A.flip(im); f._s = 2; A.monF[k] = f; } res(); }; im.onerror = res; im.src = `game/art/${k}.png`; })));
+// your own back, for the start of a fight
+A.back = {};
+await Promise.all(["boy", "girl"].map((k) => new Promise((res) => { const im = new Image(); im.onload = () => { im._s = 2; A.back[k] = im; res(); }; im.onerror = res; im.src = `game/art/back_${k}.png`; })));
 // the screen is 320 by 180 game pixels, drawn at double density so the painted sprites keep their detail
 const cv = $("cv"), g = cv.getContext("2d"); cv.width = 640; cv.height = 360; g.imageSmoothingEnabled = false;
 const iw = (s) => s.width / (s._s || 1), ih = (s) => s.height / (s._s || 1);
@@ -45,7 +49,7 @@ const stats = (lvl) => { const st = S.starter ? stageOf(S.starter, lvl) : 0; ret
 // ---------- sound: a few square waves, like an old handheld ----------
 const au = {
   on: true, ctx: null, tune: null, step: 0, next: 0,
-  unlock() { if (!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); this.out = this.ctx.createGain(); this.out.gain.value = .5; this.out.connect(this.ctx.destination); setInterval(() => this.pump(), 40); } catch (e) {} } if (this.ctx && this.ctx.state !== "running") this.ctx.resume(); },
+  unlock() { if (!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); this.out = this.ctx.createGain(); this.out.gain.value = .5; this.out.connect(this.ctx.destination); this.chip.attach(this.ctx, this.out); } catch (e) {} } if (this.ctx && this.ctx.state !== "running") this.ctx.resume(); },
   note(f, d, o = {}) {
     if (!this.on || !this.ctx || this.ctx.state !== "running" || !f) return;
     const t = (o.at || this.ctx.currentTime), os = this.ctx.createOscillator(), gn = this.ctx.createGain(), v = o.vol ?? .05;
@@ -79,34 +83,13 @@ const au = {
     else if (k === "spot") seq([988, 1319, 0, 1319], .07, { vol: .05 });
     else if (k === "baa") { N(420, .12, { type: "sawtooth", vol: .04 }); N(380, .3, { type: "sawtooth", vol: .04, at: t + .12, to: 330 }); }
   },
-  // two short tunes of my own: a slow one for walking about, a quick one for a fight
-  TUNES: {
-    world: { bpm: 96, lead: [76, 0, 79, 0, 81, 79, 76, 0, 74, 0, 76, 79, 74, 0, 72, 0, 76, 0, 79, 0, 84, 81, 79, 0, 81, 0, 79, 76, 74, 0, 72, 0], bass: [48, 0, 55, 0, 45, 0, 52, 0, 41, 0, 48, 0, 43, 0, 50, 0] },
-    battle: { bpm: 152, lead: [69, 72, 76, 81, 76, 72, 69, 72, 67, 71, 74, 79, 74, 71, 67, 71, 65, 69, 72, 77, 72, 69, 65, 69, 64, 68, 71, 76, 80, 76, 71, 68], bass: [45, 45, 57, 45, 43, 43, 55, 43, 41, 41, 53, 41, 40, 40, 52, 40] },
-  },
-  // the soundtrack: three proper tracks, one for outside, one for the studio, one for a fight
-  tracks: {}, vol: .42,
-  fadeTo(a, v, ms, done) { clearInterval(a._f); const from = a.volume, s = performance.now(); a._f = setInterval(() => { const k = Math.min(1, (performance.now() - s) / ms); a.volume = from + (v - from) * k; if (k >= 1) { clearInterval(a._f); done && done(); } }, 30); },
+  // the soundtrack is written in game/music.js and played live by four chip voices
+  chip: new Chip(),
   music(name) {
     if (name === "world" && map && map.id !== "world") name = "studio";
-    if (this.tune === name) return; const prev = this.tracks[this.tune]; this.tune = name;
-    if (prev) this.fadeTo(prev, 0, 400, () => prev.pause());
-    if (!name || !this.on) return;
-    const a = this.tracks[name] || (this.tracks[name] = Object.assign(new Audio(`game/music/${name}.mp3`), { loop: true, volume: 0, preload: "auto" }));
-    if (name === "battle") a.currentTime = 0;
-    a.play().catch(() => {}); this.fadeTo(a, this.vol, 600);
+    this.tune = name; this.chip.play(name);
   },
-  toggle() { const a = this.tracks[this.tune]; if (!a) { if (this.on && this.tune) { const t = this.tune; this.tune = null; this.music(t); } return; } if (this.on) { a.play().catch(() => {}); this.fadeTo(a, this.vol, 300); } else this.fadeTo(a, 0, 200, () => a.pause()); },
-  pump() { return;
-    if (!this.on || !this.ctx || this.ctx.state !== "running" || !this.tune) return;
-    const T = this.TUNES[this.tune], d = 60 / T.bpm / 2, hz = (m) => (m ? 440 * Math.pow(2, (m - 69) / 12) : 0);
-    if (this.next < this.ctx.currentTime) this.next = this.ctx.currentTime + .05;
-    while (this.next < this.ctx.currentTime + .15) {
-      this.note(hz(T.lead[this.step % T.lead.length]), d * .9, { at: this.next, vol: .016 });
-      this.note(hz(T.bass[this.step % T.bass.length]), d * .95, { at: this.next, vol: .04, type: "triangle" });
-      this.step++; this.next += d;
-    }
-  },
+  toggle() { this.chip.on = this.on; if (this.on) { const t = this.tune; this.chip.tune = null; this.chip.play(t); } },
 };
 
 // ---------- hands: keys, and buttons on a phone ----------
@@ -207,7 +190,24 @@ function fadeTo(v, ms) { return new Promise((res) => { const a = fade, s = perfo
 function night() { nightOn = !nightOn; au.sfx("secret"); toast(nightOn ? "NIGHT MODE" : "DAY MODE"); }
 
 // ---------- walking about ----------
+// people in the office drift about: a turn, a step, a pause, always near where they started
+function mill(dt) {
+  if (map.id === "world" || busy) return;
+  for (const o of map.objs) {
+    if (!o.wander) continue;
+    if (o.mv) { o.mv.t += dt / .3; const k = Math.min(1, o.mv.t); o.dx = -o.mv.dx * 16 * (1 - k); o.dy = -o.mv.dy * 16 * (1 - k); o.step = k < .5 ? 1 + (o.mv.n % 2) : 0; if (k >= 1) { o.mv = null; o.dx = o.dy = 0; o.step = 0; } continue; }
+    o.wt = (o.wt ?? Math.random() * 3) - dt; if (o.wt > 0) continue; o.wt = 1.2 + Math.random() * 2.8;
+    const d = pick(["up", "down", "left", "right"]), [dx, dy] = DIRS[d]; o.dir = d;
+    if (Math.random() < .4) continue; // sometimes they just turn round
+    const nx = o.x + dx, ny = o.y + dy, [a, b2, c, e] = o.wander;
+    if (nx < a || ny < Math.max(3, b2) || nx > c || ny > e) continue;
+    if (blocked(nx, ny) || (nx === P.x && ny === P.y) || (nx === P.fx && ny === P.fy) || (map.warps || []).some((w) => Math.abs(w.x - nx) + Math.abs(w.y - ny) <= 1) || map.base[map.I(nx, ny)] === TT.mat) continue;
+    o.x = nx; o.y = ny; o.mv = { dx, dy, t: 0, n: (o.mv_n = (o.mv_n || 0) + 1) };
+  }
+  map.tall && map.tall.sort((p, q) => p.y - q.y);
+}
 function walk(dt) {
+  mill(dt);
   if (P.moving) {
     P.t += dt / (keys.b ? .095 : .165);
     if (P.t >= 1) { P.moving = false; P.px = P.x * 16; P.py = P.y * 16; arrive(); }
@@ -226,7 +226,11 @@ async function script(fn) { if (busy) return; busy = true; try { await fn(); } f
 function arrive() {
   const i = map.I(P.x, P.y);
   const wp = (map.warps || []).find((w) => w.x === P.x && w.y === P.y);
-  if (wp) { warp(maps[wp.to], wp.tx, wp.ty, wp.dir); return; }
+  if (wp) {
+    // in the office you can't go up a floor until you've dealt with whoever's on this one
+    if (wp.needs && !wp.needs.every((b) => S.beat.includes(b))) { const bx = P.fx, by = P.fy; script(async () => { await ui.say(SAY.floorLocked(wp.who)); place(map, bx, by, "down"); }); return; }
+    warp(maps[wp.to], wp.tx, wp.ty, wp.dir); return;
+  }
   if (map.id !== "world") { const sp = spotted(); if (sp) script(() => challenge(sp)); }
   if (map.id === "house" && map.base[i] === TT.mat) {
     if (!S.starter) { script(async () => { await ui.say(SAY.needPick, { who: "STEFAN" }); place(map, P.x, P.y - 1, "up"); }); return; }
@@ -257,10 +261,11 @@ async function run(act, o) {
     if (a === "sign") { au.sfx("ok"); await ui.say(SAY.signs[b], { cls: "sign" }); }
     else if (a === "pick") await choosePick(b);
     else if (a === "stefan") await stefan();
-    else if (a === "coffee") { await ui.say(SAY.coffee[0]); S.hp = stats(S.lvl).max; au.sfx("heal"); if (S.starter) await ui.say(SAY.coffee[1]); save(); }
+    else if (a === "coffee") { await ui.say(SAY.coffee[0]); healAll(); au.sfx("heal"); if (S.starter) await ui.say(SAY.coffee[1]); save(); }
     else if (a === "trainer") await chat(o);
+    else if (a === "staff") { o.dir = OPP[P.dir]; o.wt = 3; await ui.say([SAY.staff[+b]]); }
     else if (a === "smoke") { o.dir = OPP[P.dir]; await ui.say(SAY.smoke[+b]); }
-    else if (a === "malcoffee") { await ui.say(SAY.malcoffee[0]); S.hp = stats(S.lvl).max; au.sfx("heal"); if (S.starter) await ui.say(SAY.malcoffee[1]); save(); }
+    else if (a === "malcoffee") { await ui.say(SAY.malcoffee[0]); healAll(); au.sfx("heal"); if (S.starter) await ui.say(SAY.malcoffee[1]); save(); }
     else if (a === "guitar") { const t = au.ctx ? au.ctx.currentTime : 0; [392, 494, 587, 784, 659, 587, 494, 587].forEach((f, i) => au.note(f, .5, { at: t + i * .16, type: "triangle", vol: .06 })); await ui.say(SAY.guitar); }
     else if (a === "arcade") { await ui.say(SAY.arcade, { keep: true }); const c = await ui.choose(["Play it", "Not now"], { cls: "yn" }); ui.hide(); if (c === 0) window.open("synth", "_blank"); }
     else if (a === "balloons") { await ui.say(SAY.balloons, { keep: true }); const c = await ui.choose(["See the page", "Keep exploring"], { cls: "yn" }); ui.hide(); if (c === 0) window.open("benjamins", "_blank"); }
@@ -348,30 +353,68 @@ async function duel(o) {
   }
 }
 
+// ---------- the hire bike ----------
+function bike(on) { S.bike = !!on; }
+
 // ---------- a fight ----------
 const TCOL = { AI: "#57c9b5", IMAGE: "#6ea4f2", FILM: "#b79cff", NONE: "#ff2d4a" };
 const BG = { "les-benjamins": ["#bfe3ff", "#9be15d", "#ff9dbb"], corp: ["#e8edf5", "#9fb4d9", "#ffd76a"],  "la-croisiere": ["#bfeaf7", "#ffe9b8", "#ff9dbb"], "ai-commissions": ["#b7f3e4", "#57c9b5", "#b79cff"], "3d-explorations": ["#e0d4ff", "#a58cf0", "#86d2ec"], "ai-experiments": ["#ffc4f1", "#e772cf", "#ffd76a"], "summer-of-sport": ["#c4f0b0", "#ffd76a", "#f2907f"], relax: ["#a5e8cf", "#86d2ec", "#fff4e0"], "coca-cola": ["#ffd9a6", "#e6a25a", "#f0546a"], gumtree: ["#ffd0e3", "#ff86b6", "#a9dcbc"], x: ["#e9e4f0", "#b79cff", "#ffb38a"] };
+// ---------- your party: your tool first, then every project you've caught, each with its own health ----------
+const party = () => ["tool", ...S.won];
+const hpGet = (k) => (k === "tool" ? S.hp : (S.php || {})[k]);
+const hpSet = (k, v) => { if (k === "tool") S.hp = v; else { S.php = S.php || {}; S.php[k] = v; } };
+const healAll = () => { S.hp = stats(S.lvl).max; S.php = {}; };
+const MV = [14, 22, 11];
+function member(key) {
+  const st = stats(S.lvl);
+  const base = key === "tool" ? formOf(S.starter, S.lvl) : (() => { const f = FOES[key]; return { ...f, moves: f.moves.map((m, i) => ({ n: m.n, t: f.type, p: MV[i] || 12, acc: i === 1 ? .82 : undefined, fx: m.fx })) }; })();
+  const max = key === "tool" ? st.max : Math.round(st.max * .9), hp = clamp(hpGet(key) ?? max, 0, max);
+  return { ...base, key, lvl: S.lvl, max, hp, atk: st.atk, def: st.def, am: 1, dm: 1, ox: 0, oy: 0, a: 1, fl: 0, sc: 1 };
+}
+const alive = (except) => party().filter((k) => k !== except && (hpGet(k) ?? 1) > 0 && !(k !== "tool" && !FOES[k]));
+async function choosePartner(force, current) {
+  const ks = party().filter((k) => k === "tool" || FOES[k]);
+  const opts = ks.map((k) => { const m = member(k); return { html: `<img class="pm" src="${monImg(m.art)}" alt=""><b>${esc(m.name)}</b><i>${k === current ? "OUT NOW" : m.hp <= 0 ? "TIRED" : `${Math.ceil(m.hp)}/${m.max}`}</i>` }; });
+  for (;;) {
+    const c = await ui.choose(opts, { cls: "party", cols: 2, cancel: !force });
+    if (c < 0) return null;
+    const k = ks[c]; if (k === current) { await ui.line(`${member(k).name} is already out!`); continue; }
+    if (member(k).hp <= 0) { await ui.line(`${member(k).name} is too tired to fight.`); continue; }
+    return k;
+  }
+}
 async function fight(def, slug, trId) {
   const tr = trId ? TRAINERS[trId] : null, team = tr ? tr.team.map((k) => CORP[k]) : [def]; def = team[0];
-  const mine = formOf(S.starter, S.lvl), st = stats(S.lvl), boss = tr ? tr.boss || 0 : def.boss || 0;
+  const boss = tr ? tr.boss || 0 : def.boss || 0;
   const L = tr ? 3 + tr.lv + Math.floor((S.won.length + S.beat.length) / 2) : (slug ? 2 : boss ? 2 + boss : 1) + S.won.length;
-  const me = { ...mine, lvl: S.lvl, max: st.max, hp: clamp(S.hp ?? st.max, 1, st.max), atk: st.atk, def: st.def, am: 1, dm: 1, ox: -200, oy: 0, a: 1, fl: 0 };
-  const mk = (d) => { const f = { ...d, lvl: L, max: Math.round((20 + L * 6) * (tr ? (boss ? 2.2 : 1.6) : boss ? 2 : 1.6)), atk: 6 + L, def: 9 + L, am: 1, dm: 1, ox: 200, oy: 0, a: 1, fl: 0 }; f.hp = f.max; return f; };
+  const first = (hpGet("tool") ?? 1) > 0 ? "tool" : alive()[0] || "tool";
+  let me = member(first); if (me.hp <= 0) me.hp = 1; me.a = 0;
+  const mk = (d) => { const f = { ...d, lvl: L, max: Math.round((20 + L * 6) * (tr ? (boss ? 2.2 : 1.6) : boss ? 2 : 1.6)), atk: 6 + L, def: 9 + L, am: 1, dm: 1, ox: 200, oy: 0, a: 1, fl: 0, sc: 1 }; f.hp = f.max; return f; };
   let foe = mk(def), ti = 0;
   au.sfx("encounter"); au.music(null);
   for (let k = 0; k < 2; k++) { fade = .9; await sleep(60); fade = 0; await sleep(60); }
   await tween(420, (k) => (wipe = k)); fade = 1; wipe = 0;
-  bt = { me, foe, bg: BG[slug] || (tr ? BG.corp : BG.x), shake: 0, t: 0, pops: [], parts: [], flash: 0, qte: null, port: tr ? { img: A.port[tr.port.slice(2)], ox: 200 } : null }; mode = "battle"; hud(); au.music("battle"); bars(); $("sme").hidden = $("sfoe").hidden = !!tr;
+  bt = { fx: [], me, foe, bg: BG[slug] || (tr ? BG.corp : BG.x), shake: 0, t: 0, pops: [], parts: [], flash: 0, qte: null, port: tr ? { img: A.port[tr.port.slice(2)], ox: 200 } : null, you: { img: A.back[S.look] || A.back.boy, ox: -200 } };
+  mode = "battle"; hud(); au.music("battle"); bars(); $("sme").hidden = true; $("sfoe").hidden = !!tr;
+  // you and them slide in from either side, like the handhelds
+  await fadeTo(0, 200);
+  await tween(480, (k) => { bt.you.ox = -200 * (1 - k); if (tr) bt.port.ox = 200 * (1 - k); else foe.ox = 200 * (1 - k); });
   if (tr) {
-    await fadeTo(0, 200); await tween(420, (k) => { bt.port.ox = 200 * (1 - k); me.ox = -200 * (1 - k); });
     await ui.line(`${tr.role} ${tr.name} wants a quick chat!`, {});
-    await tween(300, (k) => (bt.port.ox = 200 * k)); bt.port = null; $("sfoe").hidden = $("sme").hidden = false; bars();
+    await tween(300, (k) => (bt.port.ox = 200 * k)); bt.port = null; $("sfoe").hidden = false; bars();
     await tween(380, (k) => (foe.ox = 200 * (1 - k)));
     await ui.line(`${tr.name} brings up ${def.name}!`, {});
-  } else {
-    await fadeTo(0, 200); await tween(420, (k) => { foe.ox = 200 * (1 - k); me.ox = -200 * (1 - k); });
-    await ui.line(def.intro || `${def.name} appears!`, {});
-  }
+  } else await ui.line(def.intro || `A wild ${def.name} appeared!`, {});
+  // then you throw your first one out and step off
+  const sendOut = async (m, first) => {
+    await ui.line(`Go! ${m.name}!`, { auto: .45 }); ui.hide();
+    if (first) tween(360, (k) => (bt.you.ox = -220 * k));
+    const b = bt.ball = { x: 50, y: 120, rot: 0, open: 0, shut: false };
+    await tween(420, (k) => { b.x = 50 + 34 * k; b.y = 120 - Math.sin(k * Math.PI) * 40; b.rot = k * 10; });
+    b.open = 1; bt.flash = .6; au.sfx("buff"); m.a = 1; m.sc = .15; bt.me = me = m; $("sme").hidden = false; bars();
+    await tween(260, (k) => (m.sc = .15 + .85 * k)); bt.ball = null; m.sc = 1;
+  };
+  await sendOut(me, true); bt.you = null;
   let result = null;
   const tell = (t) => ui.line(t, { auto: 1.15 });
   const pop = (txt, x, y, col, big) => bt.pops.push({ txt, x, y, col, big, t: 0 });
@@ -388,65 +431,125 @@ async function fight(def, slug, trId) {
     const tx = isMe ? 238 : 84, ty = isMe ? 56 : 100;
     if (crit) pop("CRITICAL!", tx, ty - 34, "#ffd76a", true);
     const dir = isMe ? 1 : -1; await tween(150, (k) => { att.ox = dir * 26 * Math.sin(k * Math.PI); att.oy = -dir * 10 * Math.sin(k * Math.PI); });
-    bt.flash = crit ? 1 : .6; burst(tx, ty, TCOL[isMe ? mv.t : att.type] || "#fff8ec", crit ? 26 : 14); pop(String(n), tx + rnd(-10, 10), ty - 10, "#fff8ec", false);
+    const sx = isMe ? 84 : 238, sy = isMe ? 100 : 56, kind = mv.fx || "slash";
+    bt.fx.push({ k: kind, t: 0, sx, sy, tx, ty, seed: Math.random() * 99 }); au.sfx(kind === "beam" || kind === "glitch" ? "buff" : kind === "notes" ? "ok" : "blip");
+    await sleep(kind === "beam" || kind === "spikes" || kind === "leaf" || kind === "pins" || kind === "notes" ? 380 : 220);
+    if (kind === "flash" || kind === "smash") bt.shake = 6;
+    bt.flash = crit ? 1 : kind === "flash" ? 1 : .35; burst(tx, ty, TCOL[isMe ? mv.t : att.type] || "#fff8ec", crit ? 22 : 10); pop(String(n), tx + rnd(-10, 10), ty - 10, "#fff8ec", false);
     await hurt(dfn, n, e);
     if (e > 1) await tell("It's super effective!"); else if (e < 1) await tell("It's not very effective.");
   };
+  const swapTo = async (key) => {
+    hpSet(me.key, me.hp); await ui.line(`${me.name}, come back!`, { auto: .5 }); ui.hide();
+    await tween(260, (k) => { me.sc = 1 - k * .85; me.a = 1 - k; }); await sendOut(member(key), false);
+  };
   while (!result) {
     ui.show(`What will ${me.name} do?`);
-    const c = await ui.choose(["FIGHT", "RUN"], { cls: "cmd", cols: 2 });
-    if (c === 1) { if (boss || tr) { await ui.line(tr ? "You can't walk out of a meeting." : SAY.cantRun[0]); continue; } result = "run"; break; }
-    const mi = await ui.choose(me.moves.map((m) => ({ html: `<b>${esc(m.n)}</b><i>${m.kind ? (m.kind === "heal" ? "HEAL" : m.kind === "buff" ? "BOOST" : "WEAKEN") : m.t}</i>` })), { cls: "moves", cols: 2, cancel: true });
-    if (mi < 0) continue;
-    await act(me, foe, me.moves[mi], true);
-    if (foe.hp <= 0) {
-      if (tr && ti < team.length - 1) {
-        au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is dealt with.`);
-        ti++; foe = mk(team[ti]); bt.foe = foe; bars(); await tween(380, (k) => (foe.ox = 200 * (1 - k)));
-        await ui.line(`${tr.name} brings up ${foe.name}!`, {}); continue;
+    const c = await ui.choose(["FIGHT", "FOLIO", "RUN"], { cls: "cmd", cols: 3 });
+    if (c === 2) { if (boss || tr) { await ui.line(tr ? "You can't walk out of a meeting." : SAY.cantRun[0]); continue; } result = "run"; break; }
+    if (c === 1) {
+      if (!S.won.length) { await ui.line("Your folio is empty. Catch a project to fight with it."); continue; }
+      const k = await choosePartner(false, me.key); if (!k) continue;
+      await swapTo(k);
+      await act(foe, me, pick(foe.moves), false);
+    } else {
+      const mi = await ui.choose(me.moves.map((m) => ({ html: `<b>${esc(m.n)}</b><i>${m.kind ? (m.kind === "heal" ? "HEAL" : m.kind === "buff" ? "BOOST" : "WEAKEN") : m.t}</i>` })), { cls: "moves", cols: 2, cancel: true });
+      if (mi < 0) continue;
+      await act(me, foe, me.moves[mi], true);
+      if (foe.hp <= 0) {
+        if (tr && ti < team.length - 1) {
+          au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is dealt with.`);
+          ti++; foe = mk(team[ti]); bt.foe = foe; bars(); await tween(380, (k) => (foe.ox = 200 * (1 - k)));
+          await ui.line(`${tr.name} brings up ${foe.name}!`, {}); continue;
+        }
+        result = "win"; break;
       }
-      result = "win"; break;
+      await act(foe, me, pick(foe.moves), false);
     }
-    await act(foe, me, pick(foe.moves), false);
-    if (me.hp <= 0) { result = "lose"; break; }
+    if (me.hp <= 0) {
+      au.sfx("faint"); await tween(500, (k) => { me.oy = k * 40; me.a = 1 - k; }); await ui.line(`${me.name} is too tired to carry on!`); hpSet(me.key, 0);
+      if (!alive().length) { result = "lose"; break; }
+      ui.show("Who's up next?"); const k = await choosePartner(true, me.key); ui.hide(); await sendOut(member(k), false);
+    }
   }
+  hpSet(me.key, Math.max(0, Math.round(me.hp)));
   if (result === "win") {
     if (slug) await catchIt(foe);
     else { au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is ${tr ? "dealt with" : "beaten"}.`); }
-    au.music(null); au.sfx("win");
+    au.music(null); au.chip.fanfare();
     if (tr) {
-      S.beat.push(trId); S.lvl = Math.min(18, S.lvl + 1); S.hp = stats(S.lvl).max; me.lvl = S.lvl; me.hp = me.max; bars(); save(); hud();
-      await ui.line(`You got through ${tr.name}'s quick chat.`); au.sfx("level"); await ui.line(`${me.name} grew to level ${S.lvl}!`); await evolve(me);
+      S.beat.push(trId); S.lvl = Math.min(18, S.lvl + 1); me.lvl = S.lvl; bars(); save(); hud();
+      await ui.line(`You got through ${tr.name}'s quick chat.`); au.sfx("level"); await ui.line(`Your folio grew to level ${S.lvl}!`); await evolve(me);
     } else if (slug) {
-      S.won.push(slug); S.lvl = Math.min(18, S.lvl + 1); S.hp = stats(S.lvl).max; me.lvl = S.lvl; me.hp = me.max; bars(); save(); hud();
-      await ui.line(`${me.name} grew to level ${S.lvl}!`); au.sfx("level"); await evolve(me);
-      await ui.line(`${def.name} is in your folio.`);
-    } else { S.hp = stats(S.lvl).max; save(); await ui.line(`${me.name} is back to full health.`); }
+      S.won.push(slug); S.lvl = Math.min(18, S.lvl + 1); me.lvl = S.lvl; bars(); save(); hud();
+      await ui.line(`Your folio grew to level ${S.lvl}!`); au.sfx("level"); await evolve(me);
+      await ui.line(`${def.name} joined your folio. You can send it out in battle now.`);
+    }
+    // knocks stay with you until you get a coffee
+    if (me.hp < me.max * .35) await ui.line(`${me.name} is looking worn out. A coffee would sort that.`);
   } else if (result === "lose") {
-    au.music(null); au.sfx("lose"); await tween(500, (k) => { me.oy = k * 40; me.a = 1 - k; }); await ui.line(`${me.name} is out of health.`);
+    au.music(null); au.sfx("lose"); await ui.line("Your whole folio is tired out.");
   } else await ui.line(SAY.ran[0]);
   ui.hide(); await fadeTo(1, 300);
   bt = null; mode = "world"; hud(); $("sfoe").hidden = $("sme").hidden = true;
-  if (result === "lose") { S.hp = stats(S.lvl).max; save(); place(maps.house, 3, 4, "down"); }
-  if (result !== "win") S.hp = result === "run" ? Math.max(1, Math.round(me.hp)) : S.hp;
+  if (result === "lose") { healAll(); save(); bike(false); place(maps.house, 3, 4, "down"); }
+  save();
   au.music("world"); await fadeTo(0, 300);
   if (result === "lose") await ui.say(SAY.lost);
-  if (result === "win" && slug) { await card(slug); if (S.won.length === 4) toast("FOUR FOUND. THE MAL OFFICE IS OPEN, EAST OF THE SQUARE.", 5000); if (S.won.length === PROJECTS.length) toast("EVERY PROJECT FOUND. GO BACK AND SEE STEFAN.", 5000); }
+  if (result === "win" && slug) { await card(slug, true); if (S.won.length === 4) toast("FOUR FOUND. THE MAL OFFICE IS OPEN, EAST OF THE SQUARE.", 5000); if (S.won.length === PROJECTS.length) toast("EVERY PROJECT FOUND. GO BACK AND SEE STEFAN.", 5000); }
   return result;
 }
 // a beaten project gets caught: throw a Folio Ball, it swallows the project, wobbles three times, and clicks shut
 async function catchIt(foe) {
   await ui.line(`${foe.name} is worn out!`); await ui.line("You throw a FOLIO BALL!", { auto: .5 }); ui.hide();
-  const b = bt.ball = { x: 60, y: 130, rot: 0, open: 0, shut: false }; au.sfx("blip");
-  await tween(620, (k) => { b.x = 60 + (238 - 60) * k; b.y = 130 - Math.sin(k * Math.PI) * 95 + (40 - 130) * k * .9; b.rot = k * 12; });
-  au.sfx("buff"); b.open = 1; bt.flash = .8;
-  await tween(380, (k) => { foe.sc = 1 - k; foe.a = 1 - k * .7; foe.oy = -k * 30; });
-  foe.a = 0; b.open = 0; au.sfx("bump");
-  await tween(360, (k) => { b.y = 49 + Math.pow(k, 2) * 36; b.rot = 0; });
-  for (let n = 0; n < 3; n++) { await sleep(300); au.sfx("blip"); await tween(380, (k) => (b.rot = Math.sin(k * Math.PI * 2) * .45)); }
-  await sleep(250); b.shut = true; au.sfx("level");
+  $("sme").hidden = true; // clear the stage so the ball sits on the platform on its own
+  const b = bt.ball = { x: 60, y: 130, rot: 0, open: 0, shut: false, suck: 0, ring: 0 }; au.sfx("blip");
+  // arc up and hang just above the project, the way the handhelds did it
+  await tween(620, (k) => { b.x = 60 + (238 - 60) * k; b.y = 130 + (40 - 130) * k - Math.sin(k * Math.PI) * 50; b.rot = k * 12; });
+  b.rot = 0; await sleep(120);
+  // the lid pops, the project turns to pink light and gets pulled in as a stream of sparks
+  au.sfx("buff"); b.open = 1; b.ring = 1;
+  await tween(220, (k) => (foe.tint = k));
+  await tween(440, (k) => { const e = k * k; foe.sc = 1 - e; foe.oy = (40 - 92) * e; b.suck = k; });
+  foe.a = 0; b.suck = 0; b.open = 0; b.ring = 1; au.sfx("bump");
+  // it drops onto the middle of the platform with a little bounce
+  await tween(340, (k) => (b.y = 40 + (81 - 40) * k * k));
+  await tween(180, (k) => (b.y = 81 - Math.sin(k * Math.PI) * 6));
+  for (let n = 0; n < 3; n++) { await sleep(320); au.sfx("blip"); await tween(380, (k) => (b.rot = Math.sin(k * Math.PI * 2) * .45)); }
+  await sleep(250); b.shut = true; b.ring = 1; au.sfx("level");
   for (let k = 0; k < 18; k++) { const a = rnd(0, 6.28), sp = rnd(30, 100); bt.parts.push({ x: b.x, y: b.y - 4, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, t: 0, col: k % 2 ? "#ffd76a" : "#fff8ec" }); }
   await ui.line(`Gotcha! ${foe.name} was caught!`);
+}
+// every kind of attack looks different: a beam, a glitch, paint, slashes, splashes, spikes, notes, coins...
+function drawFx(b) {
+  for (let i = b.fx.length - 1; i >= 0; i--) {
+    const f = b.fx[i]; f.t += 1 / 60; const T = f.t, k = Math.min(1, T / .35), out = Math.max(0, 1 - Math.max(0, T - .35) / .35);
+    if (T > .75) { b.fx.splice(i, 1); continue; }
+    const r = (n) => { const x = Math.sin(f.seed * 13.7 + n * 91.3) * 43758.5; return x - Math.floor(x); };
+    const fly = (n, w = 10) => [f.sx + (f.tx - f.sx) * Math.min(1, T / .4 + r(n) * .1) + (r(n + 9) - .5) * w, f.sy + (f.ty - f.sy) * Math.min(1, T / .4 + r(n) * .1) + (r(n + 5) - .5) * w - Math.sin(Math.min(1, T / .4) * Math.PI) * 18];
+    g.save(); g.globalAlpha = out;
+    if (f.k === "beam") { g.strokeStyle = "rgba(87,201,181,.5)"; g.lineWidth = 9; g.beginPath(); g.moveTo(f.sx, f.sy); g.lineTo(f.sx + (f.tx - f.sx) * k, f.sy + (f.ty - f.sy) * k); g.stroke(); g.strokeStyle = "#fff8ec"; g.lineWidth = 3; g.stroke(); }
+    else if (f.k === "glitch") { for (let n = 0; n < 7; n++) { g.fillStyle = ["#ff2d4a", "#57c9b5", "#6ea4f2"][n % 3]; g.globalAlpha = out * .7; g.fillRect(f.tx - 28 + (r(n + T * 20 | 0) - .5) * 16, f.ty - 28 + n * 8, 56 * r(n + 3), 3); } }
+    else if (f.k === "paint") { ["#ff9dbb", "#6ea4f2", "#ffd76a"].forEach((c, n) => { if (k < n * .25) return; g.strokeStyle = c; g.lineWidth = 6; g.lineCap = "round"; g.beginPath(); g.moveTo(f.tx - 24, f.ty - 18 + n * 14); g.quadraticCurveTo(f.tx, f.ty - 30 + n * 14, f.tx + 24 * Math.min(1, k * 1.4), f.ty - 14 + n * 14); g.stroke(); }); }
+    else if (f.k === "warp") { g.strokeStyle = "#b9a0ff"; g.lineWidth = 2; for (let n = 0; n < 3; n++) { const rr = ((T * 50 + n * 12) % 36) + 4; g.beginPath(); g.ellipse(f.tx, f.ty, rr * 1.3, rr * .8, 0, 0, 7); g.stroke(); } }
+    else if (f.k === "slash") { g.strokeStyle = "#fff8ec"; g.lineWidth = 3; for (let n = 0; n < 3; n++) { if (k < n * .3) continue; const o = n * 10 - 10; g.beginPath(); g.moveTo(f.tx - 18 + o, f.ty - 20); g.lineTo(f.tx + 10 + o, f.ty + 16); g.stroke(); } }
+    else if (f.k === "smash") { const R0 = 8 + k * 22; g.fillStyle = "#ffd76a"; g.beginPath(); for (let n = 0; n < 16; n++) { const a = n / 16 * 6.283, rr = n % 2 ? R0 * .5 : R0; g.lineTo(f.tx + Math.cos(a) * rr, f.ty + Math.sin(a) * rr); } g.fill(); g.fillStyle = "#fff8ec"; g.beginPath(); g.arc(f.tx, f.ty, R0 * .35, 0, 7); g.fill(); }
+    else if (f.k === "flash") { g.fillStyle = "#2b1f3b"; const h = 30 * (1 - Math.abs(k * 2 - 1)); g.fillRect(f.tx - 30, f.ty - 30, 60, h); g.fillRect(f.tx - 30, f.ty + 30 - h, 60, h); g.fillStyle = "#fff"; g.beginPath(); g.arc(f.tx + 14, f.ty - 14, 6 * k, 0, 7); g.fill(); }
+    else if (f.k === "splash") { g.fillStyle = "#86d2ec"; for (let n = 0; n < 14; n++) { const a = r(n) * 6.28, d = k * (12 + r(n + 2) * 22); g.beginPath(); g.ellipse(f.tx + Math.cos(a) * d, f.ty + Math.sin(a) * d - k * 6, 2.5, 3.5, 0, 0, 7); g.fill(); } }
+    else if (f.k === "fizz") { for (let n = 0; n < 14; n++) { g.strokeStyle = "#fff8ec"; g.lineWidth = 1.5; g.beginPath(); g.arc(f.tx + (r(n) - .5) * 44, f.ty + 20 - ((T * 70 + r(n + 1) * 40) % 50), 2 + r(n + 2) * 3, 0, 7); g.stroke(); } }
+    else if (f.k === "sparkle") { g.fillStyle = "#ffd76a"; for (let n = 0; n < 7; n++) { const x = f.tx + (r(n) - .5) * 56, y = f.ty + (r(n + 4) - .5) * 50, s = (2 + r(n + 1) * 4) * Math.sin(Math.min(1, T * 3 + r(n)) * Math.PI); g.beginPath(); g.moveTo(x, y - s * 2); g.lineTo(x + s * .5, y - s * .5); g.lineTo(x + s * 2, y); g.lineTo(x + s * .5, y + s * .5); g.lineTo(x, y + s * 2); g.lineTo(x - s * .5, y + s * .5); g.lineTo(x - s * 2, y); g.lineTo(x - s * .5, y - s * .5); g.fill(); } }
+    else if (f.k === "coins") { for (let n = 0; n < 10; n++) { const x = f.tx + (r(n) - .5) * 50, y = f.ty - 40 + Math.min(1, T * 2.2 + r(n) * .3) * 50; g.fillStyle = "#ffd76a"; g.beginPath(); g.ellipse(x, y, 3.5 * Math.abs(Math.cos(T * 12 + n)) + .6, 3.5, 0, 0, 7); g.fill(); g.fillStyle = "#c99a2e"; g.fillRect(x - .5, y - 2, 1, 4); } }
+    else if (f.k === "paper") { for (let n = 0; n < 9; n++) { g.save(); g.translate(f.tx + (r(n) - .5) * 56, f.ty - 34 + Math.min(1, T * 2 + r(n) * .3) * 48); g.rotate(Math.sin(T * 8 + n) * .6); g.fillStyle = "#fff8ec"; g.fillRect(-5, -6, 10, 12); g.fillStyle = "#b9a0ff"; g.fillRect(-3, -3, 6, 1); g.fillRect(-3, 0, 5, 1); g.restore(); } }
+    else { // things that fly from attacker to target: spikes, leaves, pins, notes
+      for (let n = 0; n < 6; n++) { const [x, y] = fly(n, 18); g.save(); g.translate(x, y);
+        if (f.k === "spikes") { g.fillStyle = "#7fd27a"; g.rotate(Math.atan2(f.ty - f.sy, f.tx - f.sx)); g.beginPath(); g.moveTo(6, 0); g.lineTo(-4, -3); g.lineTo(-4, 3); g.fill(); }
+        else if (f.k === "leaf") { g.rotate(T * 10 + n); g.fillStyle = "#a9dc96"; g.beginPath(); g.ellipse(0, 0, 6, 3, 0, 0, 7); g.fill(); g.fillStyle = "#5fae55"; g.fillRect(-5, 0, 10, 1); }
+        else if (f.k === "pins") { g.rotate(Math.atan2(f.ty - f.sy, f.tx - f.sx)); g.fillStyle = "#cfd3e0"; g.fillRect(-5, 0, 10, 1); g.fillStyle = "#f0546a"; g.beginPath(); g.arc(-5, .5, 1.6, 0, 7); g.fill(); }
+        else { g.fillStyle = "#2b1f3b"; g.font = "12px 'Pixelify Sans', monospace"; g.fillText(n % 2 ? "♪" : "♫", 0, 0); }
+        g.restore(); }
+    }
+    g.restore();
+  }
 }
 function drawBall(b) {
   g.save(); g.translate(b.x, b.y); g.rotate(b.rot);
@@ -455,12 +558,26 @@ function drawBall(b) {
   g.fillStyle = "#8a5ad6"; g.beginPath(); g.arc(0, -(b.open ? 3 : 0), r, Math.PI, 0); g.fill(); g.fillStyle = "#a97df0"; g.fillRect(-3, -5 - (b.open ? 3 : 0), 2, 2);
   g.fillStyle = "#2b1f3b"; g.fillRect(-r, -1, r * 2, 2); g.beginPath(); g.arc(0, 0, 2.6, 0, 7); g.fill();
   g.fillStyle = b.shut ? "#ffd76a" : "#fff8ec"; g.beginPath(); g.arc(0, 0, 1.6, 0, 7); g.fill();
-  if (b.open) { g.fillStyle = "rgba(255,255,255,.7)"; g.beginPath(); g.moveTo(-5, -3); g.lineTo(5, -3); g.lineTo(14, -40); g.lineTo(-14, -40); g.fill(); }
   g.restore();
+  // little shadow under it once it's down
+  if (b.y > 70) { g.fillStyle = "rgba(43,31,59,.22)"; g.beginPath(); g.ellipse(b.x, 88, 6 - (81 - Math.min(81, b.y)) * .3, 1.6, 0, 0, 7); g.fill(); }
+  // a ring of light pops off the ball whenever it opens or shuts
+  if (b.ring > 0) { const rr = 6 + (1 - b.ring) * 14; g.strokeStyle = `rgba(255,248,236,${b.ring})`; g.lineWidth = 1.5; g.beginPath(); g.arc(b.x, b.y, rr, 0, 7); g.stroke(); b.ring = Math.max(0, b.ring - .06); }
+  // sparks spiral out of the project and into the ball
+  if (b.suck > 0) {
+    const fx = 238, fy = 52;
+    for (let n = 0; n < 14; n++) {
+      const p = ((b.suck * 1.6 + n / 14) % 1), a = n * 2.4 + p * 5, rad = (1 - p) * 26;
+      const x = b.x + (fx - b.x) * (1 - p) + Math.cos(a) * rad, y = b.y + (fy - b.y) * (1 - p) + Math.sin(a) * rad * .6;
+      g.fillStyle = n % 3 ? "#ff9dd0" : "#fff8ec"; const s = n % 3 ? 2 : 1; g.fillRect(Math.round(x), Math.round(y), s, s);
+    }
+  }
 }
 // your tool grows up: it flickers between old and new, then the new one stays
 async function evolve(me) {
-  const to = formOf(S.starter, S.lvl); if (to.art === me.art) return;
+  const to = formOf(S.starter, S.lvl);
+  if (me.key !== "tool") { const was = formOf(S.starter, S.lvl - 1); if (was.art !== to.art) { au.sfx("level"); await ui.line(`Back in your folio, ${was.name} evolved into ${to.name}!`); } return; }
+  if (to.art === me.art) return;
   const old = me.art, oldName = me.name; au.music(null);
   await ui.line(`What? ${oldName} is evolving!`, {});
   ui.hide(); au.sfx("secret");
@@ -598,8 +715,6 @@ function ambience(now, cx, cy) {
   // dust where your feet land on bare ground
   if (P.moving && P.steps !== lastStep) { lastStep = P.steps; const tt = map.base[map.I(P.fx, P.fy)]; if (tt === TT.path || tt === TT.sand || tt === TT.track || tt === TT.soil) for (let k = 0; k < 3; k++) dust.push({ x: P.fx * 16 + 8 + rnd(-4, 4), y: P.fy * 16 + 14, vx: rnd(-8, 8), vy: rnd(-10, -3), t: 0 }); }
   for (let i = dust.length - 1; i >= 0; i--) { const d = dust[i]; d.t += 1 / 60; d.x += d.vx / 60; d.y += d.vy / 60; if (d.t > .45) { dust.splice(i, 1); continue; } g.fillStyle = `rgba(233,220,203,${(1 - d.t / .45) * .9})`; g.fillRect(Math.round(d.x - cx), Math.round(d.y - cy), 2, 2); }
-  // big soft cloud shadows sliding over everything
-  if (!night) { g.fillStyle = "rgba(43,31,59,.07)"; for (let k = 0; k < 3; k++) { const x = ((t * 7 + k * 230) % 760) - 220 - (cx * .15) % 760, y = 30 + k * 55 - (cy * .1) % 200; g.beginPath(); g.ellipse(x, y, 70, 24, 0, 0, 7); g.ellipse(x + 40, y + 10, 50, 20, 0, 0, 7); g.fill(); } }
   // evening: the light drops, the windows and fireflies come on
   if (night) { g.globalCompositeOperation = "multiply"; g.fillStyle = "#6c6fc4"; g.fillRect(0, 0, VW, VH); g.globalCompositeOperation = "source-over";
     const lx = Math.round(P.px - cx + 8), ly = Math.round(P.py - cy + 8), lg = g.createRadialGradient(lx, ly, 0, lx, ly, 46); lg.addColorStop(0, "rgba(255,226,160,.28)"); lg.addColorStop(1, "rgba(255,226,160,0)"); g.fillStyle = lg; g.fillRect(0, 0, VW, VH); }
@@ -608,7 +723,7 @@ function ambience(now, cx, cy) {
     m.x += (night ? Math.sin(t * 1.3 + m.p) * .25 : .35 + m.s * .3) ; m.y += night ? Math.cos(t * 1.1 + m.p) * .2 : .18 + m.s * .2;
     if (m.x > VW + 4) m.x = -4; if (m.y > VH + 4) m.y = -4; if (m.x < -4) m.x = VW + 4; if (m.y < -4) m.y = VH + 4;
     if (night) { const a = .5 + Math.sin(t * 3 + m.p * 5) * .5; g.fillStyle = `rgba(255,236,140,${a})`; g.fillRect(Math.round(m.x), Math.round(m.y), 1, 1); g.fillStyle = `rgba(255,236,140,${a * .25})`; g.fillRect(Math.round(m.x) - 1, Math.round(m.y) - 1, 3, 3); }
-    else { g.fillStyle = m.s > .5 ? "rgba(255,157,187,.85)" : "rgba(255,255,255,.85)"; g.fillRect(Math.round(m.x), Math.round(m.y), m.s > .8 ? 2 : 1, 1); }
+    // (no petals by day: the handhelds kept the sky clear)
   });
 }
 // a person's frame: 0 standing, 1 and 2 each foot (the old drawn people only have two)
@@ -637,6 +752,14 @@ function wire(o, cx, cy, now) {
   for (let x = x0; x <= x1; x++) { const k = (x - x0) / (x1 - x0); g.fillRect(Math.round(x), Math.round(y + Math.sin(k * Math.PI) * 5), 1, 1); }
   const gt = A.obj.goat[Math.floor(now / 700) % 2]; g.drawImage(gt, Math.round((x0 + x1) / 2 - 9), Math.round(y + 5 - gt.height + 1));
 }
+// a solid pink-light silhouette of a creature, for when it gets pulled into a ball
+const GLOW = new Map();
+function glowOf(s) {
+  let c = GLOW.get(s); if (c) return c;
+  c = document.createElement("canvas"); c.width = s.width; c.height = s.height; const x = c.getContext("2d");
+  x.drawImage(s, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = "#ffb8de"; x.fillRect(0, 0, c.width, c.height);
+  GLOW.set(s, c); return c;
+}
 function drawBattle(now) {
   const b = bt, [c0, c1, c2] = b.bg, sh = b.shake > 0 ? Math.round(Math.sin(now / 18) * b.shake) : 0; b.shake = Math.max(0, b.shake - .35);
   g.fillStyle = c0; g.fillRect(0, 0, VW, VH);
@@ -647,12 +770,15 @@ function drawBattle(now) {
   const fig = (m, x, y, mirror, bob) => {
     const s = (mirror && A.monF[m.art]) || A.mon[m.art], w = iw(s) * (m.sc ?? 1), h = ih(s) * (m.sc ?? 1); g.globalAlpha = m.a;
     g.drawImage(s, Math.round(x - w / 2 + m.ox + sh), Math.round(y - h + m.oy + bob), w, h);
+    if (m.tint > 0 && w > 1) { g.globalAlpha = m.a * m.tint; g.drawImage(glowOf(s), Math.round(x - w / 2 + m.ox + sh), Math.round(y - h + m.oy + bob), w, h); }
     if (m.fl > 0) { g.globalAlpha = m.fl * .6; g.fillStyle = "#b7f3c8"; g.beginPath(); g.ellipse(x + m.ox, y - h / 2, w * .5, h * .5, 0, 0, 7); g.fill(); }
     g.globalAlpha = 1;
   };
   if (b.port && b.port.img) { const p = b.port.img; g.drawImage(p, Math.round(238 - iw(p) / 2 + b.port.ox), 102 - ih(p), iw(p), ih(p)); }
+  if (b.you && b.you.img) { const p = b.you.img; g.drawImage(p, Math.round(84 - iw(p) / 2 + b.you.ox), 152 - ih(p), iw(p), ih(p)); }
   fig(b.foe, 238, 92, false, Math.round(Math.sin(now / 420) * 2)); fig(b.me, 84, 136, true, Math.round(Math.sin(now / 480 + 1) * 2));
   if (b.ball) drawBall(b.ball);
+  drawFx(b);
   // sparks, numbers, the white flash of a big hit, and the action command on top
   for (let i = b.parts.length - 1; i >= 0; i--) { const p = b.parts[i]; p.t += 1 / 60; p.x += p.vx / 60; p.y += p.vy / 60; p.vy += 260 / 60; if (p.t > .6) { b.parts.splice(i, 1); continue; } g.fillStyle = p.col; g.globalAlpha = 1 - p.t / .6; g.fillRect(Math.round(p.x), Math.round(p.y), 2, 2); g.globalAlpha = 1; }
   g.textAlign = "center";
@@ -685,7 +811,7 @@ function fit() {
 addEventListener("resize", fit); fit();
 async function start(fresh) {
   au.unlock(); au.sfx("ok");
-  if (fresh) { Object.assign(S, { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [], beat: [], look: "boy" }); save(); }
+  if (fresh) { Object.assign(S, { starter: null, lvl: 3, hp: null, php: {}, won: [], flags: {}, reels: [], spent: 0, bike: false, beat: [], look: "boy" }); save(); }
   await fadeTo(1, 250); $("title").hidden = true; mode = "world"; hud();
   if (S.starter) place(maps.world, 35, 37, "down"); else place(maps.house, 3, 4, "right");
   au.music("world");

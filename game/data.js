@@ -12,33 +12,33 @@ export const eff = (a, d) => (BEATS[a] === d ? 1.4 : BEATS[d] === a ? .75 : 1);
 // ---- the three tools you can take with you ----
 export const STARTERS = {
   ai: { name: "AI", type: "AI", art: "ai", about: "AI. Beats FILM projects, weak to IMAGE.", evo: [{ lvl: 5, name: "AGENT", art: "ai2" }, { lvl: 8, name: "AGI", art: "ai3" }],
-    moves: [{ n: "GENERATE", t: "AI", p: 14 }, { n: "VARIATIONS", t: "AI", p: 24, acc: .74 }, { n: "UPSCALE", kind: "buff" }, { n: "RETRY", kind: "heal" }] },
+    moves: [{ n: "PROMPT BEAM", t: "AI", p: 14, fx: "beam" }, { n: "DEEPFAKE", t: "AI", p: 24, acc: .74, fx: "glitch" }, { n: "UPSCALE", kind: "buff" }, { n: "REGENERATE", kind: "heal" }] },
   ps: { name: "PHOTOSHOP", type: "IMAGE", art: "ps", about: "PHOTOSHOP. Beats AI projects, weak to FILM.", evo: [{ lvl: 5, name: "LAYERLORD", art: "ps2" }, { lvl: 8, name: "GEN FILL", art: "ps3" }],
-    moves: [{ n: "BRUSH", t: "IMAGE", p: 14 }, { n: "LIQUIFY", t: "IMAGE", p: 24, acc: .74 }, { n: "SHARPEN", kind: "buff" }, { n: "HEAL BRUSH", kind: "heal" }] },
+    moves: [{ n: "BRUSH STROKE", t: "IMAGE", p: 14, fx: "paint" }, { n: "LIQUIFY", t: "IMAGE", p: 24, acc: .74, fx: "warp" }, { n: "SHARPEN", kind: "buff" }, { n: "HEALING BRUSH", kind: "heal" }] },
   pr: { name: "PREMIERE", type: "FILM", art: "pr", about: "PREMIERE. Beats IMAGE projects, weak to AI.", evo: [{ lvl: 5, name: "THE EDIT", art: "pr2" }, { lvl: 8, name: "DIRECTOR'S CUT", art: "pr3" }],
-    moves: [{ n: "CUT", t: "FILM", p: 12 }, { n: "SMASH CUT", t: "FILM", p: 22, acc: .74 }, { n: "SPEED RAMP", kind: "buff" }, { n: "UNDO", kind: "heal" }] },
+    moves: [{ n: "HARD CUT", t: "FILM", p: 13, fx: "slash" }, { n: "SMASH CUT", t: "FILM", p: 23, acc: .74, fx: "smash" }, { n: "SPEED RAMP", kind: "buff" }, { n: "UNDO", kind: "heal" }] },
 };
 
 // ---- the projects, in the same order as the real site. Their moves are named after the real work. ----
 export const FOES = {
   "la-croisiere": { name: "LA CROISIÈRE", type: "FILM", art: "croisiere", zone: "The Beach",
-    moves: [{ n: "SHOT ON IPHONE", p: 9 }, { n: "THE ATELIER", p: 7 }, { n: "DOLLING AROUND", p: 6 }] },
+    moves: [{ n: "SELFIE FLASH", p: 9, fx: "flash" }, { n: "CATWALK STRUT", p: 8, fx: "slash" }, { n: "PIN PRICK", p: 7, fx: "pins" }] },
   "ai-commissions": { name: "AI COMMISSIONS", type: "AI", art: "commish", zone: "The Paddock",
-    moves: [{ n: "PLAGE", p: 9 }, { n: "LE BONHEUR", p: 7 }, { n: "LE PAYSAN", p: 6 }] },
+    moves: [{ n: "LEAF SLAP", p: 9, fx: "leaf" }, { n: "SPEEDBOAT SPLASH", p: 8, fx: "splash" }, { n: "DEADPAN STARE", p: 7, fx: "glitch" }] },
   "3d-explorations": { name: "3D EXPLORATIONS", type: "IMAGE", art: "blob", zone: "The Farm",
-    moves: [{ n: "RENDER", p: 9 }, { n: "LIGHTING", p: 7 }, { n: "MODEL", p: 6 }] },
+    moves: [{ n: "CACTUS JAB", p: 9, fx: "spikes" }, { n: "RENDER BEAM", p: 8, fx: "beam" }, { n: "SOFT BOUNCE", p: 7, fx: "smash" }] },
   "ai-experiments": { name: "AI EXPERIMENTS", type: "AI", art: "goat", zone: "The Paddock",
-    moves: [{ n: "ZOMBIE COWBOYS", p: 9 }, { n: "SAMURAI BARBER", p: 7 }, { n: "GROW", p: 6 }] },
+    moves: [{ n: "HEADBUTT", p: 9, fx: "smash" }, { n: "BLEAT", p: 8, fx: "notes" }, { n: "GO VIRAL", p: 7, fx: "sparkle" }] },
   "summer-of-sport": { name: "SUMMER OF SPORT", type: "IMAGE", art: "sport", zone: "The Stadium",
-    moves: [{ n: "DRAWN ON IPAD", p: 9 }, { n: "OUT OF HOME", p: 7 }, { n: "23 DRAWINGS", p: 6 }] },
+    moves: [{ n: "SPRINT KICK", p: 9, fx: "slash" }, { n: "IPAD SKETCH", p: 8, fx: "paint" }, { n: "BILLBOARD SLAM", p: 7, fx: "smash" }] },
   relax: { name: "#RELAX", type: "FILM", art: "relax", zone: "The Lagoon",
-    moves: [{ n: "TUMBLE", p: 9 }, { n: "DUAL CAPTURE", p: 7 }, { n: "CAMERA REMOTE", p: 6 }] },
+    moves: [{ n: "TUMBLE", p: 9, fx: "smash" }, { n: "DROP TEST", p: 8, fx: "smash" }, { n: "CHILL OUT", p: 7, fx: "notes" }] },
   "coca-cola": { name: "COCA-COLA", type: "FILM", art: "fizz", zone: "The Springs",
-    moves: [{ n: "AHHH", p: 9 }, { n: "OOOH", p: 7 }, { n: "YEAH", p: 6 }] },
+    moves: [{ n: "FIZZ BLAST", p: 9, fx: "fizz" }, { n: "AHHH", p: 8, fx: "notes" }, { n: "ICE COLD", p: 7, fx: "splash" }] },
   "les-benjamins": { name: "FROM EARTH TO SKY", type: "IMAGE", art: "balloon", zone: "Cappadocia",
-    moves: [{ n: "SKETCH TO SKY", p: 9 }, { n: "SILK CANVAS", p: 7 }, { n: "LIFT OFF", p: 6 }] },
+    moves: [{ n: "SPIKE STORM", p: 9, fx: "spikes" }, { n: "HOT AIR", p: 8, fx: "fizz" }, { n: "LIFT OFF", p: 7, fx: "sparkle" }] },
   gumtree: { name: "GUMTREE", type: "FILM", art: "gum", zone: "The Grove",
-    moves: [{ n: "GOOD FIND", p: 9 }, { n: "NO SALESPEOPLE", p: 7 }, { n: "NO FANFARE", p: 6 }] },
+    moves: [{ n: "SIT DOWN", p: 9, fx: "smash" }, { n: "PRICE TAG", p: 8, fx: "coins" }, { n: "BARGAIN", p: 7, fx: "coins" }] },
 };
 // the one thing out there that isn't a project: the spider from the main site
 export const EXTRA = {
@@ -48,25 +48,25 @@ export const EXTRA = {
 
 // ---- the creatures the clients carry around with them ----
 export const CORP = {
-  brief: { name: "THE BRIEF", type: "NONE", art: "brief", moves: [{ n: "DUE YESTERDAY", p: 9 }, { n: "SCOPE CREEP", p: 7 }, { n: "QUICK TWEAK", p: 6 }] },
-  kpi: { name: "KPI", type: "FILM", art: "kpi", moves: [{ n: "MOVE THE NEEDLE", p: 9 }, { n: "NORTH STAR", p: 7 }, { n: "DASHBOARD", p: 6 }] },
-  roi: { name: "ROI", type: "AI", art: "roi", moves: [{ n: "SHOW ME THE ROI", p: 9 }, { n: "COST PER VIEW", p: 7 }, { n: "BUDGET CUT", p: 8 }] },
-  mediaplan: { name: "MEDIA PLAN", type: "IMAGE", art: "mediaplan", moves: [{ n: "FLIGHTING", p: 9 }, { n: "REACH & FREQUENCY", p: 7 }, { n: "ALWAYS ON", p: 6 }] },
-  vertical: { name: "VERTICAL", type: "FILM", art: "vertical", moves: [{ n: "MAKE IT 9:16", p: 9 }, { n: "FIRST 3 SECONDS", p: 7 }, { n: "SOUND OFF", p: 6 }] },
-  stakeholder: { name: "STAKEHOLDER", type: "AI", art: "stakeholder", moves: [{ n: "ONE MORE OPINION", p: 9 }, { n: "LOOP IN LEGAL", p: 7 }, { n: "CIRCLE BACK", p: 6 }] },
-  deck: { name: "THE DECK", type: "IMAGE", art: "deck", moves: [{ n: "80 SLIDES", p: 9 }, { n: "APPENDIX", p: 7 }, { n: "TAKE IT OFFLINE", p: 6 }] },
+  brief: { name: "THE BRIEF", type: "NONE", art: "brief", moves: [{ n: "DUE YESTERDAY", p: 9, fx: "paper" }, { n: "SCOPE CREEP", p: 7, fx: "coins" }, { n: "QUICK TWEAK", p: 6, fx: "paper" }] },
+  kpi: { name: "KPI", type: "FILM", art: "kpi", moves: [{ n: "MOVE THE NEEDLE", p: 9, fx: "slash" }, { n: "NORTH STAR", p: 7, fx: "beam" }, { n: "DASHBOARD", p: 6, fx: "glitch" }] },
+  roi: { name: "ROI", type: "AI", art: "roi", moves: [{ n: "SHOW ME THE ROI", p: 9, fx: "coins" }, { n: "COST PER VIEW", p: 7, fx: "coins" }, { n: "BUDGET CUT", p: 8, fx: "slash" }] },
+  mediaplan: { name: "MEDIA PLAN", type: "IMAGE", art: "mediaplan", moves: [{ n: "FLIGHTING", p: 9, fx: "paper" }, { n: "REACH & FREQUENCY", p: 7, fx: "beam" }, { n: "ALWAYS ON", p: 6, fx: "glitch" }] },
+  vertical: { name: "VERTICAL", type: "FILM", art: "vertical", moves: [{ n: "MAKE IT 9:16", p: 9, fx: "flash" }, { n: "FIRST 3 SECONDS", p: 7, fx: "beam" }, { n: "SOUND OFF", p: 6, fx: "notes" }] },
+  stakeholder: { name: "STAKEHOLDER", type: "AI", art: "stakeholder", moves: [{ n: "ONE MORE OPINION", p: 9, fx: "glitch" }, { n: "LOOP IN LEGAL", p: 7, fx: "paper" }, { n: "CIRCLE BACK", p: 6, fx: "notes" }] },
+  deck: { name: "THE DECK", type: "IMAGE", art: "deck", moves: [{ n: "80 SLIDES", p: 9, fx: "paper" }, { n: "APPENDIX", p: 7, fx: "paper" }, { n: "TAKE IT OFFLINE", p: 6, fx: "glitch" }] },
 };
 // what your tool has grown into by a given level: 0, 1 or 2 evolutions in
 export const stageOf = (id, lvl) => (STARTERS[id].evo || []).filter((e) => lvl >= e.lvl).length;
 export const formOf = (id, lvl) => { const m = STARTERS[id], k = stageOf(id, lvl); return k ? { ...m, name: m.evo[k - 1].name, art: m.evo[k - 1].art, stage: k } : { ...m, stage: 0 }; };
 // the people in the MAL office have creatures of their own
 Object.assign(CORP, {
-  easing: { name: "EASE IN OUT", type: "FILM", art: "easing", moves: [{ n: "OVERSHOOT", p: 9 }, { n: "BEZIER", p: 7 }, { n: "NEVER LINEAR", p: 8 }] },
-  dj: { name: "DEEP CUT", type: "AI", art: "dj", moves: [{ n: "40 MONTHLY LISTENERS", p: 9 }, { n: "WHITE LABEL", p: 7 }, { n: "B2B SET", p: 8 }] },
-  budget: { name: "THE BUDGET", type: "IMAGE", art: "budget", moves: [{ n: "ONE SHOOT DAY", p: 9 }, { n: "OVERAGE", p: 8 }, { n: "CALL SHEET", p: 7 }] },
-  timesheet: { name: "TIMESHEET", type: "IMAGE", art: "timesheet", moves: [{ n: "FILL IT IN", p: 9 }, { n: "JOB NUMBER", p: 7 }, { n: "FRIDAY 5PM", p: 8 }] },
-  bigidea: { name: "THE BIG IDEA", type: "AI", art: "bigidea", moves: [{ n: "WHAT IF", p: 10 }, { n: "BLANK PAGE", p: 8 }, { n: "BACK TO THE BRIEF", p: 8 }] },
-  lion: { name: "GOLD LION", type: "FILM", art: "lion", moves: [{ n: "SHORTLIST", p: 11 }, { n: "CASE STUDY", p: 9 }, { n: "JURY PRIZE", p: 10 }] },
+  easing: { name: "EASE IN OUT", type: "FILM", art: "easing", moves: [{ n: "OVERSHOOT", p: 9, fx: "beam" }, { n: "BEZIER", p: 7, fx: "warp" }, { n: "NEVER LINEAR", p: 8, fx: "slash" }] },
+  dj: { name: "DEEP CUT", type: "AI", art: "dj", moves: [{ n: "40 MONTHLY LISTENERS", p: 9, fx: "notes" }, { n: "WHITE LABEL", p: 7, fx: "notes" }, { n: "B2B SET", p: 8, fx: "sparkle" }] },
+  budget: { name: "THE BUDGET", type: "IMAGE", art: "budget", moves: [{ n: "ONE SHOOT DAY", p: 9, fx: "coins" }, { n: "OVERAGE", p: 8, fx: "coins" }, { n: "CALL SHEET", p: 7, fx: "paper" }] },
+  timesheet: { name: "TIMESHEET", type: "IMAGE", art: "timesheet", moves: [{ n: "FILL IT IN", p: 9, fx: "paper" }, { n: "JOB NUMBER", p: 7, fx: "slash" }, { n: "FRIDAY 5PM", p: 8, fx: "glitch" }] },
+  bigidea: { name: "THE BIG IDEA", type: "AI", art: "bigidea", moves: [{ n: "WHAT IF", p: 10, fx: "flash" }, { n: "BLANK PAGE", p: 8, fx: "sparkle" }, { n: "BACK TO THE BRIEF", p: 8, fx: "beam" }] },
+  lion: { name: "GOLD LION", type: "FILM", art: "lion", moves: [{ n: "SHORTLIST", p: 11, fx: "sparkle" }, { n: "CASE STUDY", p: 9, fx: "paper" }, { n: "JURY PRIZE", p: 10, fx: "smash" }] },
 });
 // ---- the people out on the roads who want "a quick chat" ----
 export const TRAINERS = {
@@ -93,7 +93,7 @@ export const TRAINERS = {
   jimi: { name: "THE TIMESHEET POLICE", role: "ACCOUNTS", look: "ad", port: "t_ad", map: "mal1", x: 10, y: 4, dir: "right", lv: 3, team: ["timesheet"],
     intro: ["Welcome to accounts.", "Nobody goes upstairs until their timesheet is in.", "And we'll need a job number for this conversation."],
     win: ["Fine. We'll code it to new business."], after: ["We know about the 37 hours you logged as \"thinking\"."] },
-  pat: { name: "PAT", role: "MOTION DESIGNER", look: "pat", port: "t_pat", map: "mal2", x: 5, y: 4, dir: "right", lv: 3, team: ["easing"],
+  pat: { name: "PAT", role: "MOTION DESIGNER", look: "pat", port: "t_pat", map: "mal0", x: 17, y: 3, dir: "right", lv: 3, team: ["easing"],
     intro: ["Hey. Look at this curve.", "Ease in, ease out. A little overshoot on the end.", "Nothing in this world should ever move linearly."],
     win: ["Okay, that had lovely easing. I'll allow it."], after: ["I've been tweaking one keyframe since nine."] },
   chris: { name: "CHRIS", role: "MUSIC", look: "chris", port: "t_chris", map: "mal2", x: 10, y: 6, dir: "left", lv: 4, team: ["dj"],
@@ -116,7 +116,7 @@ export const SAY = {
   needPick: ["Pick a tool from the stands first."],
   noPick: ["Pick one of the three tools on the stands."],
   desk: ["Stefan's desk."],
-  coffee: ["You make a coffee.", "Your tool is back to full health."],
+  coffee: ["You make a coffee.", "Your whole folio is back to full health."],
   poster: ["A poster for GROW, a short film in Ai Experiments."],
   taken: ["An empty stand."],
   left: ["You've already picked your tool."],
@@ -132,8 +132,33 @@ export const SAY = {
     "La Croisière redefined how Apple shows up on social.",
     "Gumtree: good finds sell themselves. No salespeople, no fanfare.",
   ],
+  staff: [
+    "Has anyone seen the good HDMI adapter? Not the one that only works upside down.",
+    "I've been on mute for the whole call. Nobody noticed. I'm choosing to take that as a compliment.",
+    "The coffee machine downstairs is the only thing in this building that's never missed a deadline.",
+    "We're calling it a 'quick sync'. It's in the diary for ninety minutes.",
+    "I said 'love that' in the review. I did not love that.",
+    "Final_FINAL_v7_actualfinal.mov. Don't touch it. It's load bearing.",
+    "Someone booked every meeting room with a meeting called 'hold'. It's a dark art.",
+    "If you see the client's logo in the wrong green, say nothing. Walk away. Live your life.",
+    "I came in for the free breakfast. That was three years ago.",
+    "The wifi password is on a post-it under the plant. The plant knows everything.",
+    "Tim's door is glass, so you can see exactly how busy he is. Very busy. Always.",
+    "We pitched it as 'authentic'. Then we spent four days making it look authentic.",
+    "Can we just make the logo bigger? Asking for a client.",
+    "I've got twelve tabs open and every single one of them is a deck.",
+    "There's cake in the kitchen. Nobody knows whose birthday it is. Nobody's asking.",
+    "Rendering. Don't talk to me. Don't talk to my laptop. Especially don't talk to my laptop.",
+    "The timesheets are due Friday. They're always due Friday. It's always Friday.",
+    "Someone said 'let's take this offline' and then walked into the sea.",
+    "I put 'creative' in my email signature and now people ask me to fix their PowerPoint.",
+    "Did you see the reel Stefan made? Everyone's been quietly rewatching it at their desks.",
+    "Nobody upstairs gets past the person on their floor. It's the closest thing we have to a process.",
+    "The sofas are purple because of a brand workshop in 2019. We don't talk about the workshop.",
+  ],
+  floorLocked: (who) => [`${who} isn't letting anyone upstairs until you've had a quick chat.`],
   malLocked: ["The doors are locked. A note on the glass says:", "\"By appointment only. Come back once you've found four of Stefan's projects.\""],
-  malcoffee: ["Free coffee from the office machine. It's fine.", "Your tool is back to full health."],
+  malcoffee: ["Free coffee from the office machine. It's fine.", "Your whole folio is back to full health."],
   smoke: [["KATIA: Just stepping out for five.", "I've written forty endlines on this one cigarette. Thirty-nine of them are bad.", "Don't tell Jeremy. I'm meant to be on a call."], ["ALFIE: *vapes* It's mango ice.", "Honestly, every good idea in that building started out here."], ["A bin with an ashtray on top, full to the brim."]],
   // ---- Stefan's studio, and bits of his life scattered round the valley ----
   monstera: ["A huge monstera in a huge pot.", "Stefan talks to it more than he'd admit."],
@@ -278,6 +303,9 @@ function seal(m) {
   for (let i = 0; i < m.W * m.H; i++) if (SOLID.has(m.base[i])) m.solid[i] = 1;
   return m;
 }
+// the office is busy: people milling about, each with a line of their own, never far from where they started
+let staffN = 0;
+function staff(m, list) { list.forEach(([who, x, y]) => m.objs.push({ k: "npc", who, x, y, w: 1, solid: 1, dir: ["down", "left", "right", "up"][(x + y) % 4], act: "staff:" + (staffN++ % SAY.staff.length), wander: [x - 2, y - 2, x + 2, y + 2] })); }
 export function buildOffice(f) {
   const m = room("mal" + f, 22, 14), I = (x, y) => y * m.W + x, B = (x, y, t) => (m.base[I(x, y)] = t);
   const put = (k, x, y, o = {}) => m.objs.push({ k, x, y, solid: 1, w: 1, ...o }), wall = (k, x, o = {}) => m.objs.push({ k: "wallart", art: k, x, y: 1, solid: 0, w: 1, flat: 1, ...o });
@@ -290,14 +318,16 @@ export function buildOffice(f) {
     put("ktable", 2, 6, { w: 3 }); put("ktable", 2, 10, { w: 3 });
     wall("screen", 14); put("sofaL", 11, 5, { w: 2 }); put("sofaLf", 17, 5, { w: 2 }); put("ctable", 14, 6, { w: 2 }); put("sofa", 13, 9, { w: 3 }); put("plant", 10, 2); put("plant", 21, 4);
     put("rdesk", 10, 11, { w: 3, act: "sign:mal" });
-    B(20, 2, TT.stairsU); m.warps.push({ x: 20, y: 2, to: "mal1", tx: 20, ty: 3, dir: "down" });
+    B(20, 2, TT.stairsU); m.warps.push({ x: 20, y: 2, to: "mal1", tx: 20, ty: 3, dir: "down", needs: ["pat"], who: "PAT" });
+    staff(m, [["mm", 1, 4], ["sl", 5, 4], ["bs", 6, 8], ["mp", 1, 9], ["cmo", 12, 7], ["sl", 19, 10], ["mp", 16, 12], ["bs", 11, 3]]);
     B(15, 13, TT.mat); m.warps.push({ x: 15, y: 13, to: "world", tx: 46, ty: 36, dir: "down" });
   } else if (f === 1) {
     // accounts: rows and rows of black desks
     rows([6, 9, 12], [[3, 8], [12, 17]]); wall("board", 6); wall("screen", 14);
     put("sofaL", 19, 8, { w: 2 }); put("plant", 21, 12); put("printer", 20, 12); put("plant", 0, 13);
     B(20, 2, TT.stairsD); m.warps.push({ x: 20, y: 2, to: "mal0", tx: 20, ty: 3, dir: "down" });
-    B(1, 2, TT.stairsU); m.warps.push({ x: 1, y: 2, to: "mal2", tx: 1, ty: 3, dir: "down" });
+    B(1, 2, TT.stairsU); m.warps.push({ x: 1, y: 2, to: "mal2", tx: 1, ty: 3, dir: "down", needs: ["jimi"], who: "THE TIMESHEET POLICE" });
+    staff(m, [["cmo", 5, 7], ["mm", 14, 8], ["bs", 10, 10], ["sl", 7, 13], ["mp", 15, 11], ["mm", 18, 5], ["bs", 3, 4]]);
   } else {
     // creative and production, and Tim's glass box in the corner
     rows([9, 12], [[3, 8], [10, 13]]); wall("board", 6); wall("board", 11);
@@ -305,6 +335,7 @@ export function buildOffice(f) {
     put("desk", 17, 2, { w: 2 }); put("shelf", 20, 2, { w: 2 }); put("plant", 16, 2);
     put("sofaL", 1, 10, { w: 2 }); put("printer", 20, 12); put("plant", 21, 13); put("sofa", 16, 11, { w: 3 });
     B(1, 2, TT.stairsD); m.warps.push({ x: 1, y: 2, to: "mal1", tx: 1, ty: 3, dir: "down" });
+    staff(m, [["sl", 4, 5], ["mp", 7, 11], ["mm", 12, 10], ["bs", 9, 4], ["cmo", 4, 13], ["sl", 16, 9], ["mm", 19, 12]]);
   }
   return seal(m);
 }

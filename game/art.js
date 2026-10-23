@@ -29,10 +29,10 @@ const flip = (c) => { const o = cv(c.width, c.height), g = o.getContext("2d"); g
 
 // ---- the colours of the place ----
 export const C = {
-  g1: "#b9e3a3", g2: "#a3d692", g3: "#84c481", g4: "#6aae74",
+  g1: "#88d070", g2: "#a3d692", g3: "#84c481", g4: "#6aae74",
   p1: "#f4e2b6", p2: "#e8cf98", p3: "#d7b87f",
   s1: "#fbeccb", s2: "#f2dba9", s3: "#e3c58a",
-  w1: "#86d2ec", w2: "#b8edfb", w3: "#62b4dc", foam: "#effcff",
+  w1: "#86d2ec", w2: "#b8edfb", w3: "#62b4dc", foam: "#d8f0ff",
   wood: "#b98758", wood2: "#96683f", wood3: "#d6a877",
   roof: "#f2907f", roof2: "#d96f6b", wall: "#fff4e0", wall2: "#ecdcc0",
   pink: "#ff9dbb", yellow: "#ffd76a", violet: "#b9a0ff", white: "#ffffff", red: "#f0546a",
@@ -55,14 +55,17 @@ export function buildArt() {
   const r = rng(11);
   const speck = (R, n, cols, w = 1, h = 1) => { for (let i = 0; i < n; i++) R(Math.floor(r() * (16 - w + 1)), Math.floor(r() * (16 - h + 1)), w, h, cols[Math.floor(r() * cols.length)]); };
   // ---- ground ----
-  const grass = (extra) => px(16, 16, (R) => { R(0, 0, 16, 16, C.g1); speck(R, 9, [C.g2]); speck(R, 4, [C.g3], 1, 2); extra && extra(R); });
-  const flower = (R, x, y, col) => { R(x, y - 1, 1, 1, col); R(x - 1, y, 1, 1, col); R(x + 1, y, 1, 1, col); R(x, y + 1, 1, 1, col); R(x, y, 1, 1, C.yellow); };
-  A.tile.grass = [grass(), grass(), grass((R) => speck(R, 3, [C.g4], 1, 2)), grass((R) => { flower(R, 4, 5, C.pink); flower(R, 11, 10, C.white); }), grass((R) => { flower(R, 10, 4, C.violet); flower(R, 5, 11, C.pink); }), grass((R) => flower(R, 8, 8, C.white))];
-  A.tile.path = [0, 1, 2].map(() => px(16, 16, (R) => { R(0, 0, 16, 16, C.p1); speck(R, 8, [C.p2]); speck(R, 2, [C.p3], 2, 1); }));
-  A.tile.sand = [0, 1, 2].map(() => px(16, 16, (R) => { R(0, 0, 16, 16, C.s1); speck(R, 7, [C.s2]); speck(R, 2, [C.s3]); }));
-  A.tile.water = [px(16, 16, (R) => { R(0, 0, 16, 16, C.w1); speck(R, 5, [C.w3], 2, 1); })];
-  // light moving on the water, laid over it a frame at a time
-  A.tile.glint = [0, 1, 2, 3].map((f) => px(16, 16, (R) => { R((2 + f * 3) % 14, 3, 3, 1, C.w2); R((9 + f * 2) % 13, 8, 4, 1, C.w2); R((5 + f * 4) % 14, 13, 2, 1, C.w2); }));
+  // Game Boy Advance style ground: flat colours, a regular little tick pattern on the grass, clean dots on the paths
+  const G = { g: "#88d070", gd: "#58b048", gl: "#b0e890", p: "#e8d498", pd: "#d0b878", pl: "#f8e8b8", w: "#58a8f0", wl: "#a8d8ff", wd: "#3888d8" };
+  const tick = (R, x, y) => { R(x, y + 1, 1, 1, G.gd); R(x + 1, y, 1, 1, G.gd); R(x + 2, y + 1, 1, 1, G.gd); R(x + 1, y - 1, 1, 1, G.gl); };
+  const grass = (extra) => px(16, 16, (R) => { R(0, 0, 16, 16, G.g); tick(R, 2, 3); tick(R, 10, 2); tick(R, 6, 9); tick(R, 12, 11); tick(R, 1, 13); extra && extra(R); });
+  const flower = (R, x, y, col, mid = "#f8d838") => { R(x - 1, y - 1, 1, 1, col); R(x + 1, y - 1, 1, 1, col); R(x - 1, y + 1, 1, 1, col); R(x + 1, y + 1, 1, 1, col); R(x, y - 1, 1, 1, col); R(x - 1, y, 1, 1, col); R(x + 1, y, 1, 1, col); R(x, y + 1, 1, 1, col); R(x, y, 1, 1, mid); R(x, y + 2, 1, 1, G.gd); };
+  A.tile.grass = [grass(), grass(), grass(), grass((R) => { flower(R, 4, 5, "#f05858"); flower(R, 11, 11, "#ffffff"); }), grass(), grass((R) => { flower(R, 10, 4, "#ffffff"); flower(R, 5, 11, "#f05858"); })];
+  A.tile.path = [0, 1, 2].map((k) => px(16, 16, (R) => { R(0, 0, 16, 16, G.p); [[3, 4], [11, 2], [7, 10], [13, 12], [2, 13]].forEach(([x, y], i) => { if ((i + k) % 3) { R(x, y, 2, 1, G.pd); R(x, y - 1, 2, 1, G.pl); } }); }));
+  A.tile.sand = [0, 1, 2].map((k) => px(16, 16, (R) => { R(0, 0, 16, 16, "#f8e8b0"); [[3, 4], [11, 3], [7, 11], [13, 13]].forEach(([x, y], i) => { if ((i + k) % 2) R(x, y, 1, 1, "#e0c888"); }); }));
+  A.tile.water = [px(16, 16, (R) => { R(0, 0, 16, 16, G.w); })];
+  // little curled waves sliding across the water, a frame at a time
+  A.tile.glint = [0, 1, 2, 3].map((f) => px(16, 16, (R) => { const wave = (x, y) => { x = (x + f * 2) % 16; R(x, y, 3, 1, G.wl); R((x + 3) % 16, y + 1, 1, 1, G.wd); R((x + 15) % 16, y + 1, 1, 1, G.wd); }; wave(1, 3); wave(9, 7); wave(4, 12); }));
   A.tile.fizz = [px(16, 16, (R) => { R(0, 0, 16, 16, "#8a4a2a"); speck(R, 6, ["#6d351c"], 2, 1); })];
   A.tile.bubble = [0, 1, 2, 3].map((f) => px(16, 16, (R) => { const b = (x, y) => { R(x, y, 2, 2, "#f6c98f"); R(x, y, 1, 1, "#fff2dc"); }; b(3, (13 - f * 3 + 16) % 16); b(10, (9 - f * 3 + 16) % 16); b(7, (4 - f * 3 + 16) % 16); }));
   A.tile.bridge = [px(16, 16, (R) => { R(0, 0, 16, 16, C.wood); for (let y = 0; y < 16; y += 4) R(0, y + 3, 16, 1, C.wood2); R(0, 0, 2, 16, C.wood2); R(14, 0, 2, 16, C.wood2); R(3, 1, 1, 1, C.wood3); R(11, 9, 1, 1, C.wood3); })];
@@ -90,17 +93,18 @@ export function buildArt() {
   };
   // long grass: two frames of sway per zone, drawn over whatever ground it grows on
   for (const z in GRASS) {
-    const [a, b, t] = GRASS[z];
+    const [a, b, t] = ["#50b048", "#2c7c34", "#98e078"];   // one classic tall grass everywhere, like the handhelds
     A.grass[z] = [0, 1].map((f) => px(16, 16, (R) => {
-      const tuft = (x, y) => { const s = f ? 1 : 0; R(x, y + 2, 1, 5, b); R(x + 1, y, 1, 7, a); R(x + 2, y + 1, 1, 6, b); R(x + 3, y + 3, 1, 4, a); R(x + 1 + s, y - 1, 1, 1, t); R(x + 3 + s, y + 2, 1, 1, t); };
-      tuft(0, 1); tuft(6, 0); tuft(11, 2); tuft(3, 8); tuft(9, 9);
-      if (+z === 3) { R(0, 7, 16, 1, "rgba(111,82,207,.45)"); R(7, 0, 1, 16, "rgba(111,82,207,.45)"); }   // the render farm's is half wireframe
+      // GBA tall grass: rows of pointed blades with a dark edge, filling the whole tile
+      const blade = (x, y) => { const s = f && x % 2 ? 1 : 0; R(x + s, y, 1, 1, t); R(x, y + 1, 2, 1, a); R(x - 1 + s, y + 2, 4, 2, a); R(x - 1, y + 4, 4, 1, b); };
+      for (let row = 0; row < 3; row++) for (let col = 0; col < 4; col++) blade(col * 4 + (row % 2 ? 2 : 1), row * 5);
     }));
   }
   // ---- things that stand on the ground. Each is anchored by the middle of its bottom edge. ----
-  const tree = (c1, c2, c3) => shape(20, 30, (g) => { box(g, 8, 19, 4, 9, "#8d5d45"); box(g, 8, 19, 1, 9, "#6f4533"); ell(g, 10, 11, 9, 10, c2); ell(g, 9, 9, 7.5, 7.5, c1); ell(g, 7, 6, 3, 2.5, c3); });
-  A.obj.tree = tree("#5fb089", "#43917a", "#93d9a8");
-  A.obj.tree2 = tree("#74bd8a", "#559d77", "#a9e2ae");
+  // GBA trees: a stack of round lumps, dark underneath, a bright rim on top, a short trunk, dark green outline
+  const tree = (c1, c2, c3) => shape(22, 32, (g) => { box(g, 9, 24, 4, 7, "#9a6a3a"); box(g, 9, 24, 1, 7, "#6e4824"); ell(g, 11, 17, 10, 8, c2); ell(g, 5, 13, 5, 5, c2); ell(g, 17, 13, 5, 5, c2); ell(g, 11, 8, 8, 7, c2); inside(g, () => { ell(g, 11, 6, 7, 4, c1); ell(g, 5, 11, 4, 3, c1); ell(g, 17, 11, 4, 3, c1); ell(g, 11, 14, 8, 3, c1); ell(g, 9, 4, 3, 1.6, c3); ell(g, 4, 10, 1.6, 1, c3); ell(g, 16, 10, 2, 1, c3); ell(g, 11, 13, 3, 1, c3); }); }, "#1c4a24");
+  A.obj.tree = tree("#58b858", "#2f8a40", "#a0e090");
+  A.obj.tree2 = tree("#68c060", "#3a9048", "#b0e898");
   A.obj.gumtree = shape(20, 30, (g) => { box(g, 8, 19, 4, 9, "#8d5d45"); ell(g, 10, 11, 9, 10, "#ff86b6"); ell(g, 9, 9, 7.5, 7.5, "#ffa9cc"); ell(g, 6, 5, 3, 2.5, "#ffe1ee"); ell(g, 15, 15, 3, 3, "#ffd0e3"); ell(g, 14, 14, 1, 1, "#fff"); });
   A.obj.oddtree = shape(20, 30, (g) => { box(g, 8, 19, 4, 9, "#6b5a8f"); ell(g, 10, 11, 9, 10, "#2f9c8e"); ell(g, 9, 9, 7.5, 7.5, "#57c9b5"); ell(g, 13, 13, 4, 4, "#e772cf"); ell(g, 6, 6, 2.5, 2, "#b7f3e4"); ell(g, 10, 10, 1.6, 1.6, "#fff"); ell(g, 10, 10, .8, .8, INK); });
   A.obj.polytree = shape(20, 30, (g) => { box(g, 8, 20, 4, 8, "#7b6a98"); poly(g, [[10, 0], [19, 21], [1, 21]], "#8e75e6"); poly(g, [[10, 0], [10, 21], [1, 21]], "#b6a3ff"); poly(g, [[10, 8], [15, 21], [10, 21]], "#6f52cf"); });

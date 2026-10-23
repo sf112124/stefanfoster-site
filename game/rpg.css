@@ -112,3 +112,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rend
 .sheet .mon,.slot img,.with img{image-rendering:auto}
 .menu.look button{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*2);min-width:calc(var(--u)*44);text-align:center}
 .menu .pk{height:calc(var(--u)*30);width:auto;image-rendering:pixelated}
+.menu.cmd button{min-width:calc(var(--u)*34);padding-left:calc(var(--u)*3);padding-right:calc(var(--u)*3)}
+.menu.party{bottom:calc(var(--u)*9.5);right:50%;transform:translateX(50%);max-width:calc(100% - var(--u)*20)}
+.menu.party button{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:calc(var(--u)*4);align-items:center;min-width:calc(var(--u)*92);padding:calc(var(--u)*1.5) calc(var(--u)*4);font-size:.82em}
+.menu.party .pm{grid-row:span 2;height:calc(var(--u)*18);width:auto;image-rendering:pixelated}
+.menu.party b{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.menu.party i{font-style:normal;font-size:.75em;letter-spacing:.06em;opacity:.65}
