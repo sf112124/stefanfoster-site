@@ -164,11 +164,11 @@ function frame(now) {
     const R = 260, sy = scrollY;
     FL.forEach((L) => { const d = Math.hypot(L.x - cx, L.y - sy - cy), t = !touch && L.fi === hovFi ? Math.max(0, 1 - d / R) : 0, e = t * t * (3 - 2 * t);
       L.k += (e - L.k) * .22;
-      // the breathing: two slow waves crossing, so it never quite repeats
-      const b = Math.sin(t0w * .7 - L.x * .0045 + L.y * .006) * .6 + Math.sin(t0w * .43 + L.x * .0021 - L.y * .009) * .4;
-      const w = Math.round(L.k * 100), q = Math.round(b * 12);
-      if (L.w !== w || L.q !== q) { L.w = w; L.q = q; L.el.style.fontVariationSettings = `"wght" ${Math.min(900, 780 + q * 5 + w * 1.2)}, "wdth" ${108 + q * .9 + w * .28}`;
-        L.el.style.transform = q ? `translateY(${(q * -.06).toFixed(2)}px)` : ""; } });
+      // the breathing: a slow, soft light passing through the words. Opacity only, so nothing reflows or jumps
+      const b = Math.sin(t0w * .35 - L.x * .0028 + L.y * .0035) * .6 + Math.sin(t0w * .22 + L.x * .0013 - L.y * .005) * .4;
+      const w = Math.round(L.k * 100);
+      if (L.w !== w) { L.w = w; L.el.style.fontVariationSettings = w ? `"wght" ${Math.min(900, 780 + w * 1.2)}, "wdth" ${108 + w * .28}` : ""; }
+      L.el.style.opacity = (.86 + b * .14).toFixed(3); });
   }
   requestAnimationFrame(frame);
 }
