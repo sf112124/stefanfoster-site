@@ -10,35 +10,39 @@ in vec2 v; out vec4 o;
 uniform sampler2D T; uniform vec2 R; uniform float off, N, rowH, texW, texH, S0, B, C, hov, fly, flt, S1, C1, hrow;
 // screen y (-1..1) to a position in the stack, and how many screen pixels one texel takes there
 // in the list, only the line under the pointer grows (G per line), swelling over its own spot without nudging the others
-uniform float G[16];
-vec2 flatAt(float y){
-  float rb = N * .5 - C1 * (y - .05), rr = rb, g = 0.;
+uniform float G[16], mx;
+float sa(float y){ return sqrt(y * y + .016) - .1265; }   // a soft |y|: flt through the middle line so it stays straight
+vec4 tex(float u, float row, float fy, float s){ return textureLod(T, vec2(u, (row * rowH + fy * rowH) / texH), max(0., log2(1. / s))); }
+vec4 sampleAt(vec2 q){
+  float xpx = q.x * R.x * .5;
+  // the tunnel
+  float rt = off - C * sign(q.y) * (1. - exp(-B * abs(q.y))), st = S0 * exp(B * sa(q.y)), e = (1. - exp(-B * sa(q.y))) * (1. - flt);
+  float stretch = 1. + .5 * e;                       // the far lines widen more than they grow
+  // the list: a straight stack
+  float rl = N * .5 - C1 * (q.y - .05);
+  float r = mix(rt, rl, flt), s = mix(st, S1, flt) * stretch;
+  float rr = mod(r, N), row = floor(rr);
+  float inList = 1. - clamp(flt * 1.8, 0., 1.) * (1. - step(0., r) * step(r, N));
+  float dim = 1. - flt * .62 * (hrow < -.5 || abs(row - hrow) < .5 ? 0. : 1.);
+  float grown = flt > .5 && row >= 0. && row < N ? G[int(row)] : 0.;
+  // explicit detail level: the stack wraps round, and letting the GPU guess at the seam drew a grey line
+  vec4 c = grown > .004 ? vec4(0.) : textureLod(T, vec2((texW * .5 + xpx / s) / texW, (row * rowH + fract(rr) * rowH) / texH), max(0., log2(1. / s)) + e * 2.5) * inList * dim;
+  if (flt < .5) return c;
+  // the hovered line grows in place, drawn over its neighbours, with a soft magnifier that follows the pointer along the word
   for (int k = -1; k <= 1; k++) {
-    float h = floor(rb) + float(k);
+    float h = floor(rl) + float(k);
     if (h < 0. || h >= N) continue;
     float gh = G[int(h)];
-    if (gh < .001) continue;
-    float rm = h + .5 + (rb - h - .5) / (1. + gh);
-    if (floor(rm) == h) { rr = rm; g = gh; }
+    if (gh < .004) continue;
+    float d = xpx - mx * R.x * .5, W = R.y * .14, bb = exp(-d * d / (W * W)), A = clamp(gh * 4.2, 0., .34);
+    float m = (1. + gh) / (1. - .7 * A * bb);
+    float rm = h + .5 + (rl - h - .5) / m;
+    if (floor(rm) != h) continue;
+    float xe = xpx - A * d * bb, sh = S1 * (1. + gh);
+    float dm = 1. - .62 * (hrow < -.5 || abs(h - hrow) < .5 ? 0. : 1.);
+    c = max(c, tex((texW * .5 + xe / sh) / texW, h, fract(rm), sh * m / (1. + gh)) * dm);
   }
-  return vec2(rr, S1 * (1. + g));
-}
-float rowAt(float y){ return mix(off - C * sign(y) * (1. - exp(-B * abs(y))), flatAt(y).x, flt); }
-float sa(float y){ return sqrt(y * y + .016) - .1265; }   // a soft |y|: flt through the middle line so it stays straight
-float scaleAt(float y){ return mix(S0 * exp(B * sa(y)), flatAt(y).y, flt); }
-vec4 sampleAt(vec2 q){
-  float r = rowAt(q.y), s = scaleAt(q.y), e = (1. - exp(-B * sa(q.y))) * (1. - flt);
-  float stretch = 1. + .5 * e;                       // the far lines widen more than they grow
-  float xpx = q.x * R.x * .5;
-  float u = (texW * .5 + xpx / (s * stretch)) / texW;
-  float rr = mod(r, N), row = floor(rr), fy = fract(rr);
-  float vv = (row * rowH + fy * rowH) / texH;
-  // in the list, only one copy of each name: nothing above the first or below the last
-  float inList = 1. - clamp(flt * 1.8, 0., 1.) * (1. - step(0., r) * step(r, N));
-  // and the one under the pointer stays dark while the rest step back
-  float dim = 1. - flt * .62 * (hrow < -.5 || abs(row - hrow) < .5 ? 0. : 1.);
-  // explicit detail level: the stack wraps round, and letting the GPU guess at the seam drew a grey line
-  return textureLod(T, vec2(u, vv), max(0., log2(1. / (s * stretch))) + e * 2.5) * inList * dim;
+  return c;
 }
 void main(){
   // opening a project: the camera flies into the middle line and everything washes to paper
@@ -80,7 +84,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "G"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
+  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "G", "mx"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
   draw(); document.fonts.ready.then(draw);
 
   // the label beside the line in the middle: who it was for, what it is, and a little moving picture in brackets
@@ -102,9 +106,9 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const sw = document.createElement("button"); sw.type = "button"; sw.className = "tun-sw mono"; sw.innerHTML = `<i></i><span>LIST</span>`; mount.appendChild(sw);
   // the list's own hit areas, numbers and clients, laid over the flat names
   const lst = document.createElement("div"); lst.className = "tun-list"; lst.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-i="${i}"><span class="n mono">${String(i + 1).padStart(2, "0")}</span><span class="c">${esc(p.client)}</span></a>`).join(""); mount.appendChild(lst);
-  let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null; const gs = new Float32Array(16);
+  let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null, mouseX = 0, mxS = 0; const gs = new Float32Array(16), gv = new Float32Array(16);
   mount.classList.add("is-list"); sw.querySelector("span").textContent = "TUNNEL";
-  mount.addEventListener("pointermove", (e) => { const a = e.target.closest && e.target.closest(".tun-list a"); if (!a || e.target !== a) { mouseY = null; return; } const r = mount.getBoundingClientRect(); mouseY = 1 - 2 * (e.clientY - r.top) / r.height - .05; });
+  mount.addEventListener("pointermove", (e) => { const a = e.target.closest && e.target.closest(".tun-list a"); if (!a || e.target !== a) { mouseY = null; return; } const r = mount.getBoundingClientRect(); mouseY = 1 - 2 * (e.clientY - r.top) / r.height - .05; mouseX = 2 * (e.clientX - r.left) / r.width - 1; });
   mount.addEventListener("pointerleave", () => (mouseY = null));
   const setFlat = (on) => { flatT = on ? 1 : 0; mount.classList.toggle("is-list", on); sw.querySelector("span").textContent = on ? "TUNNEL" : "LIST"; poke(); };
   sw.addEventListener("pointerdown", (e) => e.stopPropagation()); sw.addEventListener("click", () => setFlat(!flatT));
@@ -161,8 +165,8 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     const dpr = Math.min(1.5, devicePixelRatio || 1), Hc = H(), yOf = (r) => .05 + (N * .5 - r) / C1;
     lst.querySelectorAll("a").forEach((a, i) => {
       const top = (1 - yOf(i)) / 2 * Hc, bot = (1 - yOf(i + 1)) / 2 * Hc;
-      const half = (T.w ? T.w[i] : T.widest) * S1 * (1 + gs[i]) / dpr / 2;
-      a.style.top = `${top.toFixed(1)}px`; a.style.height = `${(bot - top).toFixed(1)}px`; a.style.setProperty("--half", `${half.toFixed(1)}px`);
+      const base = (T.w ? T.w[i] : T.widest) * S1 / dpr / 2, half = base * (1 + Math.max(0, gs[i]));
+      a.style.top = `${top.toFixed(1)}px`; a.style.height = `${(bot - top).toFixed(1)}px`; a.style.setProperty("--half", `${half.toFixed(1)}px`); a.style.setProperty("--base", `${base.toFixed(1)}px`);
     });
   };
   const go = (p) => { if (going) return; onOpen(p); };   // straight in: no waiting on an animation
@@ -188,9 +192,11 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     if (opening && flatK < .12 && !going) { go(LIST[opening.i]); opening = null; }
     const S1 = Math.min((h * .58) / (N * rowH), (w * (mob ? .8 : .4)) / T.widest), C1 = (h * .5) / (rowH * S1);
     // the lens drifts after the pointer and relaxes away when it leaves
-    const GA = mob ? .08 : .12;
-    for (let i = 0; i < N; i++) gs[i] += ((i === hrow ? GA : 0) - gs[i]) * (1 - Math.pow(.0005, rdt));
-    gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1fv(U.G, gs);
+    const GA = mob ? .05 : .07;
+    // a slightly underdamped spring per line, so it swells past and settles; the magnifier trails the pointer like liquid
+    for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h = Math.min(.008, rdt / n); for (let i = 0; i < N; i++) { gv[i] += ((((i === hrow ? GA : 0) - gs[i]) * 340) - gv[i] * 19) * h; gs[i] += gv[i] * h; } }
+    mxS += (mouseX - mxS) * (1 - Math.pow(.003, rdt));
+    gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1fv(U.G, gs); gl.uniform1f(U.mx, mxS);
     if (flatK > .5) placeList(S1, C1);
     lst.style.setProperty("--row", `${(rowH * S1) / Math.min(1.5, devicePixelRatio || 1)}px`); lst.style.setProperty("--wide", `${(T.widest * S1) / Math.min(1.5, devicePixelRatio || 1)}px`);
     gl.uniform2f(U.R, w, h); gl.uniform1f(U.off, off); gl.uniform1f(U.N, N); gl.uniform1f(U.rowH, rowH); gl.uniform1f(U.texW, texW); gl.uniform1f(U.texH, texH);
