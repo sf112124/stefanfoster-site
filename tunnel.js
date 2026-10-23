@@ -7,11 +7,14 @@ in vec2 p; out vec2 v; void main(){ v = p; gl_Position = vec4(p, 0., 1.); }`;
 const FS = `#version 300 es
 precision highp float;
 in vec2 v; out vec4 o;
-uniform sampler2D T; uniform vec2 R; uniform float off, N, rowH, texW, texH, S0, B, C, hov, fly, flt, S1, C1, hrow;
+uniform sampler2D T; uniform vec2 R; uniform float off, N, rowH, texW, texH, S0, B, C, hov, fly, flt, S1, C1, hrow, lm, la, ls;
+// the list's lens: rows near the pointer swell, the ones just past it tuck in, the far ones stay put
+float hf(float d){ return d * (1. - la * exp(-d * d / (ls * ls))); }
+float hd(float d){ float x = d * d / (ls * ls); return 1. - la * exp(-x) * (1. - 2. * x); }
 // screen y (-1..1) to a position in the stack, and how many screen pixels one texel takes there
-float rowAt(float y){ return mix(off - C * sign(y) * (1. - exp(-B * abs(y))), N * .5 - C1 * y, flt); }
+float rowAt(float y){ return mix(off - C * sign(y) * (1. - exp(-B * abs(y))), N * .5 - C1 * (lm + hf(y - lm)), flt); }
 float sa(float y){ return sqrt(y * y + .016) - .1265; }   // a soft |y|: flt through the middle line so it stays straight
-float scaleAt(float y){ return mix(S0 * exp(B * sa(y)), S1, flt); }
+float scaleAt(float y){ return mix(S0 * exp(B * sa(y)), S1 / pow(hd(y - lm), .55), flt); }
 vec4 sampleAt(vec2 q){
   float r = rowAt(q.y), s = scaleAt(q.y), e = (1. - exp(-B * sa(q.y))) * (1. - flt);
   float stretch = 1. + .5 * e;                       // the far lines widen more than they grow
@@ -55,7 +58,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     x.font = `600 ${fs}px Geist, sans-serif`; try { x.letterSpacing = `${(-fs * .045).toFixed(1)}px`; } catch (e) {}
     x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "middle";
     names.forEach((n, i) => x.fillText(n, texW / 2, i * rowH + rowH * .55));
-    T.widest = Math.max(...names.map((n) => x.measureText(n).width));
+    T.widest = Math.max(...names.map((n) => x.measureText(n).width)); T.w = names.map((n) => x.measureText(n).width);
     gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tc); gl.generateMipmap(gl.TEXTURE_2D);
   };
   const T = { widest: texW * .8 };
@@ -66,7 +69,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
+  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "lm", "la", "ls"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
   draw(); document.fonts.ready.then(draw);
 
   // the label beside the line in the middle: who it was for, what it is, and a little moving picture in brackets
@@ -88,14 +91,17 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const sw = document.createElement("button"); sw.type = "button"; sw.className = "tun-sw mono"; sw.innerHTML = `<i></i><span>LIST</span>`; mount.appendChild(sw);
   // the list's own hit areas, numbers and clients, laid over the flat names
   const lst = document.createElement("div"); lst.className = "tun-list"; lst.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-i="${i}"><span class="n mono">${String(i + 1).padStart(2, "0")}</span><span class="c">${esc(p.client)}</span></a>`).join(""); mount.appendChild(lst);
-  let flatK = 0, flatT = 0, hrow = -1, opening = null;
+  let flatK = 1, flatT = 1, hrow = -1, opening = null, lensY = 0, lensA = 0, mouseY = null;
+  mount.classList.add("is-list"); sw.querySelector("span").textContent = "TUNNEL";
+  mount.addEventListener("pointermove", (e) => { const r = mount.getBoundingClientRect(); mouseY = 1 - 2 * (e.clientY - r.top) / r.height; });
+  mount.addEventListener("pointerleave", () => (mouseY = null));
   const setFlat = (on) => { flatT = on ? 1 : 0; mount.classList.toggle("is-list", on); sw.querySelector("span").textContent = on ? "TUNNEL" : "LIST"; poke(); };
   sw.addEventListener("pointerdown", (e) => e.stopPropagation()); sw.addEventListener("click", () => setFlat(!flatT));
   lst.addEventListener("pointerdown", (e) => e.stopPropagation());
   lst.querySelectorAll("a").forEach((a) => {
     a.addEventListener("pointerenter", () => (hrow = +a.dataset.i)); a.addEventListener("pointerleave", () => (hrow = -1));
     // picking from the list: it folds back into the tunnel on that name, then flies in
-    a.addEventListener("click", (e) => { e.preventDefault(); const i = +a.dataset.i; off = target = i + .5; vel = 0; hrow = -1; onOpen(LIST[i]); setTimeout(() => setFlat(false), 400); });
+    a.addEventListener("click", (e) => { e.preventDefault(); const i = +a.dataset.i; off = target = i + .5; vel = 0; hrow = -1; onOpen(LIST[i]); });
   });
   rail.addEventListener("pointerdown", (e) => e.stopPropagation());
   rail.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { const i = +b.dataset.i, cur = ((Math.floor(target) % N) + N) % N; let d = (i - cur + N) % N; if (d > N / 2) d -= N; target = snap(target) + d; poke(); }));
@@ -139,6 +145,17 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
 
   let outK = 0, going = null, wasHidden = false;
   // fly into the chosen name, then hand over to the page
+  // where each name lands on screen in the list, solved backwards through the lens
+  const hf = (d, a, s2) => d * (1 - a * Math.exp(-d * d / s2)), hd = (d, a, s2) => { const xx = d * d / s2; return 1 - a * Math.exp(-xx) * (1 - 2 * xx); };
+  const placeList = (S1, C1, LS, h) => {
+    const s2 = LS * LS, dpr = Math.min(1.5, devicePixelRatio || 1), Hc = H();
+    const yOf = (r) => { let lo = -1.6, hi = 1.6; for (let k = 0; k < 30; k++) { const mid = (lo + hi) / 2, rr = N * .5 - C1 * (lensY + hf(mid - lensY, lensA, s2)); if (rr > r) lo = mid; else hi = mid; } return (lo + hi) / 2; };
+    lst.querySelectorAll("a").forEach((a, i) => {
+      const y0 = yOf(i), y1 = yOf(i + 1), top = (1 - y0) / 2 * Hc, bot = (1 - y1) / 2 * Hc, yc = (y0 + y1) / 2;
+      const half = (T.w ? T.w[i] : T.widest) * S1 / Math.pow(hd(yc - lensY, lensA, s2), .55) / dpr / 2;
+      a.style.top = `${top.toFixed(1)}px`; a.style.height = `${(bot - top).toFixed(1)}px`; a.style.setProperty("--half", `${half.toFixed(1)}px`);
+    });
+  };
   const go = (p) => { if (going) return; onOpen(p); };   // straight in: no waiting on an animation
   const frame = (now) => {
     requestAnimationFrame(frame);
@@ -161,7 +178,12 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     flatK += (flatT - flatK) * (1 - Math.pow(.0015, rdt)); const fk = flatK * flatK * (3 - 2 * flatK);
     if (opening && flatK < .12 && !going) { go(LIST[opening.i]); opening = null; }
     const S1 = Math.min((h * .74) / (N * rowH), (w * (mob ? .86 : .56)) / T.widest), C1 = (h * .5) / (rowH * S1);
-    gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow);
+    // the lens drifts after the pointer and relaxes away when it leaves
+    const LA = mob ? .32 : .5, LS = mob ? .2 : .24;
+    if (mouseY != null) { lensY += (Math.max(-.95, Math.min(.95, mouseY)) - lensY) * (1 - Math.pow(.0005, rdt)); lensA += (LA - lensA) * (1 - Math.pow(.004, rdt)); }
+    else lensA += (0 - lensA) * (1 - Math.pow(.01, rdt));
+    gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1f(U.lm, lensY); gl.uniform1f(U.la, lensA); gl.uniform1f(U.ls, LS);
+    if (flatK > .5) placeList(S1, C1, LS, h);
     lst.style.setProperty("--row", `${(rowH * S1) / Math.min(1.5, devicePixelRatio || 1)}px`); lst.style.setProperty("--wide", `${(T.widest * S1) / Math.min(1.5, devicePixelRatio || 1)}px`);
     gl.uniform2f(U.R, w, h); gl.uniform1f(U.off, off); gl.uniform1f(U.N, N); gl.uniform1f(U.rowH, rowH); gl.uniform1f(U.texW, texW); gl.uniform1f(U.texH, texH);
     gl.uniform1f(U.S0, S0); gl.uniform1f(U.B, B); gl.uniform1f(U.C, C); gl.uniform1f(U.hov, hover); gl.uniform1f(U.fly, outK);
