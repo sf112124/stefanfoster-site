@@ -24,9 +24,9 @@ const A = buildArt();
 // people are drawn from outfit recipes; every creature and portrait is a painted sprite in game/art
 for (const k in LOOKS) A.who[k] = person(LOOKS[k]);
 A.who.you = A.who.boy; A.port = {}; A.monF = {};
-const ART = ["balloon", "ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "bear", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "t_tora", "t_paris", "t_branco", "t_anna", "t_lucy", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo"];
+const ART = ["balloon", "ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "bear", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "t_tora", "t_paris", "t_branco", "t_anna", "t_lucy", "t_alysha", "bunny", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo"];
 // walking sprites: one strip per person, nine frames (front, left, back; standing then each foot), right is the left mirrored
-const WALK = ["stefan", "boy", "girl", "ad", "mm", "mp", "bs", "sl", "cmo", "tim", "pat", "chris", "jeremy", "jimi", "smoker", "vaper", "tora", "paris", "branco", "anna", "lucy"];
+const WALK = ["stefan", "boy", "girl", "ad", "mm", "mp", "bs", "sl", "cmo", "tim", "pat", "chris", "jeremy", "jimi", "smoker", "vaper", "tora", "paris", "branco", "anna", "lucy", "alysha"];
 await Promise.all(WALK.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => {
   const fw = im.width / 9, fh = im.height, cut = (i) => { const c = document.createElement("canvas"); c.width = fw; c.height = fh; c.getContext("2d").drawImage(im, i * fw, 0, fw, fh, 0, 0, fw, fh); return c; };
   const f = [...Array(9)].map((_, i) => cut(i)); A.who[k] = { down: f.slice(0, 3), left: f.slice(3, 6), up: f.slice(6, 9) }; A.who[k].right = A.who[k].left.map((c) => A.flip(c)); res(); };
@@ -114,7 +114,10 @@ addEventListener("keyup", (e) => { const k = KEY[e.key.toLowerCase()]; if (k) ke
 addEventListener("blur", () => { for (const k in keys) keys[k] = false; });
 document.querySelectorAll("[data-k]").forEach((b) => {
   const k = b.dataset.k;
-  b.addEventListener("pointerdown", (e) => { e.preventDefault(); press(k); b.classList.add("on"); });
+  b.addEventListener("pointerdown", (e) => { e.preventDefault(); b.classList.add("on");
+    // on the title screen the pad drives the menu, same as the keyboard
+    if (mode === "title") { au.unlock(); const key = { a: "Enter", up: "ArrowUp", down: "ArrowDown" }[k]; if (key) dispatchEvent(new KeyboardEvent("keydown", { key })); return; }
+    press(k); });
   ["pointerup", "pointercancel", "pointerleave"].forEach((t) => b.addEventListener(t, () => { keys[k] = false; b.classList.remove("on"); }));
 });
 const took = (k) => { if (tap[k]) { tap[k] = false; return true; } return false; };
@@ -259,6 +262,7 @@ function arrive() {
     if (tg) {
       const slug = GRASSOF[tg - 1]; P.grass++;
       if (!S.won.includes(slug) && P.grass >= 2 && (P.grass >= 7 || Math.random() < .3)) { P.grass = 0; script(() => fight(FOES[slug], slug)); }
+      else if (postgame() && P.grass >= 3 && Math.random() < .22) { P.grass = 0; const k = pick(Object.keys(CORP).filter((c) => c !== "bunny")); script(() => fight({ ...CORP[k], L: Math.max(5, S.lvl - 3 + Math.floor(Math.random() * 4)) })); }
     } else P.grass = 0;
   }
 }
@@ -314,6 +318,7 @@ async function stefan() {
   if (!S.starter) { await speak("stefan", SAY.noPick, who); return; }
   const n = S.won.length;
   if (n >= PROJECTS.length && !S.flags.badge) { await speak("stefan", ["That's all of them. You've seen everything I've made.", "Which means the MAL office has opened its doors for you. It's just east of the square.", "Tim's at the top, in the glass office. Good luck."], who); return; }
+  if (n >= PROJECTS.length && !S.flags.alysha) { await speak("stefan", SAY.toAlysha, who); return; }
   if (n >= PROJECTS.length) { await speak("stefan", SAY.ending, who); S.flags.end = 1; save(); await endCard(); return; }
   const next = PROJECTS.find((p) => !S.won.includes(p.slug)), left = 5 - S.beat.filter((b) => !TRAINERS[b].boss).length;
   await speak("stefan", [`${n} of ${PROJECTS.length} found.`, `${next.title} is at ${FOES[next.slug].zone}.`, ...(S.beat.includes("cmo") ? [] : left > 0 ? [`There are still ${left} people out on the roads who want a quick chat.`] : ["The CMO is waiting at the top of the north road."])], who);
@@ -328,10 +333,10 @@ async function speak(port, lines, who) {
 // ---------- the people on the roads ----------
 const trainerObjs = () => map.objs.filter((o) => o.tr);
 const beatCount = () => S.beat.filter((b) => !TRAINERS[b].map && !TRAINERS[b].boss).length;
-const ready = (id) => !S.beat.includes(id) && (TRAINERS[id].needs || []).every((b) => S.beat.includes(b));
+const ready = (id) => !S.beat.includes(id) && (TRAINERS[id].final ? postgame() : (TRAINERS[id].needs || []).every((b) => S.beat.includes(b)));
 function spotted() {
   for (const o of trainerObjs()) {
-    if (!ready(o.tr)) continue;
+    if (!ready(o.tr) || TRAINERS[o.tr].final) continue;
     const [dx, dy] = DIRS[o.dir], along = (P.x - o.x) * dx + (P.y - o.y) * dy, across = dx ? P.y - o.y : P.x - o.x;
     if (along < 1 || along > 4 || Math.abs(across) > 1) continue;
     let clear = true; for (let s = 1; s < along; s++) { const x = o.x + dx * s + (dy ? across : 0), y = o.y + dy * s + (dx ? across : 0); if (blocked(x, y)) clear = false; }
@@ -355,8 +360,13 @@ async function challenge(o) {
 }
 async function chat(o) {
   const t = TRAINERS[o.tr]; o.dir = OPP[P.dir];
-  if (S.beat.includes(o.tr)) { await speak(t.port.slice(2), t.after, t.name); return; }
-  if (!S.starter) { await speak(t.port.slice(2), ["Oh, you haven't got a tool yet? Come back when you have."], t.name); return; }
+  if (S.beat.includes(o.tr)) {
+    await speak(t.port.slice(2), t.after, t.name);
+    // after the badge, anyone will go again: good training
+    if (postgame()) { ui.show(`Battle ${t.name} again?`); const c = await ui.choose(["Again", "Not now"], { cls: "yn" }); ui.hide(); if (c === 0) { await speak(t.port.slice(2), t.again || ["Go on then."], t.name); await fight(null, null, o.tr); } }
+    return;
+  }
+  if (!S.starter && !t.final) { await speak(t.port.slice(2), ["Oh, you haven't got a tool yet? Come back when you have."], t.name); return; }
   if (!ready(o.tr)) { await speak(t.port.slice(2), t.gate, t.name); return; }
   await duel(o);
 }
@@ -366,6 +376,7 @@ async function duel(o) {
   const r = await fight(null, null, o.tr);
   if (r === "win") {
     await speak(pk, t.win, t.name);
+    if (t.final) { S.flags.alysha = 1; save(); hud(); au.sfx("win"); toast("THE ALYSHA TEST: PASSED", 5000); await ui.say(SAY.passed); return; }
     if (o.tr === "tim") { S.flags.badge = 1; save(); hud(); au.sfx("win"); await ui.say(SAY.badge); toast("MAL BADGE. GO BACK AND SEE STEFAN.", 5000); }
     else if (o.tr === "cmo") toast("THE CLIENT SIGNED IT OFF", 4000);
     else { const u = Object.values(TRAINERS).find((x) => x.needs && x.needs.includes(o.tr) && x.needs.every((b) => S.beat.includes(b))); if (u) toast(u.unlock, 4500); }
@@ -413,10 +424,13 @@ async function choosePartner(force, current) {
     return k;
   }
 }
+const CAP = 40;
+const postgame = () => S.won.length >= PROJECTS.length && !!S.flags.badge;
 async function fight(def, slug, trId) {
   const tr = trId ? TRAINERS[trId] : null, team = tr ? tr.team.map((k) => CORP[k]) : [def]; def = team[0];
   const boss = tr ? tr.boss || 0 : def.boss || 0;
-  const L = tr ? 3 + tr.lv + Math.floor((S.won.length + S.beat.length) / 2) : (slug ? 2 : boss ? 2 + boss : 1) + S.won.length;
+  const again = tr && S.beat.includes(trId);
+  const L = tr ? (tr.fixed || (again ? Math.max(3 + tr.lv, S.lvl - 1 + Math.floor(Math.random() * 3)) : 3 + tr.lv + Math.floor((S.won.length + S.beat.length) / 2))) : def.L || (slug ? 2 : boss ? 2 + boss : 1) + S.won.length;
   const first = (hpGet("tool") ?? 1) > 0 ? "tool" : alive()[0] || "tool";
   let me = member(first); if (me.hp <= 0) me.hp = 1; me.a = 0;
   const mk = (d) => { const f = { ...d, lvl: L, max: Math.round((20 + L * 6) * (tr ? (boss ? 2.2 : 1.6) : boss ? 2 : 1.6)), atk: 6 + L, def: 9 + L, am: 1, dm: 1, ox: 200, oy: 0, a: 1, fl: 0, sc: 1 }; f.hp = f.max; return f; };
@@ -430,7 +444,7 @@ async function fight(def, slug, trId) {
   await fadeTo(0, 200);
   await tween(480, (k) => { bt.you.ox = -200 * (1 - k); if (tr) bt.port.ox = 200 * (1 - k); else foe.ox = 200 * (1 - k); });
   if (tr) {
-    await ui.line(`${tr.role} ${tr.name} wants a quick chat!`, {});
+    await ui.line(tr.final ? "THE ALYSHA TEST begins." : `${tr.role} ${tr.name} wants a quick chat!`, {});
     await tween(300, (k) => (bt.port.ox = 200 * k)); bt.port = null; $("sfoe").hidden = false; bars();
     await tween(380, (k) => (foe.ox = 200 * (1 - k)));
     await ui.line(`${tr.name} brings up ${def.name}!`, {});
@@ -508,12 +522,15 @@ async function fight(def, slug, trId) {
     else { au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is ${tr ? "dealt with" : "beaten"}.`); }
     au.music(null); au.chip.fanfare();
     if (tr) {
-      S.beat.push(trId); S.lvl = Math.min(18, S.lvl + 1); me.lvl = S.lvl; bars(); save(); hud();
-      await ui.line(`You got through ${tr.name}'s quick chat.`); au.sfx("level"); await ui.line(`Your folio grew to level ${S.lvl}!`); await evolve(me);
+      if (!again) S.beat.push(trId); S.lvl = Math.min(CAP, S.lvl + 1); me.lvl = S.lvl; bars(); save(); hud();
+      await ui.line(again ? `You got through ${tr.name} again.` : `You got through ${tr.name}'s quick chat.`); au.sfx("level"); await ui.line(`Your folio grew to level ${S.lvl}!`); await evolve(me);
     } else if (slug) {
-      S.won.push(slug); S.lvl = Math.min(18, S.lvl + 1); me.lvl = S.lvl; bars(); save(); hud();
+      S.won.push(slug); S.lvl = Math.min(CAP, S.lvl + 1); me.lvl = S.lvl; bars(); save(); hud();
       await ui.line(`Your folio grew to level ${S.lvl}!`); au.sfx("level"); await evolve(me);
       await ui.line(`${def.name} joined your folio. You can send it out in battle now.`);
+    } else if (postgame()) {
+      // training: every wild win after the badge is worth a level
+      S.lvl = Math.min(CAP, S.lvl + 1); me.lvl = S.lvl; bars(); save(); hud(); au.sfx("level"); await ui.line(`Your folio grew to level ${S.lvl}!`); await evolve(me);
     }
     // knocks stay with you until you get a coffee
     if (me.hp < me.max * .35) await ui.line(`${me.name} is looking worn out. A coffee would sort that.`);
@@ -695,7 +712,7 @@ function endCard() {
     $("cclose").addEventListener("click", () => busyCard && busyCard());
   });
 }
-function hud() { $("bfolio").textContent = `FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8 · CHATS ${S.beat.length}/${Object.keys(TRAINERS).length}${S.flags.badge ? " · ★ BADGE" : ""}`; $("hud").hidden = mode !== "world"; $("bfolio").hidden = !S.starter; }
+function hud() { $("bfolio").textContent = touch && innerWidth < 560 ? `FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8` : `FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8 · CHATS ${S.beat.length}/${Object.keys(TRAINERS).length}${S.flags.badge ? " · ★ BADGE" : ""}`; $("hud").hidden = mode !== "world"; $("bfolio").hidden = !S.starter; }
 // tap or click a thing near you to interact with it
 $("frame").addEventListener("click", (e) => {
   if (e.target.closest("button, a, .menu, .dlg, .over, .hud") || mode !== "world" || busy || P.moving) return;

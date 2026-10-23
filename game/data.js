@@ -66,6 +66,7 @@ Object.assign(CORP, {
   budget: { name: "THE BUDGET", type: "IMAGE", art: "budget", moves: [{ n: "ONE SHOOT DAY", p: 9, fx: "coins" }, { n: "OVERAGE", p: 8, fx: "coins" }, { n: "CALL SHEET", p: 7, fx: "paper" }] },
   timesheet: { name: "TIMESHEET", type: "IMAGE", art: "timesheet", moves: [{ n: "FILL IT IN", p: 9, fx: "paper" }, { n: "JOB NUMBER", p: 7, fx: "slash" }, { n: "FRIDAY 5PM", p: 8, fx: "glitch" }] },
   bigidea: { name: "THE BIG IDEA", type: "AI", art: "bigidea", moves: [{ n: "WHAT IF", p: 10, fx: "flash" }, { n: "BLANK PAGE", p: 8, fx: "sparkle" }, { n: "BACK TO THE BRIEF", p: 8, fx: "beam" }] },
+  bunny: { name: "WHITE BUNNY", type: "NONE", art: "bunny", moves: [{ n: "SIDE EYE", p: 15, fx: "glitch" }, { n: "NOT FOR ME", p: 19, fx: "smash" }, { n: "HMM.", p: 12, fx: "sparkle" }, { n: "SLEEP ON IT", kind: "heal" }] },
   lion: { name: "GOLDEN BEAR", type: "FILM", art: "bear", moves: [{ n: "BEAR HUG", p: 11, fx: "smash" }, { n: "GOLDEN GLINT", p: 10, fx: "sparkle" }, { n: "MAUL", p: 9, fx: "slash" }] },
 });
 // ---- the people out on the roads who want "a quick chat" ----
@@ -89,6 +90,13 @@ export const TRAINERS = {
     gate: ["My team speaks for me.", "Get past Jimi, Tora, Paris, Branco and Anna first. Then we'll talk."],
     intro: ["So. You're the one who's been getting past my team.", "Let's talk numbers. Then stakeholders. Then numbers again."],
     win: ["...Fine. It's approved.", "Don't change a thing."], after: ["Approved. Go and make it."] },
+  // home: the last and hardest test
+  alysha: { name: "ALYSHA", role: "THE ALYSHA TEST", look: "alysha", port: "t_alysha", map: "house", x: 8, y: 4, dir: "left", lv: 20, fixed: 28, boss: 2, final: 1, team: ["bunny"],
+    gate: ["Hi. Have you finished it yet?", "Bring me the whole portfolio. Every project, and the MAL badge.", "Then you can do the test. I'm not easy to impress."],
+    intro: ["So. This is the whole portfolio?", "Talk me through it. Slowly.", "If something's not good, I'll know."],
+    win: ["...Okay.", "It's actually really good. I'm proud of you.", "You passed the Alysha Test."],
+    again: ["Again? Fine. I'll be harsher this time."],
+    after: ["You passed. Don't let it go to your head."] },
   // the MAL office: the gym
   jimi: { name: "LUCY", role: "DIRECTOR, PROJECT MANAGEMENT", look: "lucy", port: "t_lucy", map: "mal1", x: 10, y: 4, dir: "right", lv: 3, team: ["timesheet"],
     intro: ["Hi! Have you got a minute? I've got you down for a minute.", "Nobody goes upstairs without a timing plan, a status update and their hours in.", "Let's pop in a quick fifteen to scope the fifteen."],
@@ -158,6 +166,8 @@ export const SAY = {
   ],
   lime: ["A lime-green hire e-bike, abandoned on the pavement like they always are.", "The screen says: UNLOCK FOR 1 FILM REEL."],
   limeNone: ["You need a film reel to unlock it. There are eight hidden round the valley."],
+  toAlysha: ["You did it. Every project, and the MAL badge.", "But there's one more test. The hardest one.", "Alysha's right here. Bring her the whole portfolio.", "Train it up first though. Everyone out there will battle you again, and their creatures are loose in the long grass now."],
+  passed: ["THE ALYSHA TEST: PASSED.", "That's the whole thing. Thanks for playing Poké-folio.", "Everything you caught is in your FOLIO. Keep exploring, or go and see the real work."],
   floorLocked: (who) => [`${who} isn't letting anyone upstairs until you've had a quick chat.`],
   malLocked: ["The doors are locked. A note on the glass says:", "\"By appointment only. Come back once you've found four of Stefan's projects.\""],
   malcoffee: ["Free coffee from the office machine. It's fine.", "Your whole folio is back to full health."],
@@ -292,6 +302,7 @@ export function buildHouse() {
   put("wardrobe", 0, 3, { act: "wardrobe" }); put("oils", 12, 3, { act: "oils" }); put("tv", 10, 6, { w: 2, act: "tv" }); put("tank", 12, 7, { act: "tank" }); put("arcade", 1, 7, { act: "arcade" });
   objs.push({ k: "wallart", art: "poster", x: 0, y: 1, solid: 0, w: 1, flat: 1, act: "poster" }, { k: "wallart", art: "window", x: 12, y: 1, solid: 0, w: 1, flat: 1 });
   objs.push({ k: "npc", who: "stefan", x: 6, y: 4, w: 1, solid: 1, act: "stefan", dir: "down", id: "stefan" });
+  objs.push({ k: "npc", who: "alysha", x: 8, y: 4, w: 1, solid: 1, act: "trainer:alysha", dir: "left", tr: "alysha" });
   objs.forEach((o) => { if (o.solid && o.k !== "npc") for (let k = 0; k < (o.w || 1); k++) solid[I(o.x + k, o.y)] = 1; });
   solid[I(1, 2)] = 1;   // the head of the bed
   for (let i = 0; i < N; i++) if (SOLID.has(base[i])) solid[i] = 1;

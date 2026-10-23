@@ -139,9 +139,9 @@ const watch = (root = document) => $$("[data-r]", root).forEach((el, k) => { el.
 watch();
 
 // ---------- one loop for everything that moves ----------
-let px = mx, py = my, pvx = 0, t0 = performance.now();
+let px = mx, py = my, pvx = 0, t0 = performance.now(), t0w = 0;
 function frame(now) {
-  const t = (now - t0) / 1000;
+  const t = (now - t0) / 1000; t0w = t;
   // dot
   cx = lerp(cx, mx, .2); cy = lerp(cy, my, .2);
   cur.style.transform = `translate3d(${cx.toFixed(1)}px,${cy.toFixed(1)}px,0)`;
@@ -160,11 +160,15 @@ function frame(now) {
   // phones: whichever name sits in the middle of the screen gets the band
   if (!home.hidden && touch && scrollY > 4) { let best = null, bd = 1e9; nms.forEach((n) => { const r = n.getBoundingClientRect(), d = Math.abs(r.top + r.height / 2 - innerHeight * .5); if (d < bd) { bd = d; best = n; } }); nms.forEach((n) => n.classList.toggle("on", n === best)); }
   // flow: letters swell heavier as the cursor nears them, then thin back out
-  if (FL.length && !home.hidden && !touch && !reduce) {
+  if (FL.length && !home.hidden && !reduce) {
     const R = 260, sy = scrollY;
-    FL.forEach((L) => { const d = Math.hypot(L.x - cx, L.y - sy - cy), t = L.fi === hovFi ? Math.max(0, 1 - d / R) : 0, e = t * t * (3 - 2 * t);
-      L.k += (e - L.k) * .22; const w = Math.round(L.k * 100);
-      if (L.w !== w) { L.w = w; L.el.style.fontVariationSettings = `"wght" ${620 + w * 2.8}, "wdth" ${128 + w * .22}`; } });
+    FL.forEach((L) => { const d = Math.hypot(L.x - cx, L.y - sy - cy), t = !touch && L.fi === hovFi ? Math.max(0, 1 - d / R) : 0, e = t * t * (3 - 2 * t);
+      L.k += (e - L.k) * .22;
+      // the breathing: two slow waves crossing, so it never quite repeats
+      const b = Math.sin(t0w * .7 - L.x * .0045 + L.y * .006) * .6 + Math.sin(t0w * .43 + L.x * .0021 - L.y * .009) * .4;
+      const w = Math.round(L.k * 100), q = Math.round(b * 12);
+      if (L.w !== w || L.q !== q) { L.w = w; L.q = q; L.el.style.fontVariationSettings = `"wght" ${Math.min(900, 780 + q * 5 + w * 1.2)}, "wdth" ${108 + q * .9 + w * .28}`;
+        L.el.style.transform = q ? `translateY(${(q * -.06).toFixed(2)}px)` : ""; } });
   }
   requestAnimationFrame(frame);
 }
@@ -341,9 +345,14 @@ function tilt() {
       for (let i = 0; i < p.length; i += 4) { const m = Math.min(p[i], p[i + 1], p[i + 2]); if (m > 200) p[i + 3] = Math.max(0, 255 - (m - 200) * 4.7); }
       g.putImageData(d, 0, 0);
     }
+    rate += (want - rate) * (want > rate ? .035 : .02); if (Math.abs(v.playbackRate - rate) > .005) v.playbackRate = Math.max(.1, rate);
     requestAnimationFrame(draw);
   };
+  let rate = 1, want = 1; const brand = c.closest(".brand");
+  brand.addEventListener("mouseenter", () => (want = 4)); brand.addEventListener("mouseleave", () => (want = 1));
   v.play().catch(() => {}); draw(); }
+// the capsule in the corner opens into the game
+{ const b = $("#pball"); b?.addEventListener("click", () => { b.classList.add("go"); sound.tick?.(.9, .04); setTimeout(() => { const f = document.createElement("div"); f.className = "flash"; document.body.appendChild(f); }, 220); setTimeout(() => (location.href = "rpg"), 620); }); }
 
 // the centre is lit when you arrive: AI Experiments, with its pictures, until the mouse picks another
 { const mid = $$(".nm")[4]; if (mid) { mid.classList.add("on"); $$("video", mid).forEach((v) => { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); });
