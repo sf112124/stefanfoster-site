@@ -109,8 +109,11 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const poke = () => (idle = performance.now());
 
   // wheel: each notch of travel nudges the target on, and it always lands on a name
-  mount.addEventListener("wheel", (e) => { e.preventDefault(); if (flatT) return; poke(); wheelT += e.deltaY * .0035;
-    if (Math.abs(wheelT) >= 1) { const n = Math.trunc(wheelT); target = snap(target) + n; wheelT -= n; } }, { passive: false });
+  // wheel and trackpad: the stack follows your fingers continuously, then clicks onto the nearest name once you stop
+  let wheelTimer = 0, wheeling = false;
+  mount.addEventListener("wheel", (e) => { e.preventDefault(); if (flatT) return; poke();
+    const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY; target += Math.max(-1.2, Math.min(1.2, d * .0042)); wheeling = true;
+    clearTimeout(wheelTimer); wheelTimer = setTimeout(() => { wheeling = false; target = snap(target); }, 110); }, { passive: false });
   // drag: the stack follows the hand exactly, then flicks on and clicks into the nearest name
   mount.addEventListener("pointerdown", (e) => { if (e.button > 0 || flatT) return; dragging = true; py = e.clientY; moved = 0; dragV = 0; poke(); try { mount.setPointerCapture(e.pointerId); } catch (er) {} });
   mount.addEventListener("pointermove", (e) => { if (!dragging) return; const dy = e.clientY - py; py = e.clientY; const k = 2.4 / Math.max(300, H()); off -= dy * k; dragV = dragV * .6 + (-dy * k) * .4; moved += Math.abs(dy); poke(); });
@@ -149,7 +152,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     // drift, slowed and settled onto the nearest line while you're looking
     if (!dragging) {
       // a firm spring with a touch of overshoot, so each name lands with a click
-      const f = (target - off) * 120, prev = vel; vel += f * dt; vel *= Math.pow(.0009, dt); off += vel * dt;
+      const kk = wheeling ? 420 : 140, f = (target - off) * kk; vel += f * dt; vel *= Math.pow(wheeling ? .00002 : .0009, dt); off += vel * dt;
       if (Math.abs(target - off) < .002 && Math.abs(vel) < .01) { off = target; vel = 0; }
     } else vel = dragV / Math.max(dt, .001);
     const w = cv.width, h = cv.height, mob = W() < 700;
