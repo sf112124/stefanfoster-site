@@ -18,7 +18,7 @@ export const PROJECTS = [
       { file: "barbershop-chop--aigeneratedart--animefyp--nujabes--seedance--7630960936584498454.mp4" },
       { head: "Play", text: "Things I've built to play with. Click one to open it." },
       { play: "synth", img: "play-synth.webp", sm: "play-synth-sm.webp", caption: "Synth-folio", note: "A jungle sampler" },
-      { play: "rpg", img: "play-rpg.webp", sm: "play-rpg-sm.webp", caption: "Poke-folio", note: "The portfolio as a game" },
+      { play: "rpg", img: "play-rpg-v2.webp", sm: "play-rpg-v2-sm.webp", caption: "Poke-folio", note: "The portfolio as a game" },
       { head: "Samurai Bounty Hunter" },
       { file: "samurai-bounty-hunter.mp4" },
       { head: "100 million Goat", text: "Before AI video was everywhere, I faked a goat standing on a power line. A few weeks later the goat had 101M views on TikTok, I’d gained 160K followers, and the Daily Mail thought it was real." },
