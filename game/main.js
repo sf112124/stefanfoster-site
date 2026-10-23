@@ -38,7 +38,7 @@ await Promise.all(["boy", "girl"].map((k) => new Promise((res) => { const im = n
   const f = [...Array(6)].map((_, i) => cut(i)); A.bike[k] = { down: f.slice(0, 2), left: f.slice(2, 4), up: f.slice(4, 6) }; A.bike[k].right = A.bike[k].left.map((c) => A.flip(c)); res(); };
   im.onerror = res; im.src = `game/art/b_${k}.png`; })));
 // map objects drawn in the same handheld style
-await Promise.all([["balloon0", "g_balloon2"], ["balloon1", "g_balloon0"], ["balloon2", "g_balloon1"], ["lime", "g_lime"]].map(([k, f]) => new Promise((res) => { const im = new Image(); im.onload = () => { A.obj[k] = im; res(); }; im.onerror = res; im.src = `game/art/${f}.png`; })));
+await Promise.all([["balloon0", "g_balloon2"], ["balloon1", "g_balloon0"], ["balloon2", "g_balloon1"], ["lime", "g_lime"], ["pick_ai", "g_pick_ai"], ["pick_ps", "g_pick_ps"], ["pick_pr", "g_pick_pr"]].map(([k, f]) => new Promise((res) => { const im = new Image(); im.onload = () => { A.obj[k] = im; res(); }; im.onerror = res; im.src = `game/art/${f}.png`; })));
 A.who.you = A.who.boy;
 await Promise.all(ART.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => { im._s = 2; if (k.startsWith("t_")) A.port[k.slice(2)] = im; else { A.mon[k] = im; const f = A.flip(im); f._s = 2; A.monF[k] = f; } res(); }; im.onerror = res; im.src = `game/art/${k}.png`; })));
 // your own back, for the start of a fight
@@ -298,8 +298,11 @@ async function choosePick(id) {
   const m = STARTERS[id];
   if (S.starter) { await ui.say(S.starter === id ? SAY.taken : SAY.left); return; }
   if (!S.flags.intro) { await stefan(); return; }
+  // the little one on the table is a stand-in: show the real thing while you decide
+  talk = { img: A.mon[m.art], k: 0, show: 1 }; au.sfx("ok"); await tween(220, (k) => talk && (talk.k = k));
   await ui.say([m.about], { keep: true });
   const c = await ui.choose([`Take ${m.name}`, "Not yet"], { cls: "yn" }); ui.hide();
+  { const t = talk; await tween(180, (k) => t && (t.k = 1 - k)); talk = null; }
   if (c !== 0) return;
   S.starter = id; S.lvl = 3; S.hp = stats(3).max; au.sfx("level"); save(); hud();
   await ui.say([`You took ${m.name}.`]); await ui.say(SAY.after, { who: "STEFAN" });
@@ -693,6 +696,16 @@ function endCard() {
   });
 }
 function hud() { $("bfolio").textContent = `FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8 · CHATS ${S.beat.length}/${Object.keys(TRAINERS).length}${S.flags.badge ? " · ★ BADGE" : ""}`; $("hud").hidden = mode !== "world"; $("bfolio").hidden = !S.starter; }
+// tap or click a thing near you to interact with it
+$("frame").addEventListener("click", (e) => {
+  if (e.target.closest("button, a, .menu, .dlg, .over, .hud") || mode !== "world" || busy || P.moving) return;
+  const r = cv.getBoundingClientRect(), wx = (e.clientX - r.left) / r.width * VW + cam.x, wy = (e.clientY - r.top) / r.height * VH + cam.y;
+  const tx = Math.floor(wx / 16), ty = Math.floor(wy / 16);
+  const o = map.objs.find((o) => o.act && !o.gone && tx >= o.x && tx < o.x + (o.w || 1) && (ty === o.y || ty === o.y - 1) && Math.abs(o.x - P.x) + Math.abs(o.y - P.y) <= 4);
+  if (!o) return;
+  const ex = clamp(P.x, o.x, o.x + (o.w || 1) - 1) - P.x, ey = o.y - P.y; P.dir = Math.abs(ex) >= Math.abs(ey) ? (ex > 0 ? "right" : "left") : ey > 0 ? "down" : "up";
+  au.unlock(); run(o.act, o);
+});
 $("bfolio").addEventListener("click", () => { if (folioOpen) closeFolio(); else if (mode === "world") folio(); });
 $("bsnd").addEventListener("click", () => { au.on = !au.on; $("bsnd").textContent = au.on ? "SOUND ON" : "SOUND OFF"; if (au.on) au.unlock(); au.toggle(); });
 
@@ -823,7 +836,10 @@ function frame(now) {
   else { ui.update(dt); if (mode === "world") walk(dt); }
   if (took("m")) $("bsnd").click();
   if (mode === "battle" && bt) drawBattle(now); else drawWorld(now);
-  if (talk && talk.img && mode !== "battle") { const p = talk.img, e = 1 - Math.pow(1 - talk.k, 3); g.drawImage(p, Math.round(VW - 14 - iw(p) + (1 - e) * 140), 126 - ih(p), iw(p), ih(p)); }
+  if (talk && talk.show) { const p = talk.img, e = 1 - Math.pow(1 - talk.k, 3), cx = Math.round(VW * .36), sc = .6 + .4 * e;
+    g.globalAlpha = e; g.fillStyle = "rgba(43,31,59,.35)"; g.fillRect(0, 0, VW, VH); g.fillStyle = "#fff8ec"; g.beginPath(); g.arc(cx, 72, 46 * e, 0, 7); g.fill(); g.globalAlpha = 1;
+    const w = iw(p) * sc, h = ih(p) * sc; g.drawImage(p, Math.round(cx - w / 2), Math.round(72 - h / 2 + Math.sin(now / 400) * 2), w, h); }
+  else if (talk && talk.img && mode !== "battle") { const p = talk.img, e = 1 - Math.pow(1 - talk.k, 3); g.drawImage(p, Math.round(VW - 14 - iw(p) + (1 - e) * 140), 126 - ih(p), iw(p), ih(p)); }
   if (fade > 0) { g.fillStyle = `rgba(255,248,236,${fade})`; g.fillRect(0, 0, VW, VH); }
   if (wipe > 0) { g.fillStyle = "#2b1f3b"; for (let k = -6; k < 14; k++) { const w = 26 * wipe; g.beginPath(); g.moveTo(k * 26, 0); g.lineTo(k * 26 + w, 0); g.lineTo(k * 26 + w - 90, VH); g.lineTo(k * 26 - 90, VH); g.fill(); } }
   for (const k in tap) tap[k] = false;   // a press counts for the frame it lands in and no longer
