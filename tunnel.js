@@ -40,7 +40,7 @@ void main(){
   o = vec4(mix(paper, ink, a), 1.);
 }`;
 
-export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick }) {
+export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick, start }) {
   const cv = document.createElement("canvas"); cv.className = "tun-cv"; mount.appendChild(cv);
   const gl = cv.getContext("webgl2", { antialias: false, premultipliedAlpha: false });
   if (!gl) return false;
@@ -101,7 +101,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick 
   rail.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { const i = +b.dataset.i, cur = ((Math.floor(target) % N) + N) % N; let d = (i - cur + N) % N; if (d > N / 2) d -= N; target = snap(target) + d; poke(); }));
 
   // the stack always comes to rest with one name dead centre; target is where it's heading
-  let off = 0.5, target = 0.5, vel = 0, hover = 0, hoverT = 0, last = performance.now(), active = -1, dragging = false, py = 0, fpsA = 60, t0 = performance.now(), idle = performance.now(), dragV = 0, moved = 0, wheelT = 0;
+  let off = (start ?? 0) + .5, target = (start ?? 0) + .5, vel = 0, hover = 0, hoverT = 0, last = performance.now(), active = -1, dragging = false, py = 0, fpsA = 60, t0 = performance.now(), idle = performance.now(), dragV = 0, moved = 0, wheelT = 0;
   const W = () => cv.clientWidth, H = () => cv.clientHeight;
   const fit = () => { const d = Math.min(1.5, devicePixelRatio || 1); cv.width = Math.round(W() * d); cv.height = Math.round(H() * d); gl.viewport(0, 0, cv.width, cv.height); };
   addEventListener("resize", fit); fit();
