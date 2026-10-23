@@ -459,3 +459,7 @@ body.viewing .top{background:var(--bg);mix-blend-mode:normal}
 .flash{position:fixed;inset:0;z-index:999;background:#fff;pointer-events:none;animation:fl .45s forwards}
 @keyframes fl{from{opacity:0}35%{opacity:1}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.pball i{animation:none}}
+/* the toys spread across the foot of the page: one left, one centre, one right */
+.corner{right:var(--gut)}
+.corner .toys{flex:1;justify-content:space-between;align-items:center}
+.corner .pball span{max-width:none}
