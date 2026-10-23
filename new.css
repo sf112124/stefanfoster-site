@@ -524,3 +524,5 @@ body[data-tunnel] #view:not([hidden]){animation:pageIn .7s var(--ease) both}
 .tun-rail,.tun-lab{transition:opacity .3s}
 @media (max-width:700px){ .tun-sw{bottom:118px} .tun-list .c{display:none} .tun-list .n{right:calc(100% + 8px)} }
 .is-list .tun-hit{pointer-events:none!important}
+body[data-tunnel] .top{mix-blend-mode:normal;z-index:1000}
+body[data-tunnel] .brand{position:relative;z-index:1001}
