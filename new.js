@@ -3,6 +3,7 @@ import MEDIA from "./media.js";
 import { Crawler } from "./crawler.js";
 import { Sound } from "./sound.js";
 import { vtype } from "./vtype.js";
+import { tunnel } from "./tunnel.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -62,7 +63,11 @@ const media = (x) => x && (x.v ? `<video muted loop playsinline preload="none" p
 // favourites in the middle, fanning out to the top and bottom
 const ORDER = ["coca-cola", "summer-of-sport", "ai-commissions", "la-croisiere", "ai-experiments", "les-benjamins", "3d-explorations", "relax", "gumtree"];
 const LIST = [...PROJECTS].sort((x, y) => (ORDER.indexOf(x.slug) + 1 || 99) - (ORDER.indexOf(y.slug) + 1 || 99));
-const FLOW = document.body.dataset.flow != null;
+const TUN = document.body.dataset.tunnel != null;
+const FLOW = !TUN && document.body.dataset.flow != null;
+// the tunnel: the names pulled through a lens, drawn on the GPU (falls back to the plain list without WebGL2)
+if (TUN && !tunnel({ LIST: [...PROJECTS].sort((x, y) => ["ai-commissions", "la-croisiere", "3d-explorations", "les-benjamins", "ai-experiments", "summer-of-sport", "relax", "coca-cola", "gumtree"].indexOf(x.slug) - ["ai-commissions", "la-croisiere", "3d-explorations", "les-benjamins", "ai-experiments", "summer-of-sport", "relax", "coca-cola", "gumtree"].indexOf(y.slug)), mount: idx, media, esc, touch, reduce, onOpen: (p) => { if (p.page) location.href = p.page; else location.hash = p.slug; } })) document.body.removeAttribute("data-tunnel");
+const TUN_ON = document.body.dataset.tunnel != null;
 // flow layout: the work set like a paragraph, names running into each other with a little moving picture between each
 if (FLOW) {
   // a paragraph is read from the top left, so the favourite goes first
@@ -91,7 +96,7 @@ if (FLOW) {
   // thumbnails play gently on their own once on screen
   $$(".fi video").forEach((v) => { v.src = v.dataset.src; v.play().catch(() => {}); });
 }
-if (!FLOW) LIST.forEach((p, i) => {
+if (!FLOW && !TUN_ON) LIST.forEach((p, i) => {
   const a = document.createElement("a");
   a.className = "nm"; a.href = p.page ? p.page : `#${p.slug}`;
   const HOV = { "coca-cola": [{ i: "media/coca-cola/hover-1.jpg" }, { i: "media/coca-cola/hover-2.jpg" }], gumtree: [{ i: "media/gumtree/hover-1.jpg" }, { i: "media/gumtree/hover-2.jpg", pos: "30% 50%" }] }[p.slug];
