@@ -177,9 +177,9 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     const S0 = (w * (mob ? .86 : .5)) / T.widest, B = 1.75, C = (h * .5) / (rowH * S0 * B);
     flatK += (flatT - flatK) * (1 - Math.pow(.0015, rdt)); const fk = flatK * flatK * (3 - 2 * flatK);
     if (opening && flatK < .12 && !going) { go(LIST[opening.i]); opening = null; }
-    const S1 = Math.min((h * .74) / (N * rowH), (w * (mob ? .86 : .56)) / T.widest), C1 = (h * .5) / (rowH * S1);
+    const S1 = Math.min((h * .58) / (N * rowH), (w * (mob ? .8 : .4)) / T.widest), C1 = (h * .5) / (rowH * S1);
     // the lens drifts after the pointer and relaxes away when it leaves
-    const LA = mob ? .14 : .22, LS = mob ? .26 : .3;
+    const LA = mob ? .1 : .16, LS = mob ? .2 : .22;
     if (mouseY != null) { lensY += (Math.max(-.95, Math.min(.95, mouseY)) - lensY) * (1 - Math.pow(.02, rdt)); lensA += (LA - lensA) * (1 - Math.pow(.004, rdt)); }
     else lensA += (0 - lensA) * (1 - Math.pow(.01, rdt));
     gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1f(U.lm, lensY); gl.uniform1f(U.la, lensA); gl.uniform1f(U.ls, LS);
