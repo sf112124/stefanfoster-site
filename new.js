@@ -61,12 +61,12 @@ if (!touch) {
 const idx = $("#idx");
 const media = (x) => x && (x.v ? `<video muted loop playsinline preload="none" poster="${x.i}" data-src="${x.v}"></video>` : `<img src="${x.i}" alt="" loading="lazy"${x.pos ? ` style="object-position:${x.pos}"` : ""}>`);
 // favourites in the middle, fanning out to the top and bottom
-const ORDER = ["coca-cola", "summer-of-sport", "ai-commissions", "la-croisiere", "ai-experiments", "les-benjamins", "3d-explorations", "relax", "gumtree"];
+const ORDER = ["ai-experiments", "la-croisiere", "les-benjamins", "ai-commissions", "3d-explorations", "summer-of-sport", "relax", "coca-cola", "gumtree"];
 const LIST = [...PROJECTS].sort((x, y) => (ORDER.indexOf(x.slug) + 1 || 99) - (ORDER.indexOf(y.slug) + 1 || 99));
 const TUN = document.body.dataset.tunnel != null;
 const FLOW = !TUN && document.body.dataset.flow != null;
 // the tunnel: the names pulled through a lens, drawn on the GPU (falls back to the plain list without WebGL2)
-if (TUN && !tunnel({ LIST: [...PROJECTS].sort((x, y) => ORDER.indexOf(x.slug) - ORDER.indexOf(y.slug)), mount: idx, media, esc, touch, reduce, onOpen: (p) => { if (p.page) location.href = p.page; else location.hash = p.slug; }, onTick: () => sound.tick?.(.55, .025), start: 4 })) document.body.removeAttribute("data-tunnel");
+if (TUN && !tunnel({ LIST: [...PROJECTS].sort((x, y) => ORDER.indexOf(x.slug) - ORDER.indexOf(y.slug)), mount: idx, media, esc, touch, reduce, onOpen: (p) => { if (p.page) location.href = p.page; else location.hash = p.slug; }, onTick: () => sound.tick?.(.55, .025), start: 0 })) document.body.removeAttribute("data-tunnel");
 const TUN_ON = document.body.dataset.tunnel != null;
 // flow layout: the work set like a paragraph, names running into each other with a little moving picture between each
 if (FLOW) {

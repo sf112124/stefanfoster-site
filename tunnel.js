@@ -12,9 +12,9 @@ uniform sampler2D T; uniform vec2 R; uniform float off, N, rowH, texW, texH, S0,
 float hf(float d){ return d * (1. - la * exp(-d * d / (ls * ls))); }
 float hd(float d){ float x = d * d / (ls * ls); return 1. - la * exp(-x) * (1. - 2. * x); }
 // screen y (-1..1) to a position in the stack, and how many screen pixels one texel takes there
-float rowAt(float y){ return mix(off - C * sign(y) * (1. - exp(-B * abs(y))), N * .5 - C1 * (lm + hf(y - lm)), flt); }
+float rowAt(float y){ return mix(off - C * sign(y) * (1. - exp(-B * abs(y))), N * .5 - C1 * (lm + hf(y - .05 - lm)), flt); }
 float sa(float y){ return sqrt(y * y + .016) - .1265; }   // a soft |y|: flt through the middle line so it stays straight
-float scaleAt(float y){ return mix(S0 * exp(B * sa(y)), S1 / pow(hd(y - lm), .3), flt); }
+float scaleAt(float y){ return mix(S0 * exp(B * sa(y)), S1 / pow(hd(y - .05 - lm), .3), flt); }
 vec4 sampleAt(vec2 q){
   float r = rowAt(q.y), s = scaleAt(q.y), e = (1. - exp(-B * sa(q.y))) * (1. - flt);
   float stretch = 1. + .5 * e;                       // the far lines widen more than they grow
@@ -93,7 +93,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const lst = document.createElement("div"); lst.className = "tun-list"; lst.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-i="${i}"><span class="n mono">${String(i + 1).padStart(2, "0")}</span><span class="c">${esc(p.client)}</span></a>`).join(""); mount.appendChild(lst);
   let flatK = 1, flatT = 1, hrow = -1, opening = null, lensY = 0, lensA = 0, mouseY = null;
   mount.classList.add("is-list"); sw.querySelector("span").textContent = "TUNNEL";
-  mount.addEventListener("pointermove", (e) => { const r = mount.getBoundingClientRect(); mouseY = 1 - 2 * (e.clientY - r.top) / r.height; });
+  mount.addEventListener("pointermove", (e) => { const a = e.target.closest && e.target.closest(".tun-list a"); if (!a || e.target !== a) { mouseY = null; return; } const r = mount.getBoundingClientRect(); mouseY = 1 - 2 * (e.clientY - r.top) / r.height - .05; });
   mount.addEventListener("pointerleave", () => (mouseY = null));
   const setFlat = (on) => { flatT = on ? 1 : 0; mount.classList.toggle("is-list", on); sw.querySelector("span").textContent = on ? "TUNNEL" : "LIST"; poke(); };
   sw.addEventListener("pointerdown", (e) => e.stopPropagation()); sw.addEventListener("click", () => setFlat(!flatT));
@@ -149,10 +149,10 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const hf = (d, a, s2) => d * (1 - a * Math.exp(-d * d / s2)), hd = (d, a, s2) => { const xx = d * d / s2; return 1 - a * Math.exp(-xx) * (1 - 2 * xx); };
   const placeList = (S1, C1, LS, h) => {
     const s2 = LS * LS, dpr = Math.min(1.5, devicePixelRatio || 1), Hc = H();
-    const yOf = (r) => { let lo = -1.6, hi = 1.6; for (let k = 0; k < 30; k++) { const mid = (lo + hi) / 2, rr = N * .5 - C1 * (lensY + hf(mid - lensY, lensA, s2)); if (rr > r) lo = mid; else hi = mid; } return (lo + hi) / 2; };
+    const yOf = (r) => { let lo = -1.6, hi = 1.6; for (let k = 0; k < 30; k++) { const mid = (lo + hi) / 2, rr = N * .5 - C1 * (lensY + hf(mid - lensY, lensA, s2)); if (rr > r) lo = mid; else hi = mid; } return (lo + hi) / 2 + .05; };
     lst.querySelectorAll("a").forEach((a, i) => {
       const y0 = yOf(i), y1 = yOf(i + 1), top = (1 - y0) / 2 * Hc, bot = (1 - y1) / 2 * Hc, yc = (y0 + y1) / 2;
-      const half = (T.w ? T.w[i] : T.widest) * S1 / Math.pow(hd(yc - lensY, lensA, s2), .3) / dpr / 2;
+      const half = (T.w ? T.w[i] : T.widest) * S1 / Math.pow(hd(yc - .05 - lensY, lensA, s2), .3) / dpr / 2;
       a.style.top = `${top.toFixed(1)}px`; a.style.height = `${(bot - top).toFixed(1)}px`; a.style.setProperty("--half", `${half.toFixed(1)}px`);
     });
   };
