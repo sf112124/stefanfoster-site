@@ -24,7 +24,7 @@ const A = buildArt();
 // people are drawn from outfit recipes; every creature and portrait is a painted sprite in game/art
 for (const k in LOOKS) A.who[k] = person(LOOKS[k]);
 A.who.you = A.who.boy; A.port = {}; A.monF = {};
-const ART = ["balloon", "ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "lion", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "t_tora", "t_paris", "t_branco", "t_anna", "t_lucy", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo"];
+const ART = ["balloon", "ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "bear", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "t_tora", "t_paris", "t_branco", "t_anna", "t_lucy", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo"];
 // walking sprites: one strip per person, nine frames (front, left, back; standing then each foot), right is the left mirrored
 const WALK = ["stefan", "boy", "girl", "ad", "mm", "mp", "bs", "sl", "cmo", "tim", "pat", "chris", "jeremy", "jimi", "smoker", "vaper", "tora", "paris", "branco", "anna", "lucy"];
 await Promise.all(WALK.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => {

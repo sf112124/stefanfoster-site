@@ -66,7 +66,7 @@ Object.assign(CORP, {
   budget: { name: "THE BUDGET", type: "IMAGE", art: "budget", moves: [{ n: "ONE SHOOT DAY", p: 9, fx: "coins" }, { n: "OVERAGE", p: 8, fx: "coins" }, { n: "CALL SHEET", p: 7, fx: "paper" }] },
   timesheet: { name: "TIMESHEET", type: "IMAGE", art: "timesheet", moves: [{ n: "FILL IT IN", p: 9, fx: "paper" }, { n: "JOB NUMBER", p: 7, fx: "slash" }, { n: "FRIDAY 5PM", p: 8, fx: "glitch" }] },
   bigidea: { name: "THE BIG IDEA", type: "AI", art: "bigidea", moves: [{ n: "WHAT IF", p: 10, fx: "flash" }, { n: "BLANK PAGE", p: 8, fx: "sparkle" }, { n: "BACK TO THE BRIEF", p: 8, fx: "beam" }] },
-  lion: { name: "GOLD LION", type: "FILM", art: "lion", moves: [{ n: "SHORTLIST", p: 11, fx: "sparkle" }, { n: "CASE STUDY", p: 9, fx: "paper" }, { n: "JURY PRIZE", p: 10, fx: "smash" }] },
+  lion: { name: "GOLDEN BEAR", type: "FILM", art: "bear", moves: [{ n: "BEAR HUG", p: 11, fx: "smash" }, { n: "GOLDEN GLINT", p: 10, fx: "sparkle" }, { n: "MAUL", p: 9, fx: "slash" }] },
 });
 // ---- the people out on the roads who want "a quick chat" ----
 export const TRAINERS = {
@@ -100,9 +100,9 @@ export const TRAINERS = {
     intro: ["Have you heard of this artist? About forty monthly listeners.", "Played a tiny indie set last night. Basement. Incredible.", "We should get them on the next film before anyone else does."],
     win: ["Fine. But they'll be huge. You'll see."], after: ["I'll send you the link. Headphones only."] },
   jeremy: { name: "JEREMY", role: "PRODUCER", look: "jeremy", port: "t_jeremy", map: "mal2", x: 13, y: 5, dir: "down", lv: 4, team: ["budget"],
-    intro: ["Love it. Genuinely.", "Quick question though. How much does it cost?", "And can we shoot the whole thing in one day?"],
-    win: ["Right. I'll find the money. Somewhere."], after: ["The eyebrow goes up when the budget goes up."] },
-  tim: { name: "TIM", role: "GYM LEADER", look: "tim", port: "t_tim", map: "mal2", x: 18, y: 4, dir: "down", lv: 6, boss: 1, team: ["lion"], needs: ["jimi", "pat", "chris", "jeremy"], unlock: "TIM WILL SEE YOU NOW. THE GLASS OFFICE.",
+    intro: ["All G, all G?", "Quick one. Benji.", "Cappadocia is a go, but the balloons need a weather window, a drone permit and a second hotel.", "Can we shoot the whole thing in one day?"],
+    win: ["All G. All G. I'll find the money. Somewhere."], after: ["All G, all G? Quick one later about the call sheet."] },
+  tim: { name: "TIM", role: "ECD", look: "tim", port: "t_tim", map: "mal2", x: 18, y: 4, dir: "down", lv: 6, boss: 1, team: ["lion"], needs: ["jimi", "pat", "chris", "jeremy"], unlock: "TIM WILL SEE YOU NOW. THE GLASS OFFICE.",
     gate: ["Door's open, but get past the floor first.", "Pat, Lucy, Chris and Jeremy. Then come and see me."],
     intro: ["So you want to make work here.", "Everyone has an idea. Show me the big one.", "And it had better be on brief."],
     win: ["That's the work.", "Take the badge. You've earned it."], after: ["Good work doesn't need a deck. Mostly."] },
