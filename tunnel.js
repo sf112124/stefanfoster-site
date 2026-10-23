@@ -95,7 +95,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   lst.querySelectorAll("a").forEach((a) => {
     a.addEventListener("pointerenter", () => (hrow = +a.dataset.i)); a.addEventListener("pointerleave", () => (hrow = -1));
     // picking from the list: it folds back into the tunnel on that name, then flies in
-    a.addEventListener("click", (e) => { e.preventDefault(); const i = +a.dataset.i; off = target = i + .5; vel = 0; hrow = -1; setFlat(false); opening = { i, t: performance.now() }; });
+    a.addEventListener("click", (e) => { e.preventDefault(); const i = +a.dataset.i; off = target = i + .5; vel = 0; hrow = -1; onOpen(LIST[i]); setTimeout(() => setFlat(false), 400); });
   });
   rail.addEventListener("pointerdown", (e) => e.stopPropagation());
   rail.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { const i = +b.dataset.i, cur = ((Math.floor(target) % N) + N) % N; let d = (i - cur + N) % N; if (d > N / 2) d -= N; target = snap(target) + d; poke(); }));
@@ -142,8 +142,8 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     if (mount.closest("[hidden]")) { wasHidden = true; return; }
     // coming back from a page: start fully flown-in and pull back out to the stack
     if (wasHidden) { wasHidden = false; outK = 1; going = null; lab.classList.remove("gone"); last = now; }
-    if (going) { outK = Math.min(1, (now - going.t) / 650); if (outK >= 1) { const p = going.p; going = null; onOpen(p); } }
-    else if (outK > 0) outK = Math.max(0, outK - Math.min(.05, (now - last) / 1000) / .7);
+    if (going) { outK = Math.min(1, (now - going.t) / 240); if (outK >= 1) { const p = going.p; going = null; onOpen(p); } }
+    else if (outK > 0) outK = Math.max(0, outK - Math.min(.05, (now - last) / 1000) / .32);
     const rdt = Math.min(.5, (now - last) / 1000), dt = Math.min(.05, rdt); last = now; fpsA += (1 / Math.max(dt, .001) - fpsA) * .05;
     hover += (hoverT - hover) * .06;
     // drift, slowed and settled onto the nearest line while you're looking
