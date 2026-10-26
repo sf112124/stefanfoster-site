@@ -86,6 +86,8 @@ export function buildArt() {
   const stairs = (up) => px(16, 16, (R) => { R(0, 0, 16, 16, "#3b3e4a"); for (let i = 0; i < 4; i++) { const y = up ? i * 4 : 12 - i * 4, sh = up ? 4 + i * 1 : 7 - i; R(0, y, 16, 3, ["#9aa0b5", "#868ca1", "#72788d", "#5e6479"][up ? 3 - i : i]); R(0, y + 3, 16, 1, "#2b2836"); } R(1, 0, 1, 16, "#c9ccd8"); R(14, 0, 1, 16, "#c9ccd8"); });
   A.tile.stairsU = [stairs(1)]; A.tile.stairsD = [stairs(0)];
   A.tile.paving = [0, 1].map((k) => px(16, 16, (R) => { R(0, 0, 16, 16, "#c9c6c0"); R(0, 7, 16, 1, "#aeaba4"); R(0, 15, 16, 1, "#aeaba4"); R(k ? 4 : 11, 0, 1, 7, "#aeaba4"); R(k ? 12 : 6, 8, 1, 7, "#aeaba4"); speck(R, 4, ["#b9b6af"]); }));
+  // freshly mopped carpet: darker, with shiny streaks
+  A.tile.wet = [0, 1].map((k) => px(16, 16, (R) => { R(0, 0, 16, 16, "#55607a"); R(0, 15, 16, 1, "#4c566e"); R(k ? 2 : 6, 3, 6, 1, "#9fb8dc"); R(k ? 3 : 7, 4, 3, 1, "#c8dcf5"); R(k ? 9 : 1, 10, 5, 1, "#8aa4cc"); R(k ? 10 : 2, 11, 2, 1, "#c8dcf5"); }));
   // the ragged edge where one ground meets another: little bites of the neighbour's colour along a side
   A.fringe = (g, x, y, side, col, seed) => {
     const q = rng(seed * 7 + side * 131 + 3); g.fillStyle = col;
@@ -203,6 +205,11 @@ export function buildArt() {
   A.obj.balloon0 = balloon("#ff86b6", "#ffc4dd"); A.obj.balloon1 = balloon("#7fd27a", "#c8f2b0"); A.obj.balloon2 = balloon("#ffd23f", "#fff0a8");
   // the coffee kiosk on the square: striped awning, a counter, cups, a little chalkboard
   A.obj.kiosk = shape(32, 34, (g) => { box(g, 2, 12, 2, 22, "#5d4030"); box(g, 28, 12, 2, 22, "#5d4030"); for (let i = 0; i < 8; i++) box(g, i * 4, 6, 4, 7, i % 2 ? "#fff8ec" : "#57c9b5"); box(g, 0, 4, 32, 2, "#2f9c8e"); for (let i = 0; i < 8; i++) ell(g, i * 4 + 2, 13, 2, 1.6, i % 2 ? "#fff8ec" : "#57c9b5"); box(g, 1, 20, 30, 14, "#b98758"); box(g, 1, 20, 30, 2, "#d6a877"); box(g, 4, 24, 24, 8, "#96683f"); box(g, 6, 25, 9, 6, "#2b1f3b"); box(g, 7, 26, 4, 1, "#fff8ec"); box(g, 7, 28, 6, 1, "#ffd76a"); box(g, 18, 16, 3, 4, "#fff8ec"); box(g, 18, 16, 3, 1, "#c98a55"); box(g, 23, 15, 3, 5, "#fff8ec"); box(g, 23, 15, 3, 1, "#8d5d45"); box(g, 9, 16, 6, 4, "#cfd3e0"); box(g, 10, 17, 2, 2, "#2b1f3b"); box(g, 13, 0, 6, 4, "#ffd76a"); box(g, 15, 1, 2, 2, "#c98a55"); });
+  // gym puzzle props
+  A.obj.cabinet = shape(16, 24, (g) => { box(g, 0, 2, 16, 22, "#8f95a8"); box(g, 0, 2, 16, 2, "#b5bacb"); for (let i = 0; i < 3; i++) { box(g, 1, 5 + i * 6, 14, 5, "#a3a9bb"); box(g, 6, 7 + i * 6, 4, 1, "#5d6170"); } box(g, 0, 23, 16, 1, "#5d6170"); });
+  A.obj.chair = shape(14, 20, (g) => { box(g, 2, 0, 10, 9, "#3a3350"); box(g, 3, 1, 8, 7, "#57507a"); box(g, 1, 9, 12, 4, "#3a3350"); box(g, 2, 10, 10, 2, "#6e43b8"); box(g, 6, 13, 2, 4, "#9aa0b5"); box(g, 1, 17, 12, 1, "#9aa0b5"); ell(g, 2, 18.5, 1.5, 1.5, "#2b1f3b"); ell(g, 12, 18.5, 1.5, 1.5, "#2b1f3b"); ell(g, 7, 18.5, 1.5, 1.5, "#2b1f3b"); });
+  A.obj.wetsign = shape(12, 18, (g) => { poly(g, [[6, 0], [11, 17], [1, 17]], "#ffd23f"); poly(g, [[6, 2], [9, 13], [3, 13]], "#ffe58a"); box(g, 5, 5, 2, 5, "#2b1f3b"); box(g, 5, 11, 2, 2, "#2b1f3b"); box(g, 1, 16, 10, 2, "#c99a2e"); });
+  A.obj.tape = shape(16, 18, (g) => { box(g, 1, 4, 2, 14, "#9aa0b5"); box(g, 13, 4, 2, 14, "#9aa0b5"); box(g, 0, 3, 4, 2, "#cfd3e0"); box(g, 12, 3, 4, 2, "#cfd3e0"); poly(g, [[0, 7], [16, 11], [16, 14], [0, 10]], "#f0546a"); poly(g, [[0, 13], [16, 6], [16, 9], [0, 16]], "#ff7d8e"); box(g, 3, 9, 3, 1, "#fff"); box(g, 10, 9, 3, 1, "#fff"); });
   A.obj.bench = shape(32, 16, (g) => { box(g, 0, 4, 32, 4, "#b98758"); box(g, 0, 0, 32, 3, "#96683f"); box(g, 2, 8, 2, 8, "#5d4030"); box(g, 28, 8, 2, 8, "#5d4030"); box(g, 14, 0, 3, 4, "#d5f4ff"); box(g, 15, -1, 1, 1, "#ff9dbb"); });
   // ---- the MAL office ----
   const PUR = "#8a5ad6", PUR2 = "#6e43b8", PUR3 = "#a97df0";

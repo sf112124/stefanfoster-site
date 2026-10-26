@@ -209,7 +209,7 @@ const P = { x: 3, y: 4, fx: 3, fy: 4, px: 48, py: 64, dir: "down", moving: false
 const objAt = (x, y) => map.objs.find((o) => !o.gone && y === o.y && x >= o.x && x < o.x + o.w && (o.solid || o.act));
 const blocked = (x, y) => x < 0 || y < 0 || x >= map.W || y >= map.H || map.solid[map.I(x, y)] || map.objs.some((o) => o.k === "npc" && !o.gone && y === o.y && x >= o.x && x < o.x + o.w);
 function place(m, x, y, dir) { map = m; P.x = P.fx = x; P.y = P.fy = y; P.px = x * 16; P.py = y * 16; P.moving = false; if (dir) P.dir = dir; P.grass = 0; }
-async function warp(m, x, y, dir) { busy = true; m.objs.forEach((q) => { if (q.tr) q.cool = false; }); if (S.bike && m.id !== "world") { dropBike(map, P.fx, P.fy); bike(false); } au.sfx("door"); await fadeTo(1, 220); place(m, x, y, dir); au.music("world"); zoneNow = ""; await fadeTo(0, 220); busy = false; }
+async function warp(m, x, y, dir) { busy = true; m.objs.forEach((q) => { if (q.tr) q.cool = false; }); resetPuzzles(m); if (S.bike && m.id !== "world") { dropBike(map, P.fx, P.fy); bike(false); } au.sfx("door"); await fadeTo(1, 220); place(m, x, y, dir); au.music("world"); zoneNow = ""; await fadeTo(0, 220); busy = false; }
 function fadeTo(v, ms) { return new Promise((res) => { const a = fade, s = performance.now(); const step = (n) => { const k = clamp((n - s) / ms, 0, 1); fade = a + (v - a) * k; if (k < 1) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); }); }
 function night() { nightOn = !nightOn; au.sfx("secret"); toast(nightOn ? "NIGHT MODE" : "DAY MODE"); }
 
@@ -225,7 +225,7 @@ function mill(dt) {
     if (Math.random() < .4) continue; // sometimes they just turn round
     const nx = o.x + dx, ny = o.y + dy, [a, b2, c, e] = o.wander;
     if (nx < a || ny < Math.max(3, b2) || nx > c || ny > e) continue;
-    if (blocked(nx, ny) || (nx === P.x && ny === P.y) || (nx === P.fx && ny === P.fy) || (map.warps || []).some((w) => Math.abs(w.x - nx) + Math.abs(w.y - ny) <= 1) || map.base[map.I(nx, ny)] === TT.mat) continue;
+    if (blocked(nx, ny) || (nx === P.x && ny === P.y) || (nx === P.fx && ny === P.fy) || (map.warps || []).some((w) => Math.abs(w.x - nx) + Math.abs(w.y - ny) <= 1) || map.base[map.I(nx, ny)] === TT.mat || map.base[map.I(nx, ny)] === TT.wet) continue;
     o.x = nx; o.y = ny; o.mv = { dx, dy, t: 0, n: (o.mv_n = (o.mv_n || 0) + 1) };
   }
   map.tall && map.tall.sort((p, q) => p.y - q.y);
@@ -233,7 +233,7 @@ function mill(dt) {
 function walk(dt) {
   mill(dt); lookAbout(dt);
   if (P.moving) {
-    P.t += dt / (S.bike ? .075 : keys.b ? .095 : .165);
+    P.t += dt / (P.sliding ? .07 : S.bike ? .075 : keys.b ? .095 : .165);
     if (P.t >= 1) { P.moving = false; P.px = P.x * 16; P.py = P.y * 16; arrive(); }
     else { P.px = (P.fx + (P.x - P.fx) * P.t) * 16; P.py = (P.fy + (P.y - P.fy) * P.t) * 16; }
   }
@@ -243,9 +243,24 @@ function walk(dt) {
   if (took("a")) { const [dx, dy] = DIRS[P.dir], o = objAt(P.x + dx, P.y + dy); if (o && o.act) { run(o.act, o); return; } if (S.bike && map.id === "world") { script(hopOff); return; } }
   for (const d of ["up", "down", "left", "right"]) if (keys[d]) {
     const [dx, dy] = DIRS[d]; P.dir = d;
-    if (blocked(P.x + dx, P.y + dy)) { if (tap[d]) au.sfx("bump"); tap[d] = false; return; }
+    if (blocked(P.x + dx, P.y + dy) && !tryPush(P.x + dx, P.y + dy, dx, dy)) { if (tap[d]) au.sfx("bump"); tap[d] = false; return; }
     tap[d] = false; P.fx = P.x; P.fy = P.y; P.x += dx; P.y += dy; P.t = 0; P.moving = true; P.steps++; return;
   }
+}
+// gym puzzles: wheelie chairs you can shove one square, as long as there's room behind them
+function tryPush(x, y, dx, dy) {
+  const o = map.objs.find((q) => q.push && !q.gone && q.x === x && q.y === y); if (!o || o.mv) return false;
+  const bx = x + dx, by = y + dy;
+  if (blocked(bx, by) || map.objs.some((q) => q !== o && !q.gone && q.y === by && bx >= q.x && bx < q.x + (q.w || 1) && (q.solid || q.act)) || (map.warps || []).some((w) => w.x === bx && w.y === by) || [TT.mat, TT.wet].includes(map.base[map.I(bx, by)])) return false;
+  o.hx ??= o.x; o.hy ??= o.y; map.solid[map.I(x, y)] = 0; o.x = bx; o.y = by; map.solid[map.I(bx, by)] = 1; o.dx = -dx * 16; o.dy = -dy * 16;
+  au.sfx("bump"); tween(240, (k) => { o.dx = -dx * 16 * (1 - k); o.dy = -dy * 16 * (1 - k); }); return true;
+}
+// coming back onto a floor tidies its puzzle back up
+function resetPuzzles(m) {
+  m.objs.forEach((q) => {
+    if (q.hx != null && (q.x !== q.hx || q.y !== q.hy)) { m.solid[m.I(q.x, q.y)] = 0; q.x = q.hx; q.y = q.hy; m.solid[m.I(q.x, q.y)] = 1; q.dx = q.dy = 0; }
+    if (q.k === "tape" && q.gone) { q.gone = false; m.solid[m.I(q.x, q.y)] = 1; }
+  });
 }
 async function script(fn) { if (busy) return; busy = true; try { await fn(); } finally { busy = false; for (const k in tap) tap[k] = false; } }
 function arrive() {
@@ -256,6 +271,9 @@ function arrive() {
     if (wp.needs && !wp.needs.every((b) => S.beat.includes(b))) { const bx = P.fx, by = P.fy; script(async () => { await ui.say(SAY.floorLocked(wp.who)); place(map, bx, by, "down"); }); return; }
     warp(maps[wp.to], wp.tx, wp.ty, wp.dir); return;
   }
+  // mopped floor: keep sliding the way you were going until something stops you
+  if (map.base[i] === TT.wet) { const [dx, dy] = DIRS[P.dir]; if (!blocked(P.x + dx, P.y + dy)) { P.fx = P.x; P.fy = P.y; P.x += dx; P.y += dy; P.t = 0; P.moving = true; P.sliding = true; return; } }
+  P.sliding = false;
   if (map.id !== "world") { const sp = spotted(); if (sp) script(() => challenge(sp)); }
   if (map.id === "house" && map.base[i] === TT.mat) {
     if (!S.starter) { script(async () => { await ui.say(SAY.needPick, { who: "STEFAN" }); place(map, P.x, P.y - 1, "up"); }); return; }
@@ -292,6 +310,12 @@ async function run(act, o) {
     else if (a === "coffee") { await ui.say(SAY.coffee[0]); healAll(); au.sfx("heal"); if (S.starter) await ui.say(SAY.coffee[1]); save(); }
     else if (a === "trainer") await chat(o);
     else if (a === "shop") await shop();
+    else if (a === "tape") {
+      const nm = S.starter ? formFor("tool").name : "your hands";
+      await ui.say(["A tangle of red tape. Nobody gets past this without a fight."], { keep: true });
+      const c = await ui.choose([`Cut it with ${nm}`, "Leave it"], { cls: "yn" }); ui.hide();
+      if (c === 0) { au.sfx("super"); o.gone = true; map.solid[map.I(o.x, o.y)] = 0; await ui.say([`${nm} cut straight through the red tape!`]); }
+    }
     else if (a === "lime") {
       if (S.bike) return;
       await ui.say(SAY.lime, { keep: true });
@@ -864,7 +888,7 @@ function drawWorld(now) {
   map.flat.forEach(put);
   // everything standing up, back to front, with you in among it
   const row = map.tall.filter((o) => !o.gone && o.y >= y0 - 2 && o.y <= y1 + 3).sort((a, b) => a.y - b.y); let drawn = false;
-  const me = () => { const s = S.bike && A.bike[S.look] ? A.bike[S.look][P.dir][P.moving ? Math.floor(now / 120) % 2 : 0] : pose(A.who.you, P.dir, P.moving && P.t < .55 ? 1 + (P.steps % 2) : 0), x = Math.round(P.px - cx), y = Math.round(P.py - cy); g.drawImage(A.sh[12], x + 2, y + 12); g.drawImage(s, Math.round(x + 8 - iw(s) / 2), y + 16 - ih(s), iw(s), ih(s)); drawn = true; };
+  const me = () => { const s = S.bike && A.bike[S.look] ? A.bike[S.look][P.dir][P.moving ? Math.floor(now / 120) % 2 : 0] : pose(A.who.you, P.dir, P.moving && !P.sliding && P.t < .55 ? 1 + (P.steps % 2) : 0), x = Math.round(P.px - cx), y = Math.round(P.py - cy); g.drawImage(A.sh[12], x + 2, y + 12); g.drawImage(s, Math.round(x + 8 - iw(s) / 2), y + 16 - ih(s), iw(s), ih(s)); drawn = true; };
   const py = P.py / 16;
   row.forEach((o) => { if (!drawn && o.y > py) me(); put(o); }); if (!drawn) me();
   // standing in long grass, it comes up over your feet

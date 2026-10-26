@@ -1,5 +1,5 @@
 // Foster Valley: the map, what's in it, and all the text.
-export const TT = { grass: 0, path: 1, sand: 2, water: 3, bridge: 4, track: 5, lawnA: 6, lawnB: 7, soil: 8, fizz: 9, floor: 10, wall: 11, skirt: 12, rug: 13, mat: 14, void: 15, carpet: 16, kitchen: 17, glass: 18, stairsU: 19, stairsD: 20, paving: 21 };
+export const TT = { grass: 0, path: 1, sand: 2, water: 3, bridge: 4, track: 5, lawnA: 6, lawnB: 7, soil: 8, fizz: 9, floor: 10, wall: 11, skirt: 12, rug: 13, mat: 14, void: 15, carpet: 16, kitchen: 17, glass: 18, stairsU: 19, stairsD: 20, paving: 21, wet: 22 };
 export const TNAME = Object.keys(TT);
 const SOLID = new Set([TT.water, TT.fizz, TT.wall, TT.skirt, TT.void, TT.glass]);
 const rng = (s) => () => ((s = (s * 16807) % 2147483647) / 2147483647);
@@ -203,6 +203,8 @@ export const SAY = {
   ran: ["You got away."],
   cantRun: ["You can't run from this one."],
   signs: {
+    chairs: ["HOT DESKING ZONE.", "Wheelie chairs everywhere. Walk into one to push it.", "Get one stuck? Leave the floor and come back. Facilities will tidy up."],
+    wet: ["CAUTION: WET FLOOR.", "Freshly mopped. Step on it and you will slide until something stops you."],
     home: ["FOSTER VALLEY", "Stefan Foster's studio."],
     stadium: ["THE STADIUM", "Summer of Sport is in the long grass here."],
     farm: ["THE FARM", "3D Explorations is in the long grass here."],
@@ -346,10 +348,16 @@ export function buildOffice(f) {
     for (let y = 2; y < m.H; y++) for (let x = 0; x <= 8; x++) B(x, y, TT.kitchen);
     put("counter", 0, 2); put("counter", 1, 2); put("counter", 2, 2); put("coffee", 3, 2, { act: "malcoffee" }); put("fridge", 4, 2); put("counter", 5, 2); put("counter", 6, 2); put("plant", 8, 2);
     put("ktable", 2, 6, { w: 3 }); put("ktable", 2, 10, { w: 3 });
-    wall("screen", 14); put("sofaL", 11, 5, { w: 2 }); put("sofaLf", 17, 5, { w: 2 }); put("ctable", 14, 6, { w: 2 }); put("sofa", 13, 9, { w: 3 }); put("plant", 10, 2); put("plant", 21, 4);
+    wall("screen", 14); put("sofaL", 11, 4, { w: 2 }); put("plant", 10, 2);
+    // the gym puzzle: a room of wheelie chairs between two walls of filing cabinets. Push them clear to reach the top.
+    for (let y = 2; y <= 10; y++) put("cabinet", 9, y);
+    for (let x = 10; x <= 21; x++) { if (x !== 15) { put("cabinet", x, 6); put("cabinet", x, 10); } }
+    [[10, 7], [10, 8], [13, 8], [15, 8], [16, 9], [17, 7], [18, 9], [20, 7], [21, 7], [21, 8], [21, 9]].forEach(([x, y]) => put("cabinet", x, y));
+    [[12, 7], [14, 8], [14, 9], [20, 8]].forEach(([x, y]) => put("chair", x, y, { push: 1 }));
+    put("sign", 16, 11, { act: "sign:chairs" });
     put("rdesk", 10, 11, { w: 3, act: "sign:mal" });
     B(20, 2, TT.stairsU); m.warps.push({ x: 20, y: 2, to: "mal1", tx: 20, ty: 3, dir: "down", needs: ["pat"], who: "PAT" });
-    staff(m, [["mm", 1, 4], ["sl", 5, 4], ["bs", 6, 8], ["mp", 1, 9], ["ad", 12, 7], ["sl", 19, 10], ["mp", 16, 12], ["bs", 11, 3]]);
+    staff(m, [["mm", 1, 4], ["sl", 5, 4], ["bs", 6, 8], ["mp", 1, 9], ["ad", 12, 12], ["sl", 19, 12], ["bs", 12, 3]]);
     B(15, 13, TT.mat); m.warps.push({ x: 15, y: 13, to: "world", tx: 46, ty: 36, dir: "down" });
   } else if (f === 1) {
     // accounts: rows and rows of black desks
@@ -357,15 +365,21 @@ export function buildOffice(f) {
     put("sofaL", 19, 8, { w: 2 }); put("plant", 21, 12); put("printer", 20, 12); put("plant", 0, 13);
     B(20, 2, TT.stairsD); m.warps.push({ x: 20, y: 2, to: "mal0", tx: 20, ty: 3, dir: "down" });
     B(1, 2, TT.stairsU); m.warps.push({ x: 1, y: 2, to: "mal2", tx: 1, ty: 3, dir: "down", needs: ["jimi"], who: "LUCY" });
-    staff(m, [["ad", 5, 7], ["mm", 14, 8], ["bs", 10, 10], ["sl", 7, 13], ["mp", 15, 11], ["mm", 18, 5], ["bs", 3, 4]]);
+    // the gym puzzle: the floor by the stairs up has just been mopped. Step on it and you slide till something stops you.
+    for (let y = 2; y <= 5; y++) for (let x = 0; x <= 8; x++) if (!(x === 1 && y === 2)) B(x, y, TT.wet);
+    [[0, 3], [2, 2], [3, 5], [4, 4], [6, 2], [7, 3], [8, 5]].forEach(([x, y]) => put("wetsign", x, y));
+    [0, 1, 2].forEach((x) => put("cabinet", x, 6)); put("sign", 9, 6, { act: "sign:wet" });
+    staff(m, [["ad", 5, 8], ["mm", 14, 8], ["bs", 10, 10], ["sl", 7, 13], ["mp", 15, 11], ["mm", 18, 5], ["bs", 11, 13]]);
   } else {
     // creative and production, and Tim's glass box in the corner
     rows([9, 12], [[3, 8], [10, 13]]); wall("board", 6); wall("board", 11);
     for (let y = 2; y <= 7; y++) B(15, y, TT.glass); for (let x = 15; x <= 21; x++) B(x, 7, TT.glass); B(18, 7, TT.carpet);
+    // the gym puzzle: red tape everywhere. Cut through it.
+    put("tape", 18, 7, { act: "tape" }); for (let y = 2; y <= 8; y++) put("tape", 3, y, { act: "tape" }); [0, 1, 2].forEach((x) => put("tape", x, 9, { act: "tape" }));
     put("desk", 17, 2, { w: 2 }); put("shelf", 20, 2, { w: 2 }); put("plant", 16, 2);
     put("sofaL", 1, 10, { w: 2 }); put("printer", 20, 12); put("plant", 21, 13); put("sofa", 16, 11, { w: 3 });
     B(1, 2, TT.stairsD); m.warps.push({ x: 1, y: 2, to: "mal1", tx: 1, ty: 3, dir: "down" });
-    staff(m, [["sl", 4, 5], ["mp", 7, 11], ["mm", 12, 10], ["bs", 9, 4], ["ad", 4, 13], ["sl", 16, 9], ["mm", 19, 12]]);
+    staff(m, [["sl", 6, 5], ["mp", 7, 11], ["mm", 12, 10], ["bs", 9, 4], ["ad", 4, 13], ["sl", 16, 9], ["mm", 19, 12]]);
   }
   return seal(m);
 }
