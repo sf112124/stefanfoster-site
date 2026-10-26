@@ -15,18 +15,18 @@ const SHAPE = { M: [0, 4, 7], m: [0, 3, 7], m7: [0, 3, 7, 10], M7: [0, 4, 7, 11]
 const chord = (s) => { const m = /^([A-G][#b]?)(m7|M7|D7|m|M)?$/.exec(s); const r = midi(m[1] + "3"); return SHAPE[m[2] || "M"].map((x) => r + x); };
 
 const TRACKS = {
-  // outside: a route theme in D, the way the old handhelds wrote them: a singing lead doubled a third below,
-  // a little echo behind it, the bass jumping octaves, and a B section that lifts before it loops home
+  // outside: a gentle, nostalgic little route tune in G, like a hometown theme: one soft singing line,
+  // a quiet broken chord under it, a lazy bass and barely any drums
   world: {
-    bpm: 150, swing: 0, key: "D", echo: 1,
+    bpm: 112, swing: .08, key: "G", echo: 1,
     lead: [
-      "D5 . . . F#5 . A5 . . . D6 . C#6 . A5 .", "B5 . . . . . A5 . F#5 . . . D5 . E5 .", "G5 . . . B5 . D6 . . . E6 . D6 . B5 .", "C#6 . . . . . . . A5 . B5 . C#6 . E6 .",
-      "F#6 . . . E6 . D6 . . . A5 . F#5 . A5 .", "C#6 . . . . . A5 . E5 . F#5 . A5 . . .", "B5 . . . A5 . G5 . B5 . . . D6 . G6 .", "F#6 . . . E6 . . . - - C#6 . D6 . E6 .",
-      "D6 . . . B5 . . . G5 . . . B5 . D6 .", "E6 . . . C#6 . . . A5 . . . C#6 . E6 .", "F#6 . . . . . E6 . C#6 . . . A5 . . .", "B5 . . . D6 . . . F#6 . . . E6 . D6 .",
-      "E6 . . . G5 . B5 . E6 . F#6 . G6 . . .", "F#6 . . . E6 . . . C#6 . A5 . C#6 . E6 .", "D6 . . . A5 . F#5 . D5 . F#5 . A5 . D6 .", "C6 . . . . . . . A5 . B5 . C6 . A5 .",
+      "D5 . G5 . B5 . . . A5 . G5 . A5 . . .", "B5 . . . G5 . . . E5 . . . . . . .", "E5 . G5 . C6 . . . B5 . A5 . G5 . . .", "A5 . . . . . . . F#5 . G5 . A5 . . .",
+      "D5 . G5 . B5 . . . A5 . G5 . A5 . B5 .", "D6 . . . B5 . . . F#5 . . . A5 . . .", "G5 . . . E5 . G5 . C6 . . . B5 . A5 .", "G5 . . . . . . . - - - - D5 . . .",
+      "E5 . G5 . B5 . . . E6 . D6 . B5 . . .", "C6 . . . G5 . . . E5 . . . G5 . . .", "D5 . G5 . B5 . D6 . . . B5 . G5 . . .", "A5 . . . . . F#5 . A5 . . . D6 . . .",
+      "E6 . . . D6 . C6 . B5 . . . A5 . . .", "B5 . . . A5 . G5 . F#5 . . . A5 . . .", "G5 . . . . . B5 . D6 . . . B5 . . .", "G5 . . . . . . . - - - - D5 . . .",
     ],
-    chords: ["D", "Bm", "G", "A", "D", "F#m", "G", "DD7", "G", "A", "F#m", "Bm", "Em", "A", "D", "DD7"],
-    harm: "third", bass: "oct", drums: "route2",
+    chords: ["G", "Em", "C", "D", "G", "Bm", "C", "D", "Em", "C", "G", "D", "C", "D", "G", "G"],
+    harm: "soft", bass: "lazy", drums: "soft",
   },
   // a trainer's eyes meet yours: an urgent little loop that plays while they march over
   spotted: {
@@ -129,11 +129,13 @@ export class Chip {
         if (T.harm === "third" && T.scale) { let h = m - 3; while (h > m - 5 && !T.scale.includes(((h % 12) + 12) % 12)) h--; this.voice(this.p25, h, t, l * d * .9, .02, { vib: 1 }); } });
       // harmony
       if (T.harm === "stab" && s % 4 === 2) { this.voice(this.p25, ch[1] + 24, t, d * 1.6, .018, { sus: .3 }); this.voice(this.p25, ch[2] + 12, t, d * 1.6, .018, { sus: .3 }); }
+      if (T.harm === "soft" && s % 2 === 0) this.voice(this.p12, [ch[0], ch[1], ch[2], ch[1]][(s / 2) % 4] + 12, t, d * 1.6, .009, { sus: .4 });
       if (T.harm === "arp") this.voice(this.p12, ch[s % 3] + 24, t, d * .9, .016, { sus: .5 });
       if (T.harm === "rise") this.voice(this.p12, [ch[0], ch[1], ch[2], ch[0] + 12][s % 4] + 12, t, d * .9, .014, { sus: .5 });
       if (T.harm === "pad" && s % 8 === 0) ch.forEach((m) => this.voice(this.p25, m + 12, t, d * 7.5, .011, { sus: .9 }));
       // bass
       if (T.bass === "bounce" && s % 2 === 0) this.voice("triangle", [ch[0], ch[0] + 7, ch[0] + 12, ch[0] + 7][(s / 2) % 4] - 12, t, d * 1.8, .11, { sus: .6 });
+      if (T.bass === "lazy" && s % 8 === 0) this.voice("triangle", (s ? ch[2] - 12 : ch[0]) - 12, t, d * 7, .1, { sus: .7 });
       if (T.bass === "oct" && s % 2 === 0) { const q = (s / 2) % 4, n = q === 3 && s === 14 ? ch[2] - 12 : ch[0] - 12 + (q % 2 ? 12 : 0); this.voice("triangle", n - 12, t, d * 1.7, .12, { sus: .55 }); }
       if (T.bass === "drive") this.voice("triangle", ch[0] - 12 + (s % 2 ? 12 : 0), t, d * .9, .11, { sus: .6 });
       if (T.bass === "march" && s % 4 === 0) this.voice("triangle", (s % 8 ? ch[2] - 12 : ch[0]) - 12, t, d * 2.6, .12, { sus: .6 });
