@@ -51,12 +51,16 @@ const iw = (s) => s.width / (s._s || 1), ih = (s) => s.height / (s._s || 1);
 // ---------- what's remembered between visits ----------
 const S = { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [], beat: [], look: "boy", cash: 0, bag: {}, plv: {}, coins: {} };
 const save = () => { try { localStorage.setItem("foster-valley", JSON.stringify(S)); } catch (e) {} };
-const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; S.beat = S.beat || []; S.look = S.look || "boy"; S.cash = S.cash || 0; S.bag = S.bag || {}; S.coins = S.coins || {}; S.plv = S.plv || {}; S.won.forEach((k) => { if (!S.plv[k]) S.plv[k] = S.lvl; }); A.who.you = A.who[S.look] || A.who.boy; return true; } } catch (e) {} return false; };
-const stats = (lvl, st = S.starter ? stageOf(S.starter, lvl) : 0) => ({ max: 30 + lvl * 6 + (S.reels || []).length * 2 + st * 10, atk: 10 + lvl + (S.reels || []).length + st * 3, def: 10 + lvl + st * 2 });
+const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; S.beat = S.beat || []; S.look = S.look || "boy"; S.cash = S.cash || 0; S.bag = S.bag || {}; S.coins = S.coins || {}; S.plv = S.plv || {}; S.won.forEach((k) => { if (!S.plv[k]) S.plv[k] = S.lvl; }); S.stg = S.stg || {}; if (S.stg.tool == null) S.stg.tool = (S.lvl >= 5) + (S.lvl >= 8); A.who.you = A.who[S.look] || A.who.boy; return true; } } catch (e) {} return false; };
+const stats = (lvl, st = S.starter ? stageFor("tool", lvl) : 0) => ({ max: 30 + lvl * 6 + (S.reels || []).length * 2 + st * 10, atk: 10 + lvl + (S.reels || []).length + st * 3, def: 10 + lvl + st * 2 });
 // every project in your folio has its own level now, and evolves at 14 and 24
 const lvlOf = (k) => (k === "tool" ? S.lvl : S.plv[k] || S.lvl);
-const formFor = (k, lvl = lvlOf(k)) => { const f = k === "tool" ? formOf(S.starter, lvl) : pform(k, lvl); if (!A.mon[f.art]) { const b = k === "tool" ? STARTERS[S.starter] : FOES[k]; return { ...f, art: b.art }; } return f; };
-const statsFor = (k) => { const L = lvlOf(k); if (k === "tool") return stats(L); const st = stats(L, pstage(k, L)); return { ...st, max: Math.round(st.max * .9) }; };
+// once something has evolved it stays evolved, even if the levels it evolves at ever move
+const stageFor = (k, lvl = lvlOf(k)) => Math.max(k === "tool" ? stageOf(S.starter, lvl) : pstage(k, lvl), (S.stg || {})[k] || 0);
+const formFor = (k, lvl = lvlOf(k)) => { const base = k === "tool" ? STARTERS[S.starter] : FOES[k], st = Math.min(stageFor(k, lvl), (base.evo || []).length), e = st ? base.evo[st - 1] : null;
+  const f = e ? { ...base, name: e.name, art: e.art, stage: st } : { ...base, stage: 0 }; if (!A.mon[f.art]) return { ...f, art: base.art }; return f; };
+const keepStage = (k) => { S.stg = S.stg || {}; S.stg[k] = Math.max(S.stg[k] || 0, stageFor(k)); };
+const statsFor = (k) => { const L = lvlOf(k); if (k === "tool") return stats(L); const st = stats(L, stageFor(k, L)); return { ...st, max: Math.round(st.max * .9) }; };
 const money = (n) => `£${n.toLocaleString("en-GB")}`;
 
 // ---------- sound: a few square waves, like an old handheld ----------
@@ -359,7 +363,7 @@ function spotted() {
 }
 const OPP = { up: "down", down: "up", left: "right", right: "left" };
 async function challenge(o) {
-  au.sfx("spot"); o.bang = performance.now(); await sleep(800);
+  au.music("spotted"); au.sfx("spot"); o.bang = performance.now(); await sleep(800);
   // they walk over to you
   for (let n = 0; n < 6; n++) {
     const ex = P.x - o.x, ey = P.y - o.y; if (Math.abs(ex) + Math.abs(ey) <= 1) break;
@@ -385,6 +389,7 @@ async function chat(o) {
 }
 async function duel(o) {
   const t = TRAINERS[o.tr], pk = t.port.slice(2);
+  au.music("spotted");
   await speak(pk, t.intro, `${t.name} · ${t.role}`);
   const r = await fight(null, null, o.tr);
   if (r === "win") {
@@ -498,7 +503,7 @@ async function fight(def, slug, trId) {
   for (let k = 0; k < 2; k++) { fade = .9; await sleep(60); fade = 0; await sleep(60); }
   await tween(420, (k) => (wipe = k)); fade = 1; wipe = 0;
   bt = { fx: [], me, foe, bg: BG[slug] || (tr ? BG.corp : BG.x), shake: 0, t: 0, pops: [], parts: [], flash: 0, qte: null, port: tr ? { img: A.port[tr.port.slice(2)], ox: 200 } : null, you: { img: A.back[S.look] || A.back.boy, ox: -200 } };
-  mode = "battle"; hud(); au.music("battle"); bars(); $("sme").hidden = true; $("sfoe").hidden = !!tr;
+  mode = "battle"; hud(); au.music(tr ? "trainer" : "battle"); bars(); $("sme").hidden = true; $("sfoe").hidden = !!tr;
   // you and them slide in from either side, like the handhelds
   await fadeTo(0, 200);
   await tween(480, (k) => { bt.you.ox = -200 * (1 - k); if (tr) bt.port.ox = 200 * (1 - k); else foe.ox = 200 * (1 - k); });
@@ -603,7 +608,7 @@ async function fight(def, slug, trId) {
     await ui.line(`${tr ? `${tr.name} paid you` : "You picked up"} ${money(fee)}.`);
     // say who grew, then evolve anyone who's ready
     for (const k of used) { const was = lvBefore[k], now = lvlOf(k); if (now > was) { await ui.line(`${nmBefore[k]} grew to level ${now}!`, { auto: .9 }); } }
-    for (const k of used) await evolve(k, lvBefore[k], me);
+    for (const k of used) { await evolve(k, lvBefore[k], me); keepStage(k); } save();
     if (slug) await ui.line(`${def.name} joined your folio. You can send it out in battle now.`);
     // knocks stay with you until you get a coffee
     if (me.hp < me.max * .35) await ui.line(`${me.name} is looking worn out. A coffee would sort that.`);
@@ -767,7 +772,7 @@ function card(slug) {
 let busyCard = null, folioOpen = false, wipe = 0;
 function folio() {
   if (!S.starter || busy) return; folioOpen = true; au.sfx("ok");
-  const el = $("folio"), m = formOf(S.starter, S.lvl);
+  const el = $("folio"), m = formFor("tool");
   el.innerHTML = `<div class="sheet"><div class="fh"><h2>FOLIO</h2><span>${S.won.length} of ${PROJECTS.length} beaten</span><button type="button" id="fclose">Close</button></div>
     <div class="grid">${PROJECTS.map((p, i) => { const got = S.won.includes(p.slug), f = FOES[p.slug]; return `<button type="button" class="slot${got ? " got" : ""}" data-s="${p.slug}" ${got ? "" : "disabled"}><img src="${monImg(got ? formFor(p.slug).art : f.art)}" alt=""><b>${got ? esc(formFor(p.slug).name) : "? ? ?"}</b><i>${got ? `Lv ${lvlOf(p.slug)} · ${esc(p.client)}` : esc(f.zone)}</i></button>`; }).join("")}</div>
     <p class="with"><img src="${monImg(m.art)}" alt=""><span>With you: <b>${m.name}</b>, level ${S.lvl}.</span></p></div>`;

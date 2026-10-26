@@ -15,17 +15,38 @@ const SHAPE = { M: [0, 4, 7], m: [0, 3, 7], m7: [0, 3, 7, 10], M7: [0, 4, 7, 11]
 const chord = (s) => { const m = /^([A-G][#b]?)(m7|M7|D7|m|M)?$/.exec(s); const r = midi(m[1] + "3"); return SHAPE[m[2] || "M"].map((x) => r + x); };
 
 const TRACKS = {
-  // outside: a bright, bouncy route theme in C
+  // outside: a route theme in D, the way the old handhelds wrote them: a singing lead doubled a third below,
+  // a little echo behind it, the bass jumping octaves, and a B section that lifts before it loops home
   world: {
-    bpm: 132, swing: 0,
+    bpm: 150, swing: 0, key: "D", echo: 1,
     lead: [
-      "E5 . G5 . C6 . . . B5 . G5 . E5 . D5 .", "C5 . E5 . A5 . . . G5 . E5 . C5 . . .", "F5 . A5 . C6 . . . A5 . F5 . A5 . C6 .", "B5 . . . A5 . G5 . F5 . D5 . G5 . . .",
-      "E5 . G5 . C6 . E6 . D6 . C6 . G5 . . .", "B5 . . . G5 . E5 . G5 . B5 . E6 . . .", "D6 . C6 . A5 . F5 . A5 . C6 . F6 . . .", "E6 . D6 . B5 . G5 . D6 . . . - - - -",
-      "A5 . . . C6 . A5 . F5 . G5 . A5 . . .", "B5 . . . D6 . B5 . G5 . A5 . B5 . . .", "G5 . B5 . E6 . . . D6 . B5 . G5 . . .", "A5 . C6 . E6 . . . D6 . C6 . A5 . . .",
-      "F5 . A5 . D6 . . . C6 . A5 . F5 . A5 .", "B5 . D6 . G6 . . . F6 . D6 . B5 . . .", "C6 . . . G5 . E5 . G5 . C6 . E6 . . .", "D6 . . . B5 . . . G5 . A5 . B5 . . .",
+      "D5 . . . F#5 . A5 . . . D6 . C#6 . A5 .", "B5 . . . . . A5 . F#5 . . . D5 . E5 .", "G5 . . . B5 . D6 . . . E6 . D6 . B5 .", "C#6 . . . . . . . A5 . B5 . C#6 . E6 .",
+      "F#6 . . . E6 . D6 . . . A5 . F#5 . A5 .", "C#6 . . . . . A5 . E5 . F#5 . A5 . . .", "B5 . . . A5 . G5 . B5 . . . D6 . G6 .", "F#6 . . . E6 . . . - - C#6 . D6 . E6 .",
+      "D6 . . . B5 . . . G5 . . . B5 . D6 .", "E6 . . . C#6 . . . A5 . . . C#6 . E6 .", "F#6 . . . . . E6 . C#6 . . . A5 . . .", "B5 . . . D6 . . . F#6 . . . E6 . D6 .",
+      "E6 . . . G5 . B5 . E6 . F#6 . G6 . . .", "F#6 . . . E6 . . . C#6 . A5 . C#6 . E6 .", "D6 . . . A5 . F#5 . D5 . F#5 . A5 . D6 .", "C6 . . . . . . . A5 . B5 . C6 . A5 .",
     ],
-    chords: ["C", "Am", "F", "G", "C", "Em", "F", "G", "F", "G", "Em", "Am", "Dm", "G", "C", "G"],
-    harm: "stab", bass: "bounce", drums: "route",
+    chords: ["D", "Bm", "G", "A", "D", "F#m", "G", "DD7", "G", "A", "F#m", "Bm", "Em", "A", "D", "DD7"],
+    harm: "third", bass: "oct", drums: "route2",
+  },
+  // a trainer's eyes meet yours: an urgent little loop that plays while they march over
+  spotted: {
+    bpm: 152, swing: 0, key: "E", echo: 1,
+    lead: [
+      "E5 . - G5 B5 . - E6 D6 . B5 . G5 . A5 .", "C6 . - E6 C6 . - G5 E5 . G5 . C6 . E6 .",
+      "D6 . - F#6 D6 . - A5 F#5 . A5 . D6 . F#6 .", "D#6 . . . B5 . F#5 . A5 . B5 . C6 . D#6 .",
+    ],
+    chords: ["Em", "C", "D", "B"],
+    harm: "arp", bass: "oct", drums: "spot",
+  },
+  // fighting a person: heroic and minor, faster than a wild fight
+  trainer: {
+    bpm: 176, swing: 0, key: "G", echo: 1,
+    lead: [
+      "G5 . . . D6 . . . C6 . Bb5 . A5 . G5 .", "Bb5 . . . A5 . G5 . F#5 . G5 . A5 . D5 .", "Eb6 . . . D6 . C6 . Bb5 . . . G5 . Bb5 .", "C6 . . . . . F5 . A5 . C6 . F6 . Eb6 .",
+      "D6 . . . G6 . . . F6 . Eb6 . D6 . C6 .", "Bb5 . . . G5 . Bb5 . Eb6 . D6 . C6 . Bb5 .", "C6 . Eb6 . G6 . . . F6 . Eb6 . D6 . C6 .", "D6 . . . . . . . F#6 . . . A6 . . .",
+    ],
+    chords: ["Gm", "Gm", "Eb", "F", "Gm", "Eb", "Cm", "D"],
+    harm: "arp", bass: "oct", drums: "battle",
   },
   // indoors: Stefan's studio and the office, gentle and a bit jazzy, in F
   studio: {
@@ -45,7 +66,7 @@ const TRACKS = {
       "C6 . . . G5 . E5 . A5 . . . F5 . . .", "G5 . . . E5 . C5 . D5 . . . B4 . . .", "C5 . E5 . G5 . C6 . A5 . F5 . D6 . . .", "C6 . . . . . . . G5 . A5 . B5 . . .",
     ],
     chords: ["C", "F", "C", "G", "F", "C", "F", "G"],
-    harm: "rise", bass: "march", drums: "march",
+    harm: "rise", bass: "march", drums: "march", echo: 1,
   },
   // a fight: fast, minor, with the rattling arpeggios the old battle themes lived on
   battle: {
@@ -56,7 +77,7 @@ const TRACKS = {
       "A5 . C6 . E6 . A6 . G6 . E6 . C6 . E6 .", "F6 . . . C6 . A5 . F5 . A5 . C6 . F6 .", "G6 . . . D6 . B5 . G5 . B5 . D6 . G6 .", "E6 . . . B5 . G#5 . E5 . G#5 . B5 . E6 .",
     ],
     chords: ["Am", "Am", "F", "G", "Am", "Am", "Dm", "E", "Am", "F", "G", "E"],
-    harm: "arp", bass: "drive", drums: "battle",
+    harm: "arp", bass: "oct", drums: "battle", echo: 1,
   },
 };
 // a short fanfare for a win, played once
@@ -70,7 +91,7 @@ export class Chip {
     const pulse = (duty) => { const n = 40, re = new Float32Array(n), im = new Float32Array(n); for (let k = 1; k < n; k++) im[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * duty); return ctx.createPeriodicWave(re, im); };
     this.p50 = pulse(.5); this.p25 = pulse(.25); this.p12 = pulse(.125);
     const len = ctx.sampleRate * .3, b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1; this.noise = b;
-    for (const k in TRACKS) { const T = TRACKS[k]; T.L = T.lead.map(line); T.C = T.chords.map(chord); }
+    for (const k in TRACKS) { const T = TRACKS[k]; T.L = T.lead.map(line); T.C = T.chords.map(chord); if (T.key) { const r = NOTE[T.key[0]] + (T.key[1] === "#" ? 1 : T.key[1] === "b" ? -1 : 0); T.scale = [0, 2, 4, 5, 7, 9, 11].map((x) => (x + r) % 12); } }
     WIN.L = line(WIN.lead);
     setInterval(() => this.pump(), 30);
   }
@@ -100,7 +121,12 @@ export class Chip {
     while (this.next < this.ctx.currentTime + .2) {
       const bar = this.bar % T.L.length, s = this.step, t = this.next + (s % 2 ? d * T.swing : 0), ch = T.C[bar % T.C.length];
       // lead
-      T.L[bar].ev.forEach(([at, m, l]) => { if (at === s) this.voice(this.p50, m, t, l * d * .98, .045, { vib: 1 }); });
+      T.L[bar].ev.forEach(([at, m, l]) => { if (at !== s) return;
+        this.voice(this.p50, m, t, l * d * .98, .045, { vib: 1 });
+        // the echo: the same note a dotted 16th later, quiet, on a thinner pulse
+        if (T.echo) this.voice(this.p25, m, t + d * 1.5, l * d * .9, .014, { vib: 1 });
+        // a second voice a third below, staying in the key
+        if (T.harm === "third" && T.scale) { let h = m - 3; while (h > m - 5 && !T.scale.includes(((h % 12) + 12) % 12)) h--; this.voice(this.p25, h, t, l * d * .9, .02, { vib: 1 }); } });
       // harmony
       if (T.harm === "stab" && s % 4 === 2) { this.voice(this.p25, ch[1] + 24, t, d * 1.6, .018, { sus: .3 }); this.voice(this.p25, ch[2] + 12, t, d * 1.6, .018, { sus: .3 }); }
       if (T.harm === "arp") this.voice(this.p12, ch[s % 3] + 24, t, d * .9, .016, { sus: .5 });
@@ -108,6 +134,7 @@ export class Chip {
       if (T.harm === "pad" && s % 8 === 0) ch.forEach((m) => this.voice(this.p25, m + 12, t, d * 7.5, .011, { sus: .9 }));
       // bass
       if (T.bass === "bounce" && s % 2 === 0) this.voice("triangle", [ch[0], ch[0] + 7, ch[0] + 12, ch[0] + 7][(s / 2) % 4] - 12, t, d * 1.8, .11, { sus: .6 });
+      if (T.bass === "oct" && s % 2 === 0) { const q = (s / 2) % 4, n = q === 3 && s === 14 ? ch[2] - 12 : ch[0] - 12 + (q % 2 ? 12 : 0); this.voice("triangle", n - 12, t, d * 1.7, .12, { sus: .55 }); }
       if (T.bass === "drive") this.voice("triangle", ch[0] - 12 + (s % 2 ? 12 : 0), t, d * .9, .11, { sus: .6 });
       if (T.bass === "march" && s % 4 === 0) this.voice("triangle", (s % 8 ? ch[2] - 12 : ch[0]) - 12, t, d * 2.6, .12, { sus: .6 });
       if (T.bass === "walk" && s % 4 === 0) this.voice("triangle", [ch[0], ch[2], ch[0] + 12, ch[1]][s / 4] - 12, t, d * 3.6, .1, { sus: .8 });
@@ -116,6 +143,9 @@ export class Chip {
       if (dr === "route") { if (s % 2 === 0) this.hit(t, "hat", .025); if (s === 4 || s === 12) this.hit(t, "snare", .05); if (s === 0 || s === 8 || s === 10) this.voice("triangle", 50, t, .09, .14, { drop: 1, sus: .1 }); }
       if (dr === "battle") { this.hit(t, "hat", s % 2 ? .012 : .022); if (s === 4 || s === 12) this.hit(t, "snare", .06); if (s % 8 === 0 || s === 6 || s === 14) this.voice("triangle", 48, t, .09, .15, { drop: 1, sus: .1 }); }
       if (dr === "march") { if (s % 4 === 0) this.voice("triangle", 48, t, .09, .14, { drop: 1, sus: .1 }); if (s === 4 || s === 12) this.hit(t, "snare", .055); if (bar % 4 === 3 && s >= 12) this.hit(t, "snare", .03 + (s - 12) * .01); else if (s % 2 === 0) this.hit(t, "hat", .018); }
+      if (dr === "route2") { if (s % 2 === 0) this.hit(t, "hat", s % 4 ? .014 : .024); if (s === 4 || s === 12) this.hit(t, "snare", .05); if (s === 0 || s === 6 || s === 10) this.voice("triangle", 50, t, .09, .14, { drop: 1, sus: .1 });
+        if (bar % 8 === 7 && s >= 12) this.voice("triangle", 62 - (s - 12) * 3, t, .08, .1, { drop: 1, sus: .2 }); }
+      if (dr === "spot") { this.hit(t, "hat", s % 2 ? .01 : .02); if (s % 4 === 2) this.hit(t, "snare", .04); if (s % 4 === 0) this.voice("triangle", 48, t, .08, .15, { drop: 1, sus: .1 }); }
       if (dr === "soft") { if (s === 4 || s === 12) this.hit(t, "hat", .016); if (s === 0) this.voice("triangle", 48, t, .1, .08, { drop: 1, sus: .1 }); }
       this.step++; this.next += d;
       if (this.step >= 16) { this.step = 0; this.bar++; }
