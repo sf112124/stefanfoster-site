@@ -92,7 +92,7 @@ export const TRAINERS = {
   darren: { name: "JIMI", role: "ACCOUNT DIRECTOR", look: "jimi", port: "t_jimi", x: 16, y: 27, dir: "right", lv: 0, team: ["brief"],
     intro: ["You work with Stefan, right? Quick one.", "Client's sent over a brief. Well. It's more of a vibe.", "They want it to go viral. By Friday. Can you jump on it?"],
     win: ["Okay, love that. Let's do a WIP on Thursday?"], after: ["I've put a hold in your calendar. Just a placeholder."] },
-  priya: { name: "TIARA", role: "MARKETING LEAD", look: "tora", port: "t_tora", x: 55, y: 28, dir: "left", lv: 1, team: ["kpi"],
+  priya: { name: "TEA", role: "MARKETING LEAD", look: "tora", port: "t_tora", x: 55, y: 28, dir: "left", lv: 1, team: ["kpi"],
     intro: ["Hi! Huge fan of the work.", "Before we brief, can we align on the verticals?", "And I'll need KPIs for each one. Per platform. Per week."],
     win: ["Fine. I'll tell the team the KPI is vibes."], after: ["We're seeing really strong engagement on this chat."] },
   gary: { name: "PARIS", role: "OMD MEDIA PLANNER", look: "paris", port: "t_paris", x: 19, y: 42, dir: "right", lv: 1, team: ["mediaplan"],
@@ -105,7 +105,7 @@ export const TRAINERS = {
     intro: ["Omg hiii. Can it be a trend?", "Like, vertical, but it has to feel organic.", "And can we hook them in the first half a second?"],
     win: ["Okay that's actually so good. Posting it now."], after: ["It's doing numbers. Like, real numbers."] },
   cmo: { name: "TOMMY", role: "CMO", look: "cmo", port: "t_cmo", x: 35, y: 9, dir: "down", lv: 4, boss: 1, team: ["roi"], needs: ["darren", "priya", "gary", "jules", "mia"], unlock: "THE CMO WANTS A WORD. NORTH ROAD.",
-    gate: ["My team speaks for me.", "Get past Jimi, Tiara, Paris, Branco and Anna first. Then we'll talk."],
+    gate: ["My team speaks for me.", "Get past Jimi, Tea, Paris, Branco and Anna first. Then we'll talk."],
     intro: ["So. You're the one who's been getting past my team.", "Let's talk numbers. Then stakeholders. Then numbers again."],
     win: ["...Fine. It's approved.", "Don't change a thing."], after: ["Approved. Go and make it."] },
   // home: the last and hardest test

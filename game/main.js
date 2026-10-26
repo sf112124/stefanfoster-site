@@ -819,7 +819,7 @@ function openMenu() {
     const opts = [["folio", "FOLIO"], ["bag", "BAG"], ["fs", fsOn() ? "EXIT FULLSCREEN" : "FULLSCREEN"], ["snd", au.on ? "SOUND: ON" : "SOUND: OFF"], ["exit", "BACK TO THE SITE"]];
     const c = await ui.choose(opts.map((o) => o[1]), { cls: "pmenu", cancel: true }); ui.hide();
     if (c < 0) return; const k = opts[c][0];
-    if (k === "folio") then = folio; else if (k === "bag") await useItem(null); else if (k === "fs") fullscreen(); else if (k === "snd") toggleSound(); else if (k === "exit") location.href = "./#ai-experiments";
+    if (k === "folio") then = folio; else if (k === "bag") { await useItem(null); ui.hide(); } else if (k === "fs") fullscreen(); else if (k === "snd") toggleSound(); else if (k === "exit") location.href = "./#ai-experiments";
   }).then(() => then && then());
 }
 // tap or click a thing near you to interact with it
