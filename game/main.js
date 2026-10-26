@@ -4,7 +4,7 @@ import { PROJECTS as ALLP, ABOUT } from "../projects.js";
 const PROJECTS = ALLP.filter((p) => !p.page || p.slug === "les-benjamins"); // pages of their own (and locked ones) stay out of the game
 import MEDIA from "../media.js";
 import { buildArt, C } from "./art.js";
-import { buildWorld, buildHouse, buildOffice, STARTERS, FOES, EXTRA, CORP, TRAINERS, SAY, ZONES, TT, TNAME, eff, formOf, stageOf } from "./data.js";
+import { buildWorld, buildHouse, buildOffice, STARTERS, FOES, EXTRA, CORP, TRAINERS, SAY, ZONES, TT, TNAME, eff, formOf, stageOf, pform, pstage, ITEMS, PEVO } from "./data.js";
 import { person, LOOKS } from "./people.js";
 import { Chip } from "./music.js";
 
@@ -16,7 +16,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const VW = 320, VH = 180, DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+let VW = 320, OX = 0; const VH = 180, DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
 document.documentElement.classList.toggle("touch", touch);
 
@@ -24,7 +24,7 @@ const A = buildArt();
 // people are drawn from outfit recipes; every creature and portrait is a painted sprite in game/art
 for (const k in LOOKS) A.who[k] = person(LOOKS[k]);
 A.who.you = A.who.boy; A.port = {}; A.monF = {};
-const ART = ["balloon", "ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "bear", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "t_tora", "t_paris", "t_branco", "t_anna", "t_lucy", "t_alysha", "bunny", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo"];
+const ART = ["balloon", "ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "bear", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "t_tora", "t_paris", "t_branco", "t_anna", "t_lucy", "t_alysha", "bunny", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo", "angel", "butterfly", "kitten", ...Object.values(FOES).flatMap((f) => (f.evo || []).map((e) => e.art))];
 // walking sprites: one strip per person, nine frames (front, left, back; standing then each foot), right is the left mirrored
 const WALK = ["stefan", "boy", "girl", "ad", "mm", "mp", "bs", "sl", "cmo", "tim", "pat", "chris", "jeremy", "jimi", "smoker", "vaper", "tora", "paris", "branco", "anna", "lucy", "alysha"];
 await Promise.all(WALK.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => {
@@ -49,10 +49,15 @@ const cv = $("cv"), g = cv.getContext("2d"); cv.width = 640; cv.height = 360; g.
 const iw = (s) => s.width / (s._s || 1), ih = (s) => s.height / (s._s || 1);
 
 // ---------- what's remembered between visits ----------
-const S = { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [], beat: [], look: "boy" };
+const S = { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [], beat: [], look: "boy", cash: 0, bag: {}, plv: {}, coins: {} };
 const save = () => { try { localStorage.setItem("foster-valley", JSON.stringify(S)); } catch (e) {} };
-const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; S.beat = S.beat || []; S.look = S.look || "boy"; A.who.you = A.who[S.look] || A.who.boy; return true; } } catch (e) {} return false; };
-const stats = (lvl) => { const st = S.starter ? stageOf(S.starter, lvl) : 0; return { max: 30 + lvl * 6 + (S.reels || []).length * 2 + st * 10, atk: 10 + lvl + (S.reels || []).length + st * 3, def: 10 + lvl + st * 2 }; };
+const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; S.beat = S.beat || []; S.look = S.look || "boy"; S.cash = S.cash || 0; S.bag = S.bag || {}; S.coins = S.coins || {}; S.plv = S.plv || {}; S.won.forEach((k) => { if (!S.plv[k]) S.plv[k] = S.lvl; }); A.who.you = A.who[S.look] || A.who.boy; return true; } } catch (e) {} return false; };
+const stats = (lvl, st = S.starter ? stageOf(S.starter, lvl) : 0) => ({ max: 30 + lvl * 6 + (S.reels || []).length * 2 + st * 10, atk: 10 + lvl + (S.reels || []).length + st * 3, def: 10 + lvl + st * 2 });
+// every project in your folio has its own level now, and evolves at 14 and 24
+const lvlOf = (k) => (k === "tool" ? S.lvl : S.plv[k] || S.lvl);
+const formFor = (k, lvl = lvlOf(k)) => { const f = k === "tool" ? formOf(S.starter, lvl) : pform(k, lvl); if (!A.mon[f.art]) { const b = k === "tool" ? STARTERS[S.starter] : FOES[k]; return { ...f, art: b.art }; } return f; };
+const statsFor = (k) => { const L = lvlOf(k); if (k === "tool") return stats(L); const st = stats(L, pstage(k, L)); return { ...st, max: Math.round(st.max * .9) }; };
+const money = (n) => `£${n.toLocaleString("en-GB")}`;
 
 // ---------- sound: a few square waves, like an old handheld ----------
 const au = {
@@ -102,7 +107,7 @@ const au = {
 
 // ---------- hands: keys, and buttons on a phone ----------
 const keys = {}, tap = {}; let lastInput = performance.now();
-const KEY = { arrowup: "up", w: "up", arrowdown: "down", s: "down", arrowleft: "left", a: "left", arrowright: "right", d: "right", enter: "a", " ": "a", z: "a", x: "b", escape: "b", backspace: "b", f: "f", tab: "f", m: "m" };
+const KEY = { arrowup: "up", w: "up", arrowdown: "down", s: "down", arrowleft: "left", a: "left", arrowright: "right", d: "right", enter: "a", " ": "a", z: "a", x: "b", escape: "b", backspace: "b", f: "f", tab: "menu", e: "menu", m: "m" };
 const KONAMI = ["arrowup", "arrowup", "arrowdown", "arrowdown", "arrowleft", "arrowright", "arrowleft", "arrowright", "b", "a"]; let kpos = 0;
 const press = (k) => { if (!keys[k]) tap[k] = true; keys[k] = true; lastInput = performance.now(); au.unlock(); };
 addEventListener("keydown", (e) => {
@@ -190,7 +195,11 @@ const maps = { world: prep(buildWorld()), house: prep(buildHouse()), mal0: prep(
 { const m = maps.world, spots = [[6, 18], [44, 15], [68, 19], [20, 25], [56, 31], [27, 47], [47, 47], [4, 34]];
   const free = (x, y) => x > 1 && y > 1 && x < m.W - 2 && y < m.H - 2 && !m.solid[m.I(x, y)] && !m.tg[m.I(x, y)] && !m.objs.some((o) => !o.flat && y === o.y && x >= o.x && x < o.x + (o.w || 1));
   spots.forEach(([sx, sy], n) => { for (let r = 0; r < 8; r++) { let done = false; for (let dy = -r; dy <= r && !done; dy++) for (let dx = -r; dx <= r && !done; dx++) if (free(sx + dx, sy + dy)) { m.objs.push({ k: "reel", n, x: sx + dx, y: sy + dy, w: 1, flat: 1 }); done = true; } if (done) break; } });
+  // loose change dropped all over the valley; each coin comes back a few minutes after you pick it up
+  let seed = 7, n = 0; const rr = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let tries = 0; n < 28 && tries < 6000; tries++) { const x = 2 + Math.floor(rr() * (m.W - 4)), y = 2 + Math.floor(rr() * (m.H - 4)); if (free(x, y) && !m.objs.some((o) => o.x === x && o.y === y)) m.objs.push({ k: "coin", n: n++, x, y, w: 1, flat: 1 }); }
   m.flat = m.objs.filter((o) => o.flat); }
+const coinUp = (o) => !S.coins[o.n] || Date.now() - S.coins[o.n] > 6 * 60 * 1000;
 let map = maps.house, mode = "title", busy = false, t0 = 0, cam = { x: 0, y: 0 }, nightOn = false, zoneNow = "", fade = 0, bt = null;
 const P = { x: 3, y: 4, fx: 3, fy: 4, px: 48, py: 64, dir: "down", moving: false, t: 0, steps: 0, grass: 0 };
 const objAt = (x, y) => map.objs.find((o) => !o.gone && y === o.y && x >= o.x && x < o.x + o.w && (o.solid || o.act));
@@ -226,6 +235,7 @@ function walk(dt) {
   }
   if (P.moving || busy) return;
   if (took("f")) { folio(); return; }
+  if (took("menu")) { openMenu(); return; }
   if (took("a")) { const [dx, dy] = DIRS[P.dir], o = objAt(P.x + dx, P.y + dy); if (o && o.act) { run(o.act, o); return; } if (S.bike && map.id === "world") { script(hopOff); return; } }
   for (const d of ["up", "down", "left", "right"]) if (keys[d]) {
     const [dx, dy] = DIRS[d]; P.dir = d;
@@ -250,6 +260,8 @@ function arrive() {
   if (map.id === "world") {
     const rl = map.objs.find((o) => o.k === "reel" && o.x === P.x && o.y === P.y && !S.reels.includes(o.n));
     if (rl) { S.reels.push(rl.n); const st = stats(S.lvl); S.hp = Math.min(st.max, (S.hp ?? st.max) + 2); save(); hud(); au.sfx("level"); script(async () => { await ui.say([`You found a film reel! (${S.reels.length} of 8)`, SAY.reels[rl.n], "Your tool feels stronger."]); }); return; }
+    const cn = map.objs.find((o) => o.k === "coin" && o.x === P.x && o.y === P.y && coinUp(o));
+    if (cn) { const v = 5 + Math.floor(Math.random() * 4) * 5; S.coins[cn.n] = Date.now(); S.cash = (S.cash || 0) + v; save(); au.sfx("ok"); toast(`+${money(v)}  ·  ${money(S.cash)}`, 1400); }
     if (P.x === 35 && P.y === 36) { warp(maps.house, 6, 7, "up"); return; }
     if (P.x === 46 && P.y === 35) {
       if (S.won.length < 4) { script(async () => { await ui.say(SAY.malLocked); place(map, 46, 36, "down"); }); return; }
@@ -262,7 +274,7 @@ function arrive() {
     if (tg) {
       const slug = GRASSOF[tg - 1]; P.grass++;
       if (!S.won.includes(slug) && P.grass >= 2 && (P.grass >= 7 || Math.random() < .3)) { P.grass = 0; script(() => fight(FOES[slug], slug)); }
-      else if (postgame() && P.grass >= 3 && Math.random() < .22) { P.grass = 0; const k = pick(Object.keys(CORP).filter((c) => c !== "bunny")); script(() => fight({ ...CORP[k], L: Math.max(5, S.lvl - 3 + Math.floor(Math.random() * 4)) })); }
+      else if (postgame() && P.grass >= 3 && Math.random() < .22) { P.grass = 0; const k = pick(Object.keys(CORP).filter((c) => !CORP[c].legend)); script(() => fight({ ...CORP[k], L: Math.max(5, S.lvl - 3 + Math.floor(Math.random() * 4)) })); }
     } else P.grass = 0;
   }
 }
@@ -275,6 +287,7 @@ async function run(act, o) {
     else if (a === "stefan") await stefan();
     else if (a === "coffee") { await ui.say(SAY.coffee[0]); healAll(); au.sfx("heal"); if (S.starter) await ui.say(SAY.coffee[1]); save(); }
     else if (a === "trainer") await chat(o);
+    else if (a === "shop") await shop();
     else if (a === "lime") {
       if (S.bike) return;
       await ui.say(SAY.lime, { keep: true });
@@ -362,8 +375,8 @@ async function chat(o) {
   const t = TRAINERS[o.tr]; o.dir = OPP[P.dir];
   if (S.beat.includes(o.tr)) {
     await speak(t.port.slice(2), t.after, t.name);
-    // after the badge, anyone will go again: good training
-    if (postgame()) { ui.show(`Battle ${t.name} again?`); const c = await ui.choose(["Again", "Not now"], { cls: "yn" }); ui.hide(); if (c === 0) { await speak(t.port.slice(2), t.again || ["Go on then."], t.name); await fight(null, null, o.tr); } }
+    // after the badge, anyone will go again: MAL turns into a training gym
+    if (S.flags.badge && (!t.final || postgame())) { ui.show(`Battle ${t.name} again?`); const c = await ui.choose(["Again", "Not now"], { cls: "yn" }); ui.hide(); if (c === 0) { await speak(t.port.slice(2), t.again || ["Go on then."], t.name); await fight(null, null, o.tr); } }
     return;
   }
   if (!S.starter && !t.final) { await speak(t.port.slice(2), ["Oh, you haven't got a tool yet? Come back when you have."], t.name); return; }
@@ -377,12 +390,58 @@ async function duel(o) {
   if (r === "win") {
     await speak(pk, t.win, t.name);
     if (t.final) { S.flags.alysha = 1; save(); hud(); au.sfx("win"); toast("THE ALYSHA TEST: PASSED", 5000); await ui.say(SAY.passed); return; }
-    if (o.tr === "tim") { S.flags.badge = 1; save(); hud(); au.sfx("win"); await ui.say(SAY.badge); toast("MAL BADGE. GO BACK AND SEE STEFAN.", 5000); }
+    if (o.tr === "tim") { S.flags.badge = 1; save(); hud(); au.sfx("win"); await ui.say(SAY.badge); await ui.say(["From now on MAL is your training gym.", "Talk to anyone you've beaten for a rematch. Whoever you send out levels up, and projects evolve at level 14 and 24."]); toast("MAL BADGE. GO BACK AND SEE STEFAN.", 5000); }
     else if (o.tr === "cmo") toast("THE CLIENT SIGNED IT OFF", 4000);
     else { const u = Object.values(TRAINERS).find((x) => x.needs && x.needs.includes(o.tr) && x.needs.every((b) => S.beat.includes(b))); if (u) toast(u.unlock, 4500); }
   }
 }
 
+// ---------- the coffee kiosk, and your bag ----------
+const IK = Object.keys(ITEMS);
+async function shop() {
+  au.sfx("ok");
+  await ui.say(["Morning! What can I get you?"], { who: "BARISTA" });
+  for (;;) {
+    ui.show(`You've got ${money(S.cash || 0)}. What'll it be?`);
+    const c = await ui.choose([...IK.map((k) => ({ html: `<img class="ic" src="game/art/i_${k}.png" alt=""><b>${esc(ITEMS[k].name)}</b><i>${money(ITEMS[k].price)}</i>` })), "That's all"], { cls: "shop", cols: 2, cancel: true });
+    if (c < 0 || c === IK.length) break;
+    const it = ITEMS[IK[c]];
+    ui.show(it.about); const y = await ui.choose([`Buy for ${money(it.price)}`, "Not that one"], { cls: "yn" });
+    if (y !== 0) continue;
+    if ((S.cash || 0) < it.price) { await ui.line("Ah, you're a bit short for that one. Battles pay, and there's change on the ground if you look."); continue; }
+    S.cash -= it.price; S.bag[IK[c]] = (S.bag[IK[c]] || 0) + 1; save(); au.sfx("level");
+    await ui.line(`One ${it.name}. It's in your bag.`);
+  }
+  ui.hide(); await ui.say(["See you soon!"], { who: "BARISTA" });
+}
+// use something from the bag: in a fight (me is who's out) or walking about. Returns falsy if nothing was used.
+async function useItem(me) {
+  const have = IK.filter((k) => S.bag[k] > 0 && (me || !ITEMS[k].battle));
+  if (!have.length) { await ui.line(me ? "Your bag is empty. The kiosk on the square sells coffee." : "Nothing in your bag you can use right now."); return null; }
+  ui.show(`What will you have? (${money(S.cash || 0)} left)`);
+  const c = await ui.choose(have.map((k) => ({ html: `<img class="ic" src="game/art/i_${k}.png" alt=""><b>${esc(ITEMS[k].name)}</b><i>×${S.bag[k]}</i>` })), { cls: "shop", cols: 2, cancel: true });
+  if (c < 0) return null;
+  const k = have[c], it = ITEMS[k], take = () => { S.bag[k]--; save(); };
+  const heal = (key, frac, revive) => { const m = me && me.key === key ? me : null, max = statsFor(key).max, now = m ? m.hp : hpGet(key) ?? max; if (now <= 0 && !revive) return false; if (now > 0 && revive) return false; if (now >= max) return false; const v = Math.min(max, (revive ? 0 : now) + Math.round(max * frac)); if (m) m.hp = v; hpSet(key, v); return true; };
+  if (it.use === "def" || it.use === "beer") {
+    take(); au.sfx("buff");
+    if (it.use === "def") { me.dm = Math.min(2, me.dm * 1.45); await ui.line(`${me.name} sips a HOJICHA. Calm. Defence rose!`); }
+    else { me.am = Math.min(2.2, me.am * 1.6); me.dm = Math.max(.6, me.dm * .8); await ui.line(`${me.name} necks a BEER. Attack shot up! Guard dropped a bit.`); }
+    return { turn: 1 };
+  }
+  if (it.use === "all") {
+    take(); healAll(); if (me) { me.hp = me.max; } au.sfx("heal"); await ui.line("A MATCHA LATTE all round. Your whole folio is back to full."); return { turn: 1 };
+  }
+  // pick who it's for
+  const ks = party().filter((q) => q === "tool" || FOES[q]);
+  ui.show(`Who's the ${it.name} for?`);
+  const w = await ui.choose(ks.map((q) => { const m = member(q), hp = me && me.key === q ? me.hp : m.hp; return { html: `<img class="pm" src="${monImg(m.art)}" alt=""><b>${esc(m.name)}</b><i>${hp <= 0 ? "TIRED" : `${Math.ceil(hp)}/${m.max}`}</i>` }; }), { cls: "party", cols: 2, cancel: true });
+  if (w < 0) return null;
+  const q = ks[w], nm = member(q).name, ok = heal(q, it.use === "full" ? 1 : .5, it.use === "revive");
+  if (!ok) { await ui.line(it.use === "revive" ? `${nm} isn't tired. Save it for later.` : `${nm} doesn't need that right now.`); return null; }
+  take(); au.sfx("heal"); await ui.line(it.use === "revive" ? `${nm} perks right up!` : `${nm} feels much better.`);
+  return { turn: 1 };
+}
 // ---------- the hire bike ----------
 function bike(on) { S.bike = !!on && !!A.bike[S.look]; }
 // drop the bike on a tile: it becomes a parked lime bike anyone can pick up again
@@ -404,18 +463,18 @@ const BG = { "les-benjamins": ["#bfe3ff", "#9be15d", "#ff9dbb"], corp: ["#e8edf5
 const party = () => ["tool", ...S.won];
 const hpGet = (k) => (k === "tool" ? S.hp : (S.php || {})[k]);
 const hpSet = (k, v) => { if (k === "tool") S.hp = v; else { S.php = S.php || {}; S.php[k] = v; } };
-const healAll = () => { S.hp = stats(S.lvl).max; S.php = {}; };
+const healAll = () => { S.hp = statsFor("tool").max; S.php = {}; };
 const MV = [14, 22, 11];
 function member(key) {
-  const st = stats(S.lvl);
-  const base = key === "tool" ? formOf(S.starter, S.lvl) : (() => { const f = FOES[key]; return { ...f, moves: f.moves.map((m, i) => ({ n: m.n, t: f.type, p: MV[i] || 12, acc: i === 1 ? .82 : undefined, fx: m.fx })) }; })();
-  const max = key === "tool" ? st.max : Math.round(st.max * .9), hp = clamp(hpGet(key) ?? max, 0, max);
-  return { ...base, key, lvl: S.lvl, max, hp, atk: st.atk, def: st.def, am: 1, dm: 1, ox: 0, oy: 0, a: 1, fl: 0, sc: 1 };
+  const st = statsFor(key), f = formFor(key);
+  const base = key === "tool" ? f : { ...f, moves: f.moves.map((m, i) => ({ n: m.n, t: f.type, p: (MV[i] || 12) + f.stage * 2, acc: i === 1 ? .82 : undefined, fx: m.fx })) };
+  const max = st.max, hp = clamp(hpGet(key) ?? max, 0, max);
+  return { ...base, key, lvl: lvlOf(key), max, hp, atk: st.atk, def: st.def, am: 1, dm: 1, ox: 0, oy: 0, a: 1, fl: 0, sc: 1 };
 }
 const alive = (except) => party().filter((k) => k !== except && (hpGet(k) ?? 1) > 0 && !(k !== "tool" && !FOES[k]));
 async function choosePartner(force, current) {
   const ks = party().filter((k) => k === "tool" || FOES[k]);
-  const opts = ks.map((k) => { const m = member(k); return { html: `<img class="pm" src="${monImg(m.art)}" alt=""><b>${esc(m.name)}</b><i>${k === current ? "OUT NOW" : m.hp <= 0 ? "TIRED" : `${Math.ceil(m.hp)}/${m.max}`}</i>` }; });
+  const opts = ks.map((k) => { const m = member(k); return { html: `<img class="pm" src="${monImg(m.art)}" alt=""><b>${esc(m.name)}</b><i>Lv ${m.lvl} · ${k === current ? "OUT NOW" : m.hp <= 0 ? "TIRED" : `${Math.ceil(m.hp)}/${m.max}`}</i>` }; });
   for (;;) {
     const c = await ui.choose(opts, { cls: "party", cols: 2, cancel: !force });
     if (c < 0) return null;
@@ -447,10 +506,11 @@ async function fight(def, slug, trId) {
     await ui.line(tr.final ? "THE ALYSHA TEST begins." : `${tr.role} ${tr.name} wants a quick chat!`, {});
     await tween(300, (k) => (bt.port.ox = 200 * k)); bt.port = null; $("sfoe").hidden = false; bars();
     await tween(380, (k) => (foe.ox = 200 * (1 - k)));
-    await ui.line(`${tr.name} brings up ${def.name}!`, {});
+    await ui.line(`${tr.name} brings up ${def.legend ? "the legendary " : ""}${def.name}!`, {});
   } else await ui.line(def.intro || `A wild ${def.name} appeared!`, {});
   // then you throw your first one out and step off
-  const sendOut = async (m, first) => {
+  const used = new Set();   // everyone who gets sent out learns something from the fight
+  const sendOut = async (m, first) => { used.add(m.key);
     await ui.line(`Go! ${m.name}!`, { auto: .45 }); ui.hide();
     if (first) tween(360, (k) => (bt.you.ox = -220 * k));
     const b = bt.ball = { x: 50, y: 120, rot: 0, open: 0, shut: false };
@@ -489,7 +549,15 @@ async function fight(def, slug, trId) {
   };
   while (!result) {
     ui.show(`What will ${me.name} do?`);
-    const c = await ui.choose(["FIGHT", "FOLIO", "RUN"], { cls: "cmd", cols: 3 });
+    const c0 = await ui.choose(["FIGHT", "BAG", "FOLIO", "RUN"], { cls: "cmd", cols: 2 });
+    if (c0 === 1) {
+      const r = await useItem(me); bars(); if (!r) continue;
+      if (r.swap) { me = bt.me; }
+      await act(foe, me, pick(foe.moves), false);
+      if (me.hp <= 0) { au.sfx("faint"); await tween(500, (k) => { me.oy = k * 40; me.a = 1 - k; }); await ui.line(`${me.name} is too tired to carry on!`); hpSet(me.key, 0); if (!alive().length) { result = "lose"; break; } ui.show("Who's up next?"); const k = await choosePartner(true, me.key); ui.hide(); await sendOut(member(k), false); }
+      continue;
+    }
+    const c = c0 === 0 ? 0 : c0 - 1;
     if (c === 2) { if (boss || tr) { await ui.line(tr ? "You can't walk out of a meeting." : SAY.cantRun[0]); continue; } result = "run"; break; }
     if (c === 1) {
       if (!S.won.length) { await ui.line("Your folio is empty. Catch a project to fight with it."); continue; }
@@ -504,7 +572,7 @@ async function fight(def, slug, trId) {
         if (tr && ti < team.length - 1) {
           au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is dealt with.`);
           ti++; foe = mk(team[ti]); bt.foe = foe; bars(); await tween(380, (k) => (foe.ox = 200 * (1 - k)));
-          await ui.line(`${tr.name} brings up ${foe.name}!`, {}); continue;
+          await ui.line(`${tr.name} brings up ${foe.legend ? "the legendary " : ""}${foe.name}!`, {}); continue;
         }
         result = "win"; break;
       }
@@ -521,17 +589,22 @@ async function fight(def, slug, trId) {
     if (slug) await catchIt(foe);
     else { au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is ${tr ? "dealt with" : "beaten"}.`); }
     au.music(null); au.chip.fanfare();
+    const lvBefore = {}, nmBefore = {}; for (const k of used) { lvBefore[k] = lvlOf(k); nmBefore[k] = formFor(k).name; }
+    const up = (n = 1) => { S.lvl = Math.min(CAP, S.lvl + n); used.forEach((k) => { if (k !== "tool") S.plv[k] = Math.min(CAP, (S.plv[k] || S.lvl) + n); }); };
+    // money: clients pay a fee, wild things drop a bit of change
+    const fee = tr ? (again ? 20 + L * 4 : 40 + L * 10) * (tr.final ? 3 : boss ? 2 : 1) : slug ? 25 + L * 5 : 8 + L * 3;
     if (tr) {
-      if (!again) S.beat.push(trId); S.lvl = Math.min(CAP, S.lvl + 1); me.lvl = S.lvl; bars(); save(); hud();
-      await ui.line(again ? `You got through ${tr.name} again.` : `You got through ${tr.name}'s quick chat.`); au.sfx("level"); await ui.line(`Your folio grew to level ${S.lvl}!`); await evolve(me);
+      if (!again) S.beat.push(trId); up(); me.lvl = lvlOf(me.key); bars(); save(); hud();
+      await ui.line(again ? `You got through ${tr.name} again.` : `You got through ${tr.name}'s quick chat.`); au.sfx("level");
     } else if (slug) {
-      S.won.push(slug); S.lvl = Math.min(CAP, S.lvl + 1); me.lvl = S.lvl; bars(); save(); hud();
-      await ui.line(`Your folio grew to level ${S.lvl}!`); au.sfx("level"); await evolve(me);
-      await ui.line(`${def.name} joined your folio. You can send it out in battle now.`);
-    } else if (postgame()) {
-      // training: every wild win after the badge is worth a level
-      S.lvl = Math.min(CAP, S.lvl + 1); me.lvl = S.lvl; bars(); save(); hud(); au.sfx("level"); await ui.line(`Your folio grew to level ${S.lvl}!`); await evolve(me);
-    }
+      S.won.push(slug); S.plv[slug] = S.lvl; up(); me.lvl = lvlOf(me.key); bars(); save(); hud(); au.sfx("level");
+    } else if (postgame() || S.flags.badge) up();
+    S.cash = (S.cash || 0) + fee; save();
+    await ui.line(`${tr ? `${tr.name} paid you` : "You picked up"} ${money(fee)}.`);
+    // say who grew, then evolve anyone who's ready
+    for (const k of used) { const was = lvBefore[k], now = lvlOf(k); if (now > was) { await ui.line(`${nmBefore[k]} grew to level ${now}!`, { auto: .9 }); } }
+    for (const k of used) await evolve(k, lvBefore[k], me);
+    if (slug) await ui.line(`${def.name} joined your folio. You can send it out in battle now.`);
     // knocks stay with you until you get a coffee
     if (me.hp < me.max * .35) await ui.line(`${me.name} is looking worn out. A coffee would sort that.`);
   } else if (result === "lose") {
@@ -621,15 +694,16 @@ function drawBall(b) {
   }
 }
 // your tool grows up: it flickers between old and new, then the new one stays
-async function evolve(me) {
-  const to = formOf(S.starter, S.lvl);
-  if (me.key !== "tool") { const was = formOf(S.starter, S.lvl - 1); if (was.art !== to.art) { au.sfx("level"); await ui.line(`Back in your folio, ${was.name} evolved into ${to.name}!`); } return; }
-  if (to.art === me.art) return;
+async function evolve(key, before, me) {
+  const was = formFor(key, before), to = formFor(key);
+  if (was.art === to.art) return;
+  // only the one on the field gets the full show; the rest grow up back in the folio
+  if (me.key !== key) { au.sfx("level"); await ui.line(`Back in your folio, ${was.name} evolved into ${to.name}!`); return; }
   const old = me.art, oldName = me.name; au.music(null);
   await ui.line(`What? ${oldName} is evolving!`, {});
   ui.hide(); au.sfx("secret");
   for (let k = 0; k < 14; k++) { me.art = k % 2 ? to.art : old; bt.flash = .7; await sleep(Math.max(60, 260 - k * 16)); }
-  me.art = to.art; me.name = to.name; const st = stats(S.lvl); me.max = st.max; me.hp = st.max; me.atk = st.atk; me.def = st.def; bt.flash = 1; bars(); au.sfx("level");
+  const st = statsFor(key); me.art = to.art; me.name = to.name; me.max = st.max; me.hp = st.max; hpSet(key, st.max); me.atk = st.atk; me.def = st.def; bt.flash = 1; bars(); au.sfx("level");
   for (let k = 0; k < 30; k++) { const a = rnd(0, 6.28), sp = rnd(40, 160); bt.parts.push({ x: 84, y: 100, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, t: 0, col: k % 2 ? "#ffd76a" : "#fff8ec" }); }
   await ui.line(`Congratulations! ${oldName} evolved into ${to.name}!`);
 }
@@ -648,7 +722,7 @@ function qteStep(dt) {
 function drawQte(now) {
   const q = bt.qte; if (!q) return;
   // drawn in the same panel the words usually sit in, so your eye is already there
-  const px = 6, py = 137, pw = 308, ph = 38;
+  const px = 6 - Math.min(0, OX), py = 137, pw = 308 + 2 * Math.min(0, OX), ph = 38;
   g.fillStyle = "#2b1f3b"; g.fillRect(px, py + 2, pw, ph); g.fillRect(px - 1, py - 1, pw + 2, ph + 2); g.fillStyle = "#fff8ec"; g.fillRect(px + 1, py, pw - 2, ph - 2);
   g.font = "9px 'Pixelify Sans', monospace"; g.textAlign = "left"; g.fillStyle = "#2b1f3b";
   if (q.kind === "atk") {
@@ -682,7 +756,7 @@ const monImg = (k) => `game/art/${k}.png`;
 function card(slug) {
   return new Promise((res) => {
     const p = PROJECTS.find((q) => q.slug === slug), f = FOES[slug], i = PROJECTS.indexOf(p), el = $("card");
-    el.innerHTML = `<div class="sheet"><div class="top"><img class="mon" src="${monImg(f.art)}" alt=""><div><span class="no">No. ${String(i + 1).padStart(2, "0")} · ${esc(f.zone)}</span><h2>${esc(p.title)}</h2><p class="meta">${esc(p.client)} · ${esc(p.kind)}</p></div></div>
+    el.innerHTML = `<div class="sheet"><div class="top"><img class="mon" src="${monImg(S.won.includes(slug) ? formFor(slug).art : f.art)}" alt=""><div><span class="no">No. ${String(i + 1).padStart(2, "0")} · ${esc(f.zone)}</span><h2>${esc(p.title)}</h2><p class="meta">${esc(p.client)} · ${esc(p.kind)}</p></div></div>
       ${p.blurb ? `<p class="blurb">${esc(p.blurb)}</p>` : ""}
       <div class="thumbs">${thumbs(p).map((u) => `<a href="./#${p.slug}" target="_blank" rel="noopener"><img src="${u}" alt="" loading="lazy"></a>`).join("")}</div>
       <div class="btns"><a class="go" href="./#${p.slug}" target="_blank" rel="noopener">See the whole project →</a><button type="button" id="cclose">Keep exploring</button></div></div>`;
@@ -695,7 +769,7 @@ function folio() {
   if (!S.starter || busy) return; folioOpen = true; au.sfx("ok");
   const el = $("folio"), m = formOf(S.starter, S.lvl);
   el.innerHTML = `<div class="sheet"><div class="fh"><h2>FOLIO</h2><span>${S.won.length} of ${PROJECTS.length} beaten</span><button type="button" id="fclose">Close</button></div>
-    <div class="grid">${PROJECTS.map((p, i) => { const got = S.won.includes(p.slug), f = FOES[p.slug]; return `<button type="button" class="slot${got ? " got" : ""}" data-s="${p.slug}" ${got ? "" : "disabled"}><img src="${monImg(f.art)}" alt=""><b>${got ? esc(p.title) : "? ? ?"}</b><i>${got ? esc(p.client) : esc(f.zone)}</i></button>`; }).join("")}</div>
+    <div class="grid">${PROJECTS.map((p, i) => { const got = S.won.includes(p.slug), f = FOES[p.slug]; return `<button type="button" class="slot${got ? " got" : ""}" data-s="${p.slug}" ${got ? "" : "disabled"}><img src="${monImg(got ? formFor(p.slug).art : f.art)}" alt=""><b>${got ? esc(formFor(p.slug).name) : "? ? ?"}</b><i>${got ? `Lv ${lvlOf(p.slug)} · ${esc(p.client)}` : esc(f.zone)}</i></button>`; }).join("")}</div>
     <p class="with"><img src="${monImg(m.art)}" alt=""><span>With you: <b>${m.name}</b>, level ${S.lvl}.</span></p></div>`;
   el.hidden = false;
   $("fclose").addEventListener("click", closeFolio);
@@ -712,7 +786,23 @@ function endCard() {
     $("cclose").addEventListener("click", () => busyCard && busyCard());
   });
 }
-function hud() { $("bfolio").textContent = touch && innerWidth < 560 ? `FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8` : `FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8 · CHATS ${S.beat.length}/${Object.keys(TRAINERS).length}${S.flags.badge ? " · ★ BADGE" : ""}`; $("hud").hidden = mode !== "world"; $("bfolio").hidden = !S.starter; }
+function hud() { $("hud").hidden = mode !== "world" || !S.starter; }
+// the burger: everything that used to sit across the top of the screen
+const fsOn = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function fullscreen() { const d = document.documentElement; try { if (fsOn()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else (d.requestFullscreen || d.webkitRequestFullscreen).call(d); } catch (e) {} }
+function toggleSound() { au.on = !au.on; if (au.on) au.unlock(); au.toggle(); toast(au.on ? "SOUND ON" : "SOUND OFF", 1200); }
+function openMenu() {
+  if (busy || mode !== "world" || !S.starter || folioOpen) return;
+  let then = null;
+  script(async () => {
+    au.sfx("ok");
+    ui.show(`FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8 · CHATS ${S.beat.length}/${Object.keys(TRAINERS).length} · ${money(S.cash || 0)}${S.flags.badge ? " · ★ MAL BADGE" : ""}`);
+    const opts = [["folio", "FOLIO"], ["bag", "BAG"], ["fs", fsOn() ? "EXIT FULLSCREEN" : "FULLSCREEN"], ["snd", au.on ? "SOUND: ON" : "SOUND: OFF"], ["exit", "BACK TO THE SITE"]];
+    const c = await ui.choose(opts.map((o) => o[1]), { cls: "pmenu", cancel: true }); ui.hide();
+    if (c < 0) return; const k = opts[c][0];
+    if (k === "folio") then = folio; else if (k === "bag") await useItem(null); else if (k === "fs") fullscreen(); else if (k === "snd") toggleSound(); else if (k === "exit") location.href = "./#ai-experiments";
+  }).then(() => then && then());
+}
 // tap or click a thing near you to interact with it
 $("frame").addEventListener("click", (e) => {
   if (e.target.closest("button, a, .menu, .dlg, .over, .hud") || mode !== "world" || busy || P.moving) return;
@@ -723,8 +813,7 @@ $("frame").addEventListener("click", (e) => {
   const ex = clamp(P.x, o.x, o.x + (o.w || 1) - 1) - P.x, ey = o.y - P.y; P.dir = Math.abs(ex) >= Math.abs(ey) ? (ex > 0 ? "right" : "left") : ey > 0 ? "down" : "up";
   au.unlock(); run(o.act, o);
 });
-$("bfolio").addEventListener("click", () => { if (folioOpen) closeFolio(); else if (mode === "world") folio(); });
-$("bsnd").addEventListener("click", () => { au.on = !au.on; $("bsnd").textContent = au.on ? "SOUND ON" : "SOUND OFF"; if (au.on) au.unlock(); au.toggle(); });
+$("bmenu").addEventListener("click", () => { if (folioOpen) closeFolio(); else openMenu(); });
 
 // ---------- drawing ----------
 function drawWorld(now) {
@@ -742,6 +831,7 @@ function drawWorld(now) {
   const spr = (o) => o.k === "npc" ? pose(A.who[o.who] || A.who.stefan, o.dir || "down", o.step || 0) : o.k === "wallart" ? A.obj[o.art] : Array.isArray(A.obj[o.k]) ? A.obj[o.k][o.k === "geyser" ? Math.floor(now / 300 + o.x) % 3 : f2] : A.obj[o.k];
   const put = (o) => {
     if (o.gone) return; if (o.k === "wire") return wire(o, cx, cy, now);
+    if (o.k === "coin") { if (coinUp(o)) coin(o.x * 16 - cx + 8, o.y * 16 - cy + 10 + Math.round(Math.sin(now / 300 + o.n) * 1), now + o.n * 97); return; }
     if (o.k === "reel") { if (!S.reels.includes(o.n)) reel(o.x * 16 - cx + 8, o.y * 16 - cy + 8 + Math.round(Math.sin(now / 260 + o.n) * 1.5), now); return; }
     const s = spr(o); if (!s) return; const bx = (o.x + o.w / 2) * 16 - cx + (o.dx || 0), by = (o.y + 1) * 16 - cy + (o.dy || 0);
     if (bx < -60 || bx > VW + 60 || by < -10 || by > VH + 90) return;
@@ -797,6 +887,12 @@ function bang(x, y, t) {
   g.fillStyle = "#2b1f3b"; g.fillRect(x - 5, y - 14, 10, 13); g.fillRect(x - 1, y - 1, 2, 2); g.fillStyle = "#fff8ec"; g.fillRect(x - 4, y - 13, 8, 11);
   g.fillStyle = "#f0546a"; g.fillRect(x - 1, y - 12, 2, 6); g.fillRect(x - 1, y - 5, 2, 2);
 }
+function coin(x, y, now) {
+  x = Math.round(x); y = Math.round(y); const w = Math.max(1, Math.round(Math.abs(Math.cos(now / 260)) * 4));
+  g.fillStyle = "rgba(43,31,59,.25)"; g.fillRect(x - 3, y + 5, 6, 1);
+  g.fillStyle = "#2b1f3b"; g.fillRect(x - w - 1, y - 4, w * 2 + 2, 9); g.fillRect(x - w, y - 5, w * 2, 11);
+  g.fillStyle = "#ffd76a"; g.fillRect(x - w, y - 4, w * 2, 9); g.fillStyle = "#c99a2e"; if (w > 2) g.fillRect(x - 1, y - 2, 2, 5); g.fillStyle = "#fff4c2"; g.fillRect(x - w, y - 4, 1, 3);
+}
 function reel(x, y, now) {
   x = Math.round(x); y = Math.round(y);
   const glow = .35 + Math.sin(now / 200) * .15; g.fillStyle = `rgba(255,215,106,${glow})`; g.beginPath(); g.arc(x, y, 8, 0, 7); g.fill();
@@ -819,9 +915,9 @@ function glowOf(s) {
 }
 function drawBattle(now) {
   const b = bt, [c0, c1, c2] = b.bg, sh = b.shake > 0 ? Math.round(Math.sin(now / 18) * b.shake) : 0; b.shake = Math.max(0, b.shake - .35);
-  g.fillStyle = c0; g.fillRect(0, 0, VW, VH);
+  g.fillStyle = c0; g.fillRect(0, 0, VW, VH); g.translate(OX, 0);
   // the same soft heat as the real site, in big pixels
-  const blob = (x, y, r, c) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, c); gr.addColorStop(1, c + "00"); g.fillStyle = gr; g.fillRect(0, 0, VW, VH); };
+  const blob = (x, y, r, c) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, c); gr.addColorStop(1, c + "00"); g.fillStyle = gr; g.fillRect(-OX, 0, VW, VH); };
   blob(70 + Math.sin(now / 1900) * 30, 40, 150, c1); blob(250 + Math.cos(now / 2300) * 30, 150, 160, c2); blob(170, 90 + Math.sin(now / 1500) * 20, 90, "#ffffff");
   g.fillStyle = "rgba(43,31,59,.14)"; g.beginPath(); g.ellipse(238 + sh, 86, 54, 11, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(84 + sh, 130, 60, 12, 0, 0, 7); g.fill();
   const fig = (m, x, y, mirror, bob) => {
@@ -834,6 +930,8 @@ function drawBattle(now) {
   if (b.port && b.port.img) { const p = b.port.img; g.drawImage(p, Math.round(238 - iw(p) / 2 + b.port.ox), 102 - ih(p), iw(p), ih(p)); }
   if (b.you && b.you.img) { const p = b.you.img; g.drawImage(p, Math.round(84 - iw(p) / 2 + b.you.ox), 152 - ih(p), iw(p), ih(p)); }
   fig(b.foe, 238, 92, false, Math.round(Math.sin(now / 420) * 2)); fig(b.me, 84, 136, true, Math.round(Math.sin(now / 480 + 1) * 2));
+  // legendaries shimmer: little stars wink in and out around them
+  if (b.foe.legend && b.foe.a > .5) for (let n = 0; n < 7; n++) { const t = now / 900 + n * .37, k = (t % 1), x = 238 + Math.sin(n * 2.3 + Math.floor(t) * 1.7) * 34 + b.foe.ox, y = 60 + Math.cos(n * 1.9 + Math.floor(t) * 2.1) * 28, sz = Math.sin(k * Math.PI) * 2.5; g.fillStyle = n % 2 ? "#fff8ec" : "#ffd6f0"; g.fillRect(Math.round(x - sz), Math.round(y), Math.round(sz * 2) + 1, 1); g.fillRect(Math.round(x), Math.round(y - sz), 1, Math.round(sz * 2) + 1); }
   if (b.ball) drawBall(b.ball);
   drawFx(b);
   // sparks, numbers, the white flash of a big hit, and the action command on top
@@ -841,8 +939,8 @@ function drawBattle(now) {
   g.textAlign = "center";
   for (let i = b.pops.length - 1; i >= 0; i--) { const p = b.pops[i]; p.t += 1 / 60; if (p.t > 1) { b.pops.splice(i, 1); continue; } const yy = p.y - Math.min(1, p.t * 3) * 10, sc = p.t < .12 ? 1 + (1 - p.t / .12) * .6 : 1;
     g.font = `${Math.round((p.big ? 14 : 11) * sc)}px 'Pixelify Sans', monospace`; g.globalAlpha = p.t > .75 ? (1 - p.t) / .25 : 1; g.fillStyle = "#2b1f3b"; g.fillText(p.txt, p.x + 1, yy + 1); g.fillStyle = p.col; g.fillText(p.txt, p.x, yy); g.globalAlpha = 1; }
-  if (b.flash > 0) { g.fillStyle = `rgba(255,255,255,${b.flash * .55})`; g.fillRect(0, 0, VW, VH); b.flash = Math.max(0, b.flash - .08); }
-  drawQte(now);
+  if (b.flash > 0) { g.fillStyle = `rgba(255,255,255,${b.flash * .55})`; g.fillRect(-OX, 0, VW, VH); b.flash = Math.max(0, b.flash - .08); }
+  drawQte(now); g.translate(-OX, 0);
 }
 function frame(now) {
   requestAnimationFrame(frame); g.setTransform(2, 0, 0, 2, 0, 0); g.imageSmoothingEnabled = false;
@@ -851,7 +949,7 @@ function frame(now) {
   else if (folioOpen) { if (took("b") || took("f") || took("a")) closeFolio(); }
   else if (bt && bt.qte) qteStep(dt);
   else { ui.update(dt); if (mode === "world") walk(dt); }
-  if (took("m")) $("bsnd").click();
+  if (took("m")) toggleSound();
   if (mode === "title") drawTitle(now); else if (mode === "battle" && bt) drawBattle(now); else drawWorld(now);
   if (talk && talk.show) { const p = talk.img, e = 1 - Math.pow(1 - talk.k, 3), cx = Math.round(VW * .36), sc = .6 + .4 * e;
     g.globalAlpha = e; g.fillStyle = "rgba(43,31,59,.35)"; g.fillRect(0, 0, VW, VH); g.fillStyle = "#fff8ec"; g.beginPath(); g.arc(cx, 72, 46 * e, 0, 7); g.fill(); g.globalAlpha = 1;
@@ -864,8 +962,12 @@ function frame(now) {
 
 // ---------- the front door ----------
 function fit() {
-  const pad = touch && innerHeight > innerWidth ? 200 : 0, k = Math.min(innerWidth / VW, (innerHeight - pad) / VH), s = k >= 2 ? Math.floor(k) : k;
-  const f = $("frame"); f.style.width = `${VW * s}px`; f.style.height = `${VH * s}px`; f.style.setProperty("--u", `${s}px`);
+  // fill the window: the world gets wider to match the screen, fights and the title stay centred in the middle 320
+  const tall = touch && innerHeight > innerWidth, pad = tall ? 200 : 0;
+  VW = tall ? 320 : clamp(Math.round(VH * innerWidth / innerHeight), 288, 428); OX = Math.round((VW - 320) / 2);
+  if (cv.width !== VW * 2) { cv.width = VW * 2; cv.height = VH * 2; g.imageSmoothingEnabled = false; }
+  const k = Math.min(innerWidth / VW, (innerHeight - pad) / VH), s = tall && k >= 2 ? Math.floor(k) : k;
+  const f = $("frame"); f.style.width = `${VW * s}px`; f.style.height = `${VH * s}px`; f.style.setProperty("--u", `${s}px`); f.style.setProperty("--ox", `${Math.max(0, OX) * s}px`);
   document.body.classList.toggle("tall", pad > 0);
 }
 addEventListener("resize", fit); fit();
@@ -904,10 +1006,24 @@ addEventListener("keydown", (e) => {
 setTimeout(() => tEl.querySelector(".tintro").classList.add("on"), 1500);
 setTimeout(toTitle, 3800);
 // the scene behind the logo, drawn in big pixels
+// a creature as a dark shape with its own line work glowing through it
+const SIL = {};
+function silOf(k) {
+  if (SIL[k]) return SIL[k]; const im = A.mon[k]; if (!im || !im.complete) return null;
+  const W = im.naturalWidth, H = im.naturalHeight, src = document.createElement("canvas"); src.width = W; src.height = H; const sx = src.getContext("2d"); sx.drawImage(im, 0, 0); const d = sx.getImageData(0, 0, W, H).data;
+  const mk = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return c; }, body = mk(), line = mk(), bd = body.getContext("2d").createImageData(W, H), ld = line.getContext("2d").createImageData(W, H);
+  const L = (x, y) => { if (x < 0 || y < 0 || x >= W || y >= H) return -1; const j = (y * W + x) * 4; return d[j + 3] < 128 ? -1 : (d[j] + d[j + 1] + d[j + 2]) / 3; };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const l = L(x, y); if (l < 0) continue; const i = (y * W + x) * 4; bd.data.set([22, 14, 58, 255], i);
+    // its own dark line work, plus anywhere the colour jumps (the veins), lights up
+    const jump = Math.max(...[[1, 0], [0, 1], [-1, 0], [0, -1]].map(([dx, dy]) => { const n = L(x + dx, y + dy); return n < 0 ? 0 : Math.abs(n - l); }));
+    if (l < 95 || jump > 38) ld.data.set([150, 110, 255, 255], i); }
+  body.getContext("2d").putImageData(bd, 0, 0); line.getContext("2d").putImageData(ld, 0, 0);
+  return (SIL[k] = { body, line, w: W / 2, h: H / 2 });
+}
 function drawTitle(now) {
   const t = (now - T.t0) / 1000;
   if (T.stage === "intro") {
-    g.fillStyle = "#0b0a1f"; g.fillRect(0, 0, VW, VH);
+    g.fillStyle = "#0b0a1f"; g.fillRect(0, 0, VW, VH); g.translate(OX, 0);
     // a shooting star crosses the dark and leaves sparkles behind it
     const k = clamp(t / 1.4, 0, 1), x = -20 + k * 360, y = 40 + Math.sin(k * Math.PI) * -18 + k * 50;
     if (k < 1 && Math.random() < .9) T.trail.push({ x, y, t: 0, vx: rnd(-10, 10), vy: rnd(-6, 14) });
@@ -916,23 +1032,27 @@ function drawTitle(now) {
     if (t > .1 && !T.dinged) { T.dinged = 1; au.sfx("secret"); }
     return;
   }
-  // a dawn sky, stars still out up top
-  const sky = g.createLinearGradient(0, 0, 0, VH); sky.addColorStop(0, "#1f2367"); sky.addColorStop(.45, "#6a5bc2"); sky.addColorStop(.75, "#f09bb8"); sky.addColorStop(1, "#ffd9a8"); g.fillStyle = sky; g.fillRect(0, 0, VW, VH);
-  T.stars.forEach((s) => { const a = .3 + .7 * Math.max(0, Math.sin(now / 500 + s.p * 3)); g.fillStyle = `rgba(255,248,236,${a * (1 - s.y / 90)})`; g.fillRect(Math.round(s.x), Math.round(s.y), 1, 1); });
-  // a big soft sun rising behind the logo
-  const sun = g.createRadialGradient(160, 120, 4, 160, 120, 110); sun.addColorStop(0, "rgba(255,240,190,.95)"); sun.addColorStop(.25, "rgba(255,214,150,.55)"); sun.addColorStop(1, "rgba(255,214,150,0)"); g.fillStyle = sun; g.fillRect(0, 0, VW, VH);
-  // clouds drifting
-  const cloud = (x, y, s, c) => { g.fillStyle = c; [[0, 0, 10], [9, -4, 12], [20, 0, 10], [10, 3, 11]].forEach(([dx, dy, r]) => { g.beginPath(); g.arc(Math.round(x + dx * s), Math.round(y + dy * s), r * s, 0, 7); g.fill(); }); };
-  for (let i = 0; i < 5; i++) { const x = ((i * 90 + now / (60 + i * 15)) % (VW + 80)) - 40; cloud(x, 96 + (i % 3) * 9, .7 + (i % 2) * .3, "rgba(255,236,240,.55)"); }
-  // the balloon project floats up through it all
-  const bl = A.mon.balloon; if (bl) { const bx = 262 + Math.sin(now / 1900) * 10, by = 92 - ((t * 4) % 30) * 0 + Math.sin(now / 1300) * 4; g.globalAlpha = .95; g.drawImage(bl, Math.round(bx - iw(bl) * .3), Math.round(by - ih(bl) * .6), iw(bl) * .6, ih(bl) * .6); g.globalAlpha = 1; }
-  // hills: far purple, near green, scrolling at different speeds
-  const hill = (base, amp, len, spd, col) => { g.fillStyle = col; for (let x = 0; x < VW; x += 2) { const h = base + Math.round(Math.sin((x + now / spd) / len) * amp + Math.sin((x + now / spd) / (len * .43)) * amp * .4); g.fillRect(x, h, 2, VH - h); } };
-  hill(132, 7, 30, 90, "#7d6bc4"); hill(146, 5, 22, 45, "#3f9a63"); hill(158, 3, 14, 25, "#2f7a4f");
-  // the three tools hop along the ridge
-  ["ai", "ps", "pr"].forEach((k, i) => { const m = A.mon[k]; if (!m) return; const hop = Math.max(0, Math.sin(now / 260 - i * 1.3)) * 6, w = iw(m) * .42, h = ih(m) * .42, x = 40 + i * 30; g.drawImage(m, Math.round(x - w / 2), Math.round(160 - h - hop), w, h); });
-  // a glint runs across the logo now and then
-  const gt = (t % 4) / 4; if (gt < .2) { const gx = 70 + gt / .2 * 180; g.fillStyle = "rgba(255,255,255,.8)"; [[0, -5], [0, 5], [-5, 0], [5, 0]].forEach(([dx, dy]) => g.fillRect(Math.round(gx + dx * .5), Math.round(38 + dy * .5), 1, 1)); g.fillRect(Math.round(gx) - 1, 37, 3, 3); }
+  // after the shooting star: a deep night, a slow scale pattern, and the legendaries as glowing silhouettes, like the old box art
+  g.translate(OX, 0);
+  const L0 = -Math.max(0, OX), R0 = 320 + Math.max(0, OX);
+  const sky = g.createLinearGradient(0, 0, 0, VH); sky.addColorStop(0, "#120c2e"); sky.addColorStop(.55, "#24185a"); sky.addColorStop(1, "#3b1f63"); g.fillStyle = sky; g.fillRect(L0 - 40, 0, R0 - L0 + 80, VH);
+  // the scales: a soft diamond lattice drifting up, brighter near the middle
+  { const off = (now / 90) % 12; for (let y = -12; y < VH + 12; y += 6) for (let x = L0 - 12; x < R0 + 12; x += 12) { const xx = x + ((y / 6) % 2 ? 6 : 0), yy = y - off, d = Math.hypot(xx - 160, yy - 95) / 190, a = Math.max(0, .14 - d * .12); if (a <= .01) continue; g.fillStyle = `rgba(150,120,255,${a})`; g.fillRect(Math.round(xx), Math.round(yy), 2, 1); g.fillRect(Math.round(xx) + 1, Math.round(yy) - 1, 1, 3); } }
+  T.stars.forEach((st) => { const a = .2 + .8 * Math.max(0, Math.sin(now / 600 + st.p * 3)); g.fillStyle = `rgba(255,248,236,${a * .7})`; g.fillRect(Math.round(st.x), Math.round(st.y), 1, 1); });
+  // the white bunny, huge, behind everything: dark body, glowing lines, breathing
+  const breathe = Math.sin(now / 1600), pulse = .55 + .45 * Math.sin(now / 900);
+  const big = silOf("bunny"); if (big) { const sc = 1.55, w = big.w * sc, h = big.h * sc, x = 168 - w / 2 + Math.sin(now / 2600) * 3, y = 122 - h / 2 + breathe * 3;
+    g.globalAlpha = .9; g.drawImage(big.body, Math.round(x), Math.round(y), w, h); g.globalAlpha = .35 + pulse * .55; g.drawImage(big.line, Math.round(x), Math.round(y), w, h); g.globalAlpha = 1;
+    // its eye catches the light now and then
+    if ((now / 4200) % 1 < .12) { g.fillStyle = `rgba(255,214,240,${Math.sin(((now / 4200) % 1) / .12 * Math.PI)})`; g.fillRect(Math.round(x + w * .66), Math.round(y + h * .33), 2, 2); } }
+  // the others pass through the dark far off, one at a time, trailing light
+  const pass = [["ai3", 0], ["butterfly", 1], ["kitten", 2]], cyc = 7000, i = Math.floor(now / cyc) % 3, k = (now % cyc) / cyc, sp = silOf(pass[i][0]);
+  if (sp && k < .8) { const q = k / .8, sc = .62, w = sp.w * sc, h = sp.h * sc, x = (i === 1 ? R0 + 20 - q * (R0 - L0 + 40) : L0 - 20 + q * (R0 - L0 + 40)), y = [30, 60, 140][i] + Math.sin(q * Math.PI * (i === 1 ? 6 : 2)) * (i === 1 ? 8 : 14) - (i === 2 ? Math.sin(q * Math.PI) * 40 : 0), fade = Math.sin(q * Math.PI);
+    g.globalAlpha = fade * .8; g.drawImage(sp.body, Math.round(x - w / 2), Math.round(y - h / 2), w, h); g.globalAlpha = fade * (.5 + pulse * .5); g.drawImage(sp.line, Math.round(x - w / 2), Math.round(y - h / 2), w, h); g.globalAlpha = 1;
+    if (Math.random() < .6) T.trail.push({ x: x + rnd(-w / 3, w / 3), y: y + rnd(-h / 4, h / 4), t: 0, vx: rnd(-4, 4), vy: rnd(-2, 6) }); }
+  for (let j = T.trail.length - 1; j >= 0; j--) { const p = T.trail[j]; p.t += 1 / 60; p.x += p.vx / 60; p.y += p.vy / 60; if (p.t > 1.4) { T.trail.splice(j, 1); continue; } const a = 1 - p.t / 1.4; g.fillStyle = `rgba(200,180,255,${a * .8})`; g.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); }
+  // mist along the bottom
+  const mist = g.createLinearGradient(0, 130, 0, VH); mist.addColorStop(0, "rgba(59,31,99,0)"); mist.addColorStop(1, "rgba(90,50,140,.75)"); g.fillStyle = mist; g.fillRect(L0 - 40, 130, R0 - L0 + 80, 50);
 }
 place(maps.world, 35, 39, "down");
 requestAnimationFrame(frame);

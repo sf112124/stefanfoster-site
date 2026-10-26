@@ -11,11 +11,11 @@ export const eff = (a, d) => (BEATS[a] === d ? 1.4 : BEATS[d] === a ? .75 : 1);
 
 // ---- the three tools you can take with you ----
 export const STARTERS = {
-  ai: { name: "AI", type: "AI", art: "ai", about: "AI. Beats FILM projects, weak to IMAGE.", evo: [{ lvl: 5, name: "AGENT", art: "ai2" }, { lvl: 8, name: "AGI", art: "ai3" }],
+  ai: { name: "AI", type: "AI", art: "ai", about: "AI. Beats FILM projects, weak to IMAGE.", evo: [{ lvl: 12, name: "AGENT", art: "ai2" }, { lvl: 22, name: "AGI", art: "ai3" }],
     moves: [{ n: "PROMPT BEAM", t: "AI", p: 14, fx: "beam" }, { n: "DEEPFAKE", t: "AI", p: 24, acc: .74, fx: "glitch" }, { n: "UPSCALE", kind: "buff" }, { n: "REGENERATE", kind: "heal" }] },
-  ps: { name: "PHOTOSHOP", type: "IMAGE", art: "ps", about: "PHOTOSHOP. Beats AI projects, weak to FILM.", evo: [{ lvl: 5, name: "LAYERLORD", art: "ps2" }, { lvl: 8, name: "GEN FILL", art: "ps3" }],
+  ps: { name: "PHOTOSHOP", type: "IMAGE", art: "ps", about: "PHOTOSHOP. Beats AI projects, weak to FILM.", evo: [{ lvl: 12, name: "LAYERLORD", art: "ps2" }, { lvl: 22, name: "GEN FILL", art: "ps3" }],
     moves: [{ n: "BRUSH STROKE", t: "IMAGE", p: 14, fx: "paint" }, { n: "LIQUIFY", t: "IMAGE", p: 24, acc: .74, fx: "warp" }, { n: "SHARPEN", kind: "buff" }, { n: "HEALING BRUSH", kind: "heal" }] },
-  pr: { name: "PREMIERE", type: "FILM", art: "pr", about: "PREMIERE. Beats IMAGE projects, weak to AI.", evo: [{ lvl: 5, name: "THE EDIT", art: "pr2" }, { lvl: 8, name: "DIRECTOR'S CUT", art: "pr3" }],
+  pr: { name: "PREMIERE", type: "FILM", art: "pr", about: "PREMIERE. Beats IMAGE projects, weak to AI.", evo: [{ lvl: 12, name: "THE EDIT", art: "pr2" }, { lvl: 22, name: "DIRECTOR'S CUT", art: "pr3" }],
     moves: [{ n: "HARD CUT", t: "FILM", p: 13, fx: "slash" }, { n: "SMASH CUT", t: "FILM", p: 23, acc: .74, fx: "smash" }, { n: "SPEED RAMP", kind: "buff" }, { n: "UNDO", kind: "heal" }] },
 };
 
@@ -39,6 +39,21 @@ export const FOES = {
     moves: [{ n: "SPIKE STORM", p: 9, fx: "spikes" }, { n: "HOT AIR", p: 8, fx: "fizz" }, { n: "LIFT OFF", p: 7, fx: "sparkle" }] },
   gumtree: { name: "GUMTREE", type: "FILM", art: "gum", zone: "The Grove",
     moves: [{ n: "SIT DOWN", p: 9, fx: "smash" }, { n: "PRICE TAG", p: 8, fx: "coins" }, { n: "BARGAIN", p: 7, fx: "coins" }] },
+};
+// ---- projects grow up too: each has its own level, and evolves twice ----
+export const PEVO = { lvls: [14, 24] };
+const PE = { "la-croisiere": [["SUN HAT", "croisiere2"], ["LA GRANDE", "croisiere3"]], "ai-commissions": [["LILY EXEC", "commish2"], ["LOTUS CEO", "commish3"]], "3d-explorations": [["CACTUS CHONK", "blob2"], ["SUPER BLOOM", "blob3"]], "ai-experiments": [["BILLY", "goat2"], ["THE G.O.A.T.", "goat3"]], "summer-of-sport": [["TANGLE STAR", "sport2"], ["THE KNOT", "sport3"]], "relax": [["TUBE BRUTE", "relax2"], ["INNER TITAN", "relax3"]], "coca-cola": [["POP TOP", "fizz2"], ["FIZZDRAKE", "fizz3"]], "les-benjamins": [["TULIP", "balloon2"], ["FOXGLOVE", "balloon3"]], "gumtree": [["BARGAIN BEAST", "gum2"], ["HOUSE CLEARANCE", "gum3"]] };
+for (const k in PE) FOES[k].evo = PE[k].map((n, i) => ({ lvl: PEVO.lvls[i], name: n[0], art: n[1] }));
+export const pstage = (slug, lvl) => (FOES[slug].evo || []).filter((e) => lvl >= e.lvl).length;
+export const pform = (slug, lvl) => { const f = FOES[slug], k = pstage(slug, lvl); return k ? { ...f, name: f.evo[k - 1].name, art: f.evo[k - 1].art, stage: k } : { ...f, stage: 0 }; };
+// ---- the coffee kiosk on the square ----
+export const ITEMS = {
+  americano: { name: "AMERICANO", price: 20, about: "A quick hit. Heals one of your folio by half.", use: "heal" },
+  oat: { name: "OAT FLAT WHITE", price: 45, about: "The proper one. One of your folio back to full.", use: "full" },
+  matcha: { name: "MATCHA LATTE", price: 90, about: "Calm, green, restorative. Your whole folio back to full, tired ones included.", use: "all" },
+  sparkling: { name: "SPARKLING WATER", price: 25, about: "Wakes a tired one up with half its health.", use: "revive" },
+  hojicha: { name: "HOJICHA", price: 35, about: "Roasted, grounding. In a fight, nothing gets to you: defence up.", use: "def", battle: 1 },
+  beer: { name: "BEER", price: 50, about: "Dutch courage. In a fight, attack way up, but your guard drops.", use: "beer", battle: 1 },
 };
 // the one thing out there that isn't a project: the spider from the main site
 export const EXTRA = {
@@ -66,7 +81,10 @@ Object.assign(CORP, {
   budget: { name: "THE BUDGET", type: "IMAGE", art: "budget", moves: [{ n: "ONE SHOOT DAY", p: 9, fx: "coins" }, { n: "OVERAGE", p: 8, fx: "coins" }, { n: "CALL SHEET", p: 7, fx: "paper" }] },
   timesheet: { name: "TIMESHEET", type: "IMAGE", art: "timesheet", moves: [{ n: "FILL IT IN", p: 9, fx: "paper" }, { n: "JOB NUMBER", p: 7, fx: "slash" }, { n: "FRIDAY 5PM", p: 8, fx: "glitch" }] },
   bigidea: { name: "THE BIG IDEA", type: "AI", art: "bigidea", moves: [{ n: "WHAT IF", p: 10, fx: "flash" }, { n: "BLANK PAGE", p: 8, fx: "sparkle" }, { n: "BACK TO THE BRIEF", p: 8, fx: "beam" }] },
-  bunny: { name: "WHITE BUNNY", type: "NONE", art: "bunny", moves: [{ n: "SIDE EYE", p: 15, fx: "glitch" }, { n: "NOT FOR ME", p: 19, fx: "smash" }, { n: "HMM.", p: 12, fx: "sparkle" }, { n: "SLEEP ON IT", kind: "heal" }] },
+  angel: { name: "SERAPH", type: "IMAGE", art: "angel", legend: 1, moves: [{ n: "HALO", p: 16, fx: "sparkle" }, { n: "JUDGEMENT", p: 19, fx: "beam" }, { n: "GRACE", kind: "heal" }] },
+  butterfly: { name: "PAPILLON", type: "FILM", art: "butterfly", legend: 1, moves: [{ n: "WING DUST", p: 15, fx: "sparkle" }, { n: "METAMORPHOSIS", kind: "buff" }, { n: "IRIDESCENCE", p: 18, fx: "glitch" }] },
+  kitten: { name: "MOONKIT", type: "AI", art: "kitten", legend: 1, moves: [{ n: "MOON SWIPE", p: 17, fx: "slash" }, { n: "NINE LIVES", kind: "heal" }, { n: "STARE", p: 15, fx: "glitch" }] },
+  bunny: { name: "WHITE BUNNY", type: "NONE", art: "bunny", legend: 1, moves: [{ n: "SIDE EYE", p: 15, fx: "glitch" }, { n: "NOT FOR ME", p: 19, fx: "smash" }, { n: "HMM.", p: 12, fx: "sparkle" }, { n: "SLEEP ON IT", kind: "heal" }] },
   lion: { name: "GOLDEN BEAR", type: "FILM", art: "bear", moves: [{ n: "BEAR HUG", p: 11, fx: "smash" }, { n: "GOLDEN GLINT", p: 10, fx: "sparkle" }, { n: "MAUL", p: 9, fx: "slash" }] },
 });
 // ---- the people out on the roads who want "a quick chat" ----
@@ -91,7 +109,7 @@ export const TRAINERS = {
     intro: ["So. You're the one who's been getting past my team.", "Let's talk numbers. Then stakeholders. Then numbers again."],
     win: ["...Fine. It's approved.", "Don't change a thing."], after: ["Approved. Go and make it."] },
   // home: the last and hardest test
-  alysha: { name: "ALYSHA", role: "THE ALYSHA TEST", look: "alysha", port: "t_alysha", map: "house", x: 8, y: 4, dir: "left", lv: 20, fixed: 28, boss: 2, final: 1, team: ["bunny"],
+  alysha: { name: "ALYSHA", role: "THE ALYSHA TEST", look: "alysha", port: "t_alysha", map: "house", x: 8, y: 4, dir: "left", lv: 20, fixed: 28, boss: 2, final: 1, team: ["bunny", "angel", "butterfly", "kitten"],
     gate: ["Hi. Have you finished it yet?", "Bring me the whole portfolio. Every project, and the MAL badge.", "Then you can do the test. I'm not easy to impress."],
     intro: ["So. This is the whole portfolio?", "Talk me through it. Slowly.", "If something's not good, I'll know."],
     win: ["...Okay.", "It's actually really good. I'm proud of you.", "You passed the Alysha Test."],
@@ -119,7 +137,7 @@ export const TRAINERS = {
 // ---- what people and things say ----
 export const SAY = {
   intro: ["Hi, I'm Stefan. This is my portfolio.", "My projects are out in the long grass around the valley.", "Find one and beat it, and you get to see the work.", "First, pick a tool to take with you: AI, Photoshop or Premiere. They're on the stands behind me."],
-  after: ["The door is at the bottom of the room. Walk into long grass to find a project.", "AI beats FILM, PHOTOSHOP beats AI, PREMIERE beats IMAGE.", "There are eight film reels hidden around the valley too. Each one makes your tool stronger.", "Watch out on the roads. Agency people and clients hang about out there, and they all want a quick chat. If one spots you, you'll have to fight their way through it.", "The coffee machine in here brings your tool back to full health."],
+  after: ["The door is at the bottom of the room. Walk into long grass to find a project.", "AI beats FILM, PHOTOSHOP beats AI, PREMIERE beats IMAGE.", "There are eight film reels hidden around the valley too. Each one makes your tool stronger.", "Watch out on the roads. Agency people and clients hang about out there, and they all want a quick chat. If one spots you, you'll have to fight their way through it.", "The coffee machine in here brings your tool back to full health.", "Win fights and pick up the coins lying about, and you can spend it at the coffee kiosk on the square. Each drink helps in its own way."],
   ending: ["That's all of them. Thanks for playing through my work.", "If you'd like to work together, my details are on the next screen."],
   needPick: ["Pick a tool from the stands first."],
   noPick: ["Pick one of the three tools on the stands."],
@@ -226,7 +244,7 @@ export function buildWorld() {
   road(35, 9, 36, 43); road(13, 27, 58, 28); road(15, 42, 50, 43); road(20, 11, 66, 12); road(30, 30, 40, 39);
   // the studio, on its little square
   put("house", 33, 36, { w: 5, door: [35, 36] }); rect(33, 33, 37, 36, (x, y) => { solid[I(x, y)] = 1; keep[I(x, y)] = 1; }); solid[I(35, 36)] = 0;
-  put("sign", 33, 38, { act: "sign:home" }); put("mailbox", 38, 37);
+  put("sign", 33, 38, { act: "sign:home" }); put("kiosk", 30, 31, { w: 2, act: "shop" }); put("mailbox", 38, 37);
   // The Stadium: a running track with the long grass in the middle
   rect(2, 2, 22, 16, (x, y) => { const d = Math.hypot((x - 12) / 8.6, (y - 9) / 5.6); if (d <= 1) { set(x, y, d > .7 ? TT.track : Math.floor(x / 2) % 2 ? TT.lawnA : TT.lawnB); keep[I(x, y)] = 1; } });
   rect(8, 7, 16, 11, (x, y) => (tg[I(x, y)] = 5));

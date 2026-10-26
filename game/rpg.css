@@ -147,3 +147,21 @@ body.tall .ab button{width:min(18vw,74px);height:min(18vw,74px);font-size:22px}
 body.tall .st{grid-area:st;display:flex;justify-content:center;gap:18px}
 body.tall .st button{padding:7px 16px;border-radius:99px;background:var(--ink);color:var(--paper);font:inherit;font-size:10px;letter-spacing:.18em;border:0}
 .touch .hud{font-size:max(9px,.62em)}
+/* full window: no frame round the screen any more, the game is the page */
+body:not(.tall){background:#14101c}
+body:not(.tall) .frame{border-radius:0;box-shadow:none}
+.stat.foe{left:calc(var(--ox,0px) + var(--u)*10)}
+.stat.me{right:calc(var(--ox,0px) + var(--u)*10)}
+.menu.cmd,.menu.moves{right:calc(var(--ox,0px) + var(--u)*9.5)}
+/* the burger, top right, the only thing on screen while you walk */
+.hud{gap:0}
+.hud>#bmenu{display:grid;place-content:center;gap:calc(var(--u)*1.2);width:calc(var(--u)*14);height:calc(var(--u)*14);padding:0;border-radius:calc(var(--u)*4)}
+#bmenu i{display:block;width:calc(var(--u)*6);height:calc(var(--u)*1.2);background:currentColor;border-radius:9px}
+.menu.pmenu{top:calc(var(--u)*22);right:calc(var(--u)*5);bottom:auto;min-width:calc(var(--u)*70)}
+.menu.shop{right:50%;transform:translateX(50%);max-width:calc(100% - var(--u)*12)}
+.menu.shop button{display:flex;justify-content:space-between;gap:calc(var(--u)*3);font-size:.78em;padding:calc(var(--u)*1.5) calc(var(--u)*4);min-width:calc(var(--u)*96)}
+.menu.shop b{font-weight:600}
+.menu.shop i{font-style:normal;opacity:.65}
+.menu.shop button{align-items:center}
+.menu.shop b{flex:1}
+.menu.shop .ic{width:calc(var(--u)*10);height:calc(var(--u)*10);image-rendering:pixelated}
