@@ -209,7 +209,7 @@ const P = { x: 3, y: 4, fx: 3, fy: 4, px: 48, py: 64, dir: "down", moving: false
 const objAt = (x, y) => map.objs.find((o) => !o.gone && y === o.y && x >= o.x && x < o.x + o.w && (o.solid || o.act));
 const blocked = (x, y) => x < 0 || y < 0 || x >= map.W || y >= map.H || map.solid[map.I(x, y)] || map.objs.some((o) => o.k === "npc" && !o.gone && y === o.y && x >= o.x && x < o.x + o.w);
 function place(m, x, y, dir) { map = m; P.x = P.fx = x; P.y = P.fy = y; P.px = x * 16; P.py = y * 16; P.moving = false; if (dir) P.dir = dir; P.grass = 0; }
-async function warp(m, x, y, dir) { busy = true; if (S.bike && m.id !== "world") { dropBike(map, P.fx, P.fy); bike(false); } au.sfx("door"); await fadeTo(1, 220); place(m, x, y, dir); au.music("world"); zoneNow = ""; await fadeTo(0, 220); busy = false; }
+async function warp(m, x, y, dir) { busy = true; m.objs.forEach((q) => { if (q.tr) q.cool = false; }); if (S.bike && m.id !== "world") { dropBike(map, P.fx, P.fy); bike(false); } au.sfx("door"); await fadeTo(1, 220); place(m, x, y, dir); au.music("world"); zoneNow = ""; await fadeTo(0, 220); busy = false; }
 function fadeTo(v, ms) { return new Promise((res) => { const a = fade, s = performance.now(); const step = (n) => { const k = clamp((n - s) / ms, 0, 1); fade = a + (v - a) * k; if (k < 1) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); }); }
 function night() { nightOn = !nightOn; au.sfx("secret"); toast(nightOn ? "NIGHT MODE" : "DAY MODE"); }
 
@@ -231,7 +231,7 @@ function mill(dt) {
   map.tall && map.tall.sort((p, q) => p.y - q.y);
 }
 function walk(dt) {
-  mill(dt);
+  mill(dt); lookAbout(dt);
   if (P.moving) {
     P.t += dt / (S.bike ? .075 : keys.b ? .095 : .165);
     if (P.t >= 1) { P.moving = false; P.px = P.x * 16; P.py = P.y * 16; arrive(); }
@@ -351,19 +351,31 @@ async function speak(port, lines, who) {
 const trainerObjs = () => map.objs.filter((o) => o.tr);
 const beatCount = () => S.beat.filter((b) => !TRAINERS[b].map && !TRAINERS[b].boss).length;
 const ready = (id) => !S.beat.includes(id) && (TRAINERS[id].final ? postgame() : (TRAINERS[id].needs || []).every((b) => S.beat.includes(b)));
+// in the MAL gym, after the badge, people you've beaten still clock you once per visit: that's the training
+const inGym = () => map.id.startsWith("mal");
+const canSpot = (o) => { const t = TRAINERS[o.tr]; if (!t || t.final || o.cool) return false; return S.beat.includes(o.tr) ? !!S.flags.badge && inGym() : ready(o.tr); };
 function spotted() {
   for (const o of trainerObjs()) {
-    if (!ready(o.tr) || TRAINERS[o.tr].final) continue;
+    if (!canSpot(o)) continue;
     const [dx, dy] = DIRS[o.dir], along = (P.x - o.x) * dx + (P.y - o.y) * dy, across = dx ? P.y - o.y : P.x - o.x;
-    if (along < 1 || along > 4 || Math.abs(across) > 1) continue;
-    let clear = true; for (let s = 1; s < along; s++) { const x = o.x + dx * s + (dy ? across : 0), y = o.y + dy * s + (dx ? across : 0); if (blocked(x, y)) clear = false; }
-    if (clear) return o;
+    const clearTo = (tx, ty) => { const n = Math.abs(tx - o.x) + Math.abs(ty - o.y); for (let s = 1; s < n; s++) { const x = o.x + Math.round((tx - o.x) * s / n), y = o.y + Math.round((ty - o.y) * s / n); if (blocked(x, y)) return false; } return true; };
+    // straight down their line of sight, like the handhelds
+    if (along >= 1 && along <= 4 && Math.abs(across) <= 1 && clearTo(P.x, P.y)) return o;
+    // and in the office, walk close past anyone and they'll turn and catch you
+    if (inGym() && Math.abs(P.x - o.x) + Math.abs(P.y - o.y) <= 3 && clearTo(P.x, P.y)) return o;
   }
   return null;
 }
+// gym trainers glance about while they wait
+function lookAbout(dt) {
+  if (!inGym() || busy) return;
+  for (const o of trainerObjs()) { o.lt = (o.lt ?? 1 + Math.random() * 2) - dt; if (o.lt > 0) continue; o.lt = 1.6 + Math.random() * 2.4; o.dir = pick(["up", "down", "left", "right"].filter((d) => d !== o.dir)); }
+  // turning round to find you standing there counts too
+  if (!P.moving && mode === "world") { const sp = spotted(); if (sp) script(() => challenge(sp)); }
+}
 const OPP = { up: "down", down: "up", left: "right", right: "left" };
 async function challenge(o) {
-  au.music("spotted"); au.sfx("spot"); o.bang = performance.now(); await sleep(800);
+  o.cool = true; au.music("spotted"); au.sfx("spot"); o.bang = performance.now(); await sleep(800);
   // they walk over to you
   for (let n = 0; n < 6; n++) {
     const ex = P.x - o.x, ey = P.y - o.y; if (Math.abs(ex) + Math.abs(ey) <= 1) break;
@@ -390,8 +402,10 @@ async function chat(o) {
 async function duel(o) {
   const t = TRAINERS[o.tr], pk = t.port.slice(2);
   au.music("spotted");
-  await speak(pk, t.intro, `${t.name} · ${t.role}`);
+  const again = S.beat.includes(o.tr);
+  await speak(pk, again ? t.again || ["Back for more? Go on then."] : t.intro, `${t.name} · ${t.role}`);
   const r = await fight(null, null, o.tr);
+  if (again) { if (r === "win") await speak(pk, t.after || ["Good. Again sometime."], t.name); return; }
   if (r === "win") {
     await speak(pk, t.win, t.name);
     if (t.final) { S.flags.alysha = 1; save(); hud(); au.sfx("win"); toast("THE ALYSHA TEST: PASSED", 5000); await ui.say(SAY.passed); return; }
