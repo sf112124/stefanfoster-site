@@ -1016,7 +1016,8 @@ function silOf(k) {
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const l = L(x, y); if (l < 0) continue; const i = (y * W + x) * 4; bd.data.set([22, 14, 58, 255], i);
     // its own dark line work, plus anywhere the colour jumps (the veins), lights up
     const jump = Math.max(...[[1, 0], [0, 1], [-1, 0], [0, -1]].map(([dx, dy]) => { const n = L(x + dx, y + dy); return n < 0 ? 0 : Math.abs(n - l); }));
-    if (l < 95 || jump > 38) ld.data.set([150, 110, 255, 255], i); }
+    const rim = [[1, 0], [0, 1], [-1, 0], [0, -1]].some(([dx, dy]) => L(x + dx, y + dy) < 0);
+    if (rim || (jump > 38 && l > 60)) ld.data.set([150, 110, 255, 255], i); }
   body.getContext("2d").putImageData(bd, 0, 0); line.getContext("2d").putImageData(ld, 0, 0);
   return (SIL[k] = { body, line, w: W / 2, h: H / 2 });
 }
@@ -1047,7 +1048,7 @@ function drawTitle(now) {
     if ((now / 4200) % 1 < .12) { g.fillStyle = `rgba(255,214,240,${Math.sin(((now / 4200) % 1) / .12 * Math.PI)})`; g.fillRect(Math.round(x + w * .66), Math.round(y + h * .33), 2, 2); } }
   // the others pass through the dark far off, one at a time, trailing light
   const pass = [["ai3", 0], ["butterfly", 1], ["kitten", 2]], cyc = 7000, i = Math.floor(now / cyc) % 3, k = (now % cyc) / cyc, sp = silOf(pass[i][0]);
-  if (sp && k < .8) { const q = k / .8, sc = .62, w = sp.w * sc, h = sp.h * sc, x = (i === 1 ? R0 + 20 - q * (R0 - L0 + 40) : L0 - 20 + q * (R0 - L0 + 40)), y = [30, 60, 140][i] + Math.sin(q * Math.PI * (i === 1 ? 6 : 2)) * (i === 1 ? 8 : 14) - (i === 2 ? Math.sin(q * Math.PI) * 40 : 0), fade = Math.sin(q * Math.PI);
+  if (sp && k < .8) { const q = k / .8, sc = .8, w = sp.w * sc, h = sp.h * sc, x = (i === 1 ? R0 + 20 - q * (R0 - L0 + 40) : L0 - 20 + q * (R0 - L0 + 40)), y = [30, 60, 140][i] + Math.sin(q * Math.PI * (i === 1 ? 6 : 2)) * (i === 1 ? 8 : 14) - (i === 2 ? Math.sin(q * Math.PI) * 40 : 0), fade = Math.sin(q * Math.PI);
     g.globalAlpha = fade * .8; g.drawImage(sp.body, Math.round(x - w / 2), Math.round(y - h / 2), w, h); g.globalAlpha = fade * (.5 + pulse * .5); g.drawImage(sp.line, Math.round(x - w / 2), Math.round(y - h / 2), w, h); g.globalAlpha = 1;
     if (Math.random() < .6) T.trail.push({ x: x + rnd(-w / 3, w / 3), y: y + rnd(-h / 4, h / 4), t: 0, vx: rnd(-4, 4), vy: rnd(-2, 6) }); }
   for (let j = T.trail.length - 1; j >= 0; j--) { const p = T.trail[j]; p.t += 1 / 60; p.x += p.vx / 60; p.y += p.vy / 60; if (p.t > 1.4) { T.trail.splice(j, 1); continue; } const a = 1 - p.t / 1.4; g.fillStyle = `rgba(200,180,255,${a * .8})`; g.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); }

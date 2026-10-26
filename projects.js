@@ -10,7 +10,7 @@ export const PROJECTS = [
       { head: "Anywhere" },
       { file: "anywhere.mp4" },
       { head: "Poké-folio", text: "My portfolio as a handheld monster game. Walk the valley, battle my projects in the long grass, catch them all, and take on the MAL office. Every sprite, track and line of dialogue made for it." },
-      { play: "rpg", img: "pokefolio-v2.webp", sm: "pokefolio-v2-sm.webp", caption: "Poké-folio", note: "Press start" },
+      { play: "rpg", img: "pokefolio-v3.webp", sm: "pokefolio-v3-sm.webp", caption: "Poké-folio", note: "Press start" },
       { head: "Samurai Barber" },
       { file: "barbershop-chop--aigeneratedart--animefyp--nujabes--seedance--7630960936584498454.mp4" },
       { head: "Zombie Cowboys", text: "Trailers for a zombie cowboy movie that one day I’ll have enough AI credits to make." },
