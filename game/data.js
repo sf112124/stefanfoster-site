@@ -136,7 +136,7 @@ export const TRAINERS = {
   mia: { name: "ANNA", role: "SOCIAL LEAD", look: "anna", port: "t_anna", x: 62, y: 11, dir: "left", lv: 2, team: ["vertical"],
     intro: ["Omg hiii. Can it be a trend?", "Like, vertical, but it has to feel organic.", "And can we hook them in the first half a second?"],
     win: ["Okay that's actually so good. Posting it now."], after: ["It's doing numbers. Like, real numbers."] },
-  katia: { name: "KATIA", role: "COPYWRITER", look: "katia", port: "t_katia", x: 53, y: 31, dir: "down", lv: 2, team: ["pinscher"],
+  katia: { name: "KATIA", role: "COPYWRITER", look: "katia", port: "t_katia", x: 55, y: 28, dir: "left", lv: 2, team: ["pinscher"],
     intro: ["Let me take your picture. I'll turn you into AI?", "This is Truff. She likes her butt scratched.", "TRUFFLE. Do you want a shower??!"],
     win: ["Ugh. Fine.", "You better be nice to Stef or I'll f*** you up."], after: ["Truff says you can scratch her butt now. That means she likes you."] },
   priya: { name: "TORA", role: "MARKETING LEAD", look: "tora", port: "t_tora", map: "mal1", x: 17, y: 10, dir: "left", lv: 3, team: ["kpi"],
@@ -326,7 +326,7 @@ export function buildWorld() {
   // round the corner: the smoking area
   rect(50, 31, 53, 34, (x, y) => { set(x, y, TT.paving); keep[I(x, y)] = 1; });
   put("bin", 50, 31, { act: "smoke:2" });
-  objs.push({ k: "npc", who: "smoker", x: 51, y: 32, w: 1, solid: 1, dir: "right", act: "smoke:0", puff: 1 }, { k: "npc", who: "vaper", x: 53, y: 33, w: 1, solid: 1, dir: "left", act: "smoke:1", puff: 2 });
+  objs.push({ k: "npc", who: "vaper", x: 53, y: 33, w: 1, solid: 1, dir: "left", act: "smoke:1", puff: 2 });
   // the hole
   clear(33, 22, 38, 25);
   put("hole", 22, 48, { act: "hole", flat: 1 }); put("sign", 23, 48, { act: "sign:hole" }); clear(20, 46, 25, 49);
