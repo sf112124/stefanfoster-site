@@ -10,7 +10,10 @@ in vec2 v; out vec4 o;
 uniform sampler2D T; uniform vec2 R; uniform float off, N, rowH, texW, texH, S0, B, C, hov, fly, flt, S1, C1, hrow;
 // screen y (-1..1) to a position in the stack, and how many screen pixels one texel takes there
 // in the list, only the line under the pointer grows (G per line), swelling over its own spot without nudging the others
-uniform float G[16], mx;
+uniform float G[16], mx, SP, hc, tm; uniform vec2 hm; uniform vec3 P0, P1, P2;
+float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float nz(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(hsh(i), hsh(i + vec2(1, 0)), f.x), mix(hsh(i + vec2(0, 1)), hsh(i + vec2(1, 1)), f.x), f.y); }
+float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 3; i++) { v += a * nz(p); p = p * 2.03 + vec2(1.7, 9.2); a *= .5; } return v; }
 float sa(float y){ return sqrt(y * y + .016) - .1265; }   // a soft |y|: flt through the middle line so it stays straight
 vec4 tex(float u, float row, float fy, float s){ return textureLod(T, vec2(u, (row * rowH + fy * rowH) / texH), max(0., log2(1. / s))); }
 vec4 sampleAt(vec2 q){
@@ -19,14 +22,15 @@ vec4 sampleAt(vec2 q){
   float rt = off - C * sign(q.y) * (1. - exp(-B * abs(q.y))), st = S0 * exp(B * sa(q.y)), e = (1. - exp(-B * sa(q.y))) * (1. - flt);
   float stretch = 1. + .5 * e;                       // the far lines widen more than they grow
   // the list: a straight stack
-  float rl = N * .5 - C1 * (q.y - .05);
+  float rl = N * .5 - C1 * (q.y - .05), spf = mix(1., SP, flt);
   float r = mix(rt, rl, flt), s = mix(st, S1, flt) * stretch;
   float rr = mod(r, N), row = floor(rr);
   float inList = 1. - clamp(flt * 1.8, 0., 1.) * (1. - step(0., r) * step(r, N));
   float dim = 1. - flt * .62 * (hrow < -.5 || abs(row - hrow) < .5 ? 0. : 1.);
   float grown = flt > .5 && row >= 0. && row < N ? G[int(row)] : 0.;
   // explicit detail level: the stack wraps round, and letting the GPU guess at the seam drew a grey line
-  vec4 c = grown > .004 ? vec4(0.) : textureLod(T, vec2((texW * .5 + xpx / s) / texW, (row * rowH + fract(rr) * rowH) / texH), max(0., log2(1. / s)) + e * 2.5) * inList * dim;
+  float fy = .5 + (fract(rr) - .5) * spf, inRow = step(0., fy) * step(fy, 1.);
+  vec4 c = grown > .004 ? vec4(0.) : textureLod(T, vec2((texW * .5 + xpx / s) / texW, (row * rowH + clamp(fy, 0., 1.) * rowH) / texH), max(0., log2(1. / s)) + e * 2.5) * inList * dim * inRow;
   if (flt < .5) return c;
   // the hovered line grows in place, drawn over its neighbours, with a soft magnifier that follows the pointer along the word
   for (int k = -1; k <= 1; k++) {
@@ -40,7 +44,8 @@ vec4 sampleAt(vec2 q){
     if (floor(rm) != h) continue;
     float xe = xpx - A * d * bb, sh = S1 * (1. + gh);
     float dm = 1. - .62 * (hrow < -.5 || abs(h - hrow) < .5 ? 0. : 1.);
-    c = max(c, tex((texW * .5 + xe / sh) / texW, h, fract(rm), sh * m / (1. + gh)) * dm);
+    float fm = .5 + (fract(rm) - .5) * SP; if (fm < 0. || fm > 1.) continue;
+    c = max(c, tex((texW * .5 + xe / sh) / texW, h, fm, sh * m / (1. + gh)) * dm);
   }
   return c;
 }
@@ -55,6 +60,17 @@ void main(){
   float a = clamp(c.a, 0., 1.) * (1. - smoothstep(.55, 1., fly));
   // the middle line is the darkest thing on the page; everything else falls back into the paper
   vec3 paper = vec3(.937, .933, .914), ink = mix(vec3(.047), vec3(.42, .415, .40), e * .85);
+  // hover a project in the list and the page floods with its colours: a heat field that gathers round your pointer
+  if (hc > .002) {
+    float asp = R.x / R.y; vec2 p = v * vec2(asp, 1.), m = hm * vec2(asp, 1.);
+    p += (vec2(fbm(p * 1.2 + tm * .09), fbm(p * 1.2 + 4.3 - tm * .07)) - .5) * .5;
+    float f = 1.05 * exp(-dot(p - m, p - m) / .42);
+    for (int i = 0; i < 5; i++) { float fi = float(i); vec2 cc = m + vec2(sin(tm * .37 + fi * 1.7), cos(tm * .29 + fi * 2.3)) * (.35 + .12 * fi); vec2 d = p - cc; f += .42 * exp(-dot(d, d) / (.2 + .05 * fi)); }
+    f += (fbm(p * 2.4 - tm * .05) - .5) * .25;
+    f *= hc;
+    vec3 bg = mix(paper, P0, smoothstep(.04, .3, f)); bg = mix(bg, P1, smoothstep(.28, .62, f)); bg = mix(bg, P2, smoothstep(.62, 1.05, f));
+    paper = bg;
+  }
   o = vec4(mix(paper, ink, a), 1.);
 }`;
 
@@ -84,7 +100,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "G", "mx"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
+  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "G", "mx", "SP", "hc", "tm", "hm", "P0", "P1", "P2"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
   draw(); document.fonts.ready.then(draw);
 
   // the label beside the line in the middle: who it was for, what it is, and a little moving picture in brackets
@@ -108,6 +124,13 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const lst = document.createElement("div"); lst.className = "tun-list"; lst.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-i="${i}"><span class="n mono">${String(i + 1).padStart(2, "0")}</span><span class="c">${esc(p.client)}</span></a>`).join(""); mount.appendChild(lst);
   let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null, mouseX = 0, mxS = 0; const gs = new Float32Array(16), gv = new Float32Array(16);
   mount.classList.add("is-list"); sw.querySelector("span").textContent = "TUNNEL";
+  // each project's colours, from pale edge to hot core
+  const hx = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255), PAL = (a, b, c) => [...hx(a), ...hx(b), ...hx(c)];
+  const PALS = { "coca-cola": PAL("#ffc9b8", "#ff3b30", "#a3001b"), "summer-of-sport": PAL("#e4f7b8", "#ffd23f", "#ff6a13"), "ai-commissions": PAL("#c4f3e3", "#2ec4a0", "#0f6b5a"),
+    "la-croisiere": PAL("#d4ecff", "#73b8ff", "#ff8fb8"), "ai-experiments": PAL("#ffd1f3", "#ff4fc4", "#7b2cff"), "les-benjamins": PAL("#ffe5ad", "#ff8a3d", "#c42f6b"),
+    "3d-explorations": PAL("#e1d6ff", "#9876ff", "#3324c9"), relax: PAL("#c9f3ff", "#26b8ff", "#0a3a8f"), gumtree: PAL("#e2f7cc", "#6fd64b", "#16803a"), _: PAL("#ffe1c4", "#ff9d5c", "#d6366b") };
+  let heat = 0; const pal = PALS._.slice(), hmP = [0, 0], hmS = [0, 0];
+  mount.addEventListener("pointermove", (e) => { const r = mount.getBoundingClientRect(); hmP[0] = 2 * (e.clientX - r.left) / r.width - 1; hmP[1] = 1 - 2 * (e.clientY - r.top) / r.height; });
   mount.addEventListener("pointermove", (e) => { const a = e.target.closest && e.target.closest(".tun-list a"); if (!a || e.target !== a) { mouseY = null; return; } const r = mount.getBoundingClientRect(); mouseY = 1 - 2 * (e.clientY - r.top) / r.height - .05; mouseX = 2 * (e.clientX - r.left) / r.width - 1; });
   mount.addEventListener("pointerleave", () => (mouseY = null));
   const setFlat = (on) => { flatT = on ? 1 : 0; mount.classList.toggle("is-list", on); sw.querySelector("span").textContent = on ? "TUNNEL" : "LIST"; poke(); };
@@ -190,13 +213,19 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     const S0 = (w * (mob ? .86 : .5)) / T.widest, B = 1.75, C = (h * .5) / (rowH * S0 * B);
     flatK += (flatT - flatK) * (1 - Math.pow(.0015, rdt)); const fk = flatK * flatK * (3 - 2 * flatK);
     if (opening && flatK < .12 && !going) { go(LIST[opening.i]); opening = null; }
-    const S1 = Math.min((h * .58) / (N * rowH), (w * (mob ? .8 : .4)) / T.widest), C1 = (h * .5) / (rowH * S1);
+    const SP = 1.6, S1 = Math.min((h * .64) / (N * rowH * SP), (w * (mob ? .66 : .3)) / T.widest), C1 = (h * .5) / (rowH * S1 * SP);
     // the lens drifts after the pointer and relaxes away when it leaves
     const GA = mob ? .05 : .07;
     // a slightly underdamped spring per line, so it swells past and settles; the magnifier trails the pointer like liquid
     for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h = Math.min(.008, rdt / n); for (let i = 0; i < N; i++) { gv[i] += ((((i === hrow ? GA : 0) - gs[i]) * 340) - gv[i] * 19) * h; gs[i] += gv[i] * h; } }
     mxS += (mouseX - mxS) * (1 - Math.pow(.003, rdt));
-    gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1fv(U.G, gs); gl.uniform1f(U.mx, mxS);
+    gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1fv(U.G, gs); gl.uniform1f(U.mx, mxS); gl.uniform1f(U.SP, SP);
+    // the colour flood: fades in on the hovered project's palette, eases between palettes, follows the pointer softly
+    const ht = hrow >= 0 && fk > .5 ? 1 : 0, pk = 1 - Math.pow(.03, rdt); heat += (ht - heat) * (1 - Math.pow(ht ? .08 : .02, rdt));
+    if (hrow >= 0) { const tgt = PALS[LIST[hrow].slug] || PALS._; for (let j = 0; j < 9; j++) pal[j] += (tgt[j] - pal[j]) * pk; }
+    hmS[0] += (hmP[0] - hmS[0]) * (1 - Math.pow(.02, rdt)); hmS[1] += (hmP[1] - hmS[1]) * (1 - Math.pow(.02, rdt));
+    gl.uniform1f(U.hc, heat * heat * (3 - 2 * heat)); gl.uniform1f(U.tm, now / 1000); gl.uniform2f(U.hm, hmS[0], hmS[1]);
+    gl.uniform3f(U.P0, pal[0], pal[1], pal[2]); gl.uniform3f(U.P1, pal[3], pal[4], pal[5]); gl.uniform3f(U.P2, pal[6], pal[7], pal[8]);
     if (flatK > .5) placeList(S1, C1);
     lst.style.setProperty("--row", `${(rowH * S1) / Math.min(1.5, devicePixelRatio || 1)}px`); lst.style.setProperty("--wide", `${(T.widest * S1) / Math.min(1.5, devicePixelRatio || 1)}px`);
     gl.uniform2f(U.R, w, h); gl.uniform1f(U.off, off); gl.uniform1f(U.N, N); gl.uniform1f(U.rowH, rowH); gl.uniform1f(U.texW, texW); gl.uniform1f(U.texH, texH);
