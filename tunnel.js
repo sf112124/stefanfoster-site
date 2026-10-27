@@ -61,11 +61,11 @@ void main(){
   // the middle line is the darkest thing on the page; everything else falls back into the paper
   vec3 paper = vec3(.937, .933, .914), ink = mix(vec3(.047), vec3(.42, .415, .40), e * .85);
   // hover a project in the list and the whole page floods with its colours: a liquid gradient that pours out from your pointer
-  if (hc > .002 && FL > .5) {
-    // the real fluid: dye carried through a simulated flow, poured in from the pointer
-    vec4 dy = texture(D, v * .5 + .5); vec3 dc = dy.rgb / max(dy.a, 1e-3); float lu = dot(dc, vec3(.3, .55, .15)); dc = clamp(mix(vec3(lu), dc, 1.45), 0., 1.); float amt = 1. - exp(-dy.a * 4.5);
-    vec3 bg = mix(PB, dc, clamp(amt, 0., 1.));
-    paper = mix(paper, bg, hc); ink = mix(ink, vec3(1.), hc);
+  if (FL > .5) {
+    // the real fluid: dye carried through a simulated flow, poured in from the pointer. It outlives the hover, so it can
+    // swirl itself away rather than just fading; the type goes white wherever there's colour under it
+    vec4 dy = texture(D, v * .5 + .5); vec3 dc = dy.rgb / max(dy.a, 1e-3); float lu = dot(dc, vec3(.3, .55, .15)); dc = clamp(mix(vec3(lu), dc, 1.3), 0., 1.) * .93; float amt = clamp(1. - exp(-dy.a * 5.), 0., 1.);
+    paper = mix(mix(paper, PB, hc), dc, amt); ink = mix(ink, vec3(1.), clamp(max(hc, amt * 1.4), 0., 1.));
   } else if (hc > .002) {
     float asp = R.x / R.y; vec2 p = v * vec2(asp, 1.), m = hm * vec2(asp, 1.), d = p - m;
     float t = tm * .55; d -= hv * .35 * exp(-dot(d, d) / 1.4); float rad = length(d);   // flung colour lags behind and overshoots with the pointer
@@ -137,13 +137,13 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   // each project's colours, from pale edge to hot core
   const hx = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255), PAL = (a, b, c) => [...hx(a), ...hx(b), ...hx(c)];
   // each project's colours: four bright, harmonious hues the flow cycles through
-  const PALS = { "ai-experiments": ["#ff4fd8", "#8b5cff", "#2fd9ff", "#ffe85c"], "la-croisiere": ["#5cc8ff", "#ff8fd0", "#ffe27a", "#6ff0d2"],
-    "les-benjamins": ["#ff9a3c", "#ff4f8b", "#ffd447", "#b98cff"], "ai-commissions": ["#3ef0b4", "#c4ff4d", "#2fc4ff", "#a99bff"],
-    "3d-explorations": ["#9a6bff", "#5f8bff", "#ff6be0", "#7ff1ff"], "summer-of-sport": ["#a6ff3d", "#ffe03a", "#ff8a24", "#ff4f9a"],
-    relax: ["#2fe0ff", "#4a7dff", "#59ffc8", "#c49bff"], "coca-cola": ["#ff3550", "#ff8a5c", "#ff5fc8", "#ffd36b"],
-    gumtree: ["#3fee6a", "#d2ff4d", "#3fe0d0", "#fff05c"], _: ["#ff6bb5", "#ffb14a", "#7a8bff", "#5ff0d0"] };
+  const PALS = { "ai-experiments": ["#ff2fb9", "#7b3cff", "#1fb6ff", "#ff7a3d"], "la-croisiere": ["#2f9bff", "#ff5fae", "#ff9f40", "#21c7b8"],
+    "les-benjamins": ["#ff7a1f", "#ff2f6e", "#e0a800", "#9a5cff"], "ai-commissions": ["#00c48c", "#3fa9ff", "#7d5cff", "#8fd400"],
+    "3d-explorations": ["#7b4dff", "#3f6dff", "#ff4fd2", "#00b7e0"], "summer-of-sport": ["#ff6a00", "#ff2f7a", "#e6b800", "#47c400"],
+    relax: ["#0096ff", "#3d4dff", "#00c2b2", "#a04dff"], "coca-cola": ["#ff1f3d", "#ff6a3d", "#d6249f", "#ff9a1f"],
+    gumtree: ["#1fbf4f", "#00a8a8", "#9ad400", "#2f7dff"], _: ["#ff3d9a", "#ff8a1f", "#5a5cff", "#00c2a8"] };
   for (const k in PALS) PALS[k] = PALS[k].map((c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255));
-  let heat = 0; const pal = PALS._.flat(), hmP = [0, 0], hmS = [0, 0], hmV = [0, 0], prevP = [0, 0]; let fluidOn = 0;
+  let heat = 0; const pal = PALS._.flat(), hmP = [0, 0], hmS = [0, 0], hmV = [0, 0], prevP = [0, 0]; let fluidOn = 0, wasOn = 0, leaveT = 0; const lastP = [.5, .5];
   mount.addEventListener("pointermove", (e) => { const r = mount.getBoundingClientRect(); hmP[0] = 2 * (e.clientX - r.left) / r.width - 1; hmP[1] = 1 - 2 * (e.clientY - r.top) / r.height; });
   mount.addEventListener("pointermove", (e) => { const a = e.target.closest && e.target.closest(".tun-list a"); if (!a || e.target !== a) { mouseY = null; return; } const r = mount.getBoundingClientRect(); mouseY = 1 - 2 * (e.clientY - r.top) / r.height - .05; mouseX = 2 * (e.clientX - r.left) / r.width - 1; });
   mount.addEventListener("pointerleave", () => (mouseY = null));
@@ -239,28 +239,37 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     if (hrow >= 0) { const tgt = (PALS[LIST[hrow].slug] || PALS._).flat(); for (let j = 0; j < 12; j++) pal[j] += (tgt[j] - pal[j]) * pk; }
     // a loose spring: flick the mouse and the colour swings after it, overshoots and settles
     for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h2 = Math.min(.008, rdt / n); for (let j = 0; j < 2; j++) { hmV[j] += ((hmP[j] - hmS[j]) * 34 - hmV[j] * 5.2) * h2; hmS[j] += hmV[j] * h2; } }
-    gl.uniform1f(U.hc, heat * heat * (3 - 2 * heat)); gl.uniform1f(U.tm, now / 1000); gl.uniform2f(U.hm, hmS[0], hmS[1]); gl.uniform2f(U.hv, Math.max(-1.5, Math.min(1.5, hmV[0] * .25)), Math.max(-1.5, Math.min(1.5, hmV[1] * .25))); lst.classList.toggle("hot", heat > .35);
+    gl.uniform1f(U.hc, heat * heat * (3 - 2 * heat)); gl.uniform1f(U.tm, now / 1000); gl.uniform2f(U.hm, hmS[0], hmS[1]); gl.uniform2f(U.hv, Math.max(-1.5, Math.min(1.5, hmV[0] * .25)), Math.max(-1.5, Math.min(1.5, hmV[1] * .25))); lst.classList.toggle("hot", heat > .35 || (leaveT && now - leaveT < 1800));
     gl.uniform3f(U.P0, pal[0], pal[1], pal[2]); gl.uniform3f(U.P1, pal[3], pal[4], pal[5]); gl.uniform3f(U.P2, pal[6], pal[7], pal[8]);
-    // drive the fluid: the pointer stirs it and pours colour; two slow currents keep it moving when you're still
+    // drive the fluid: the pointer stirs it and pours colour, three slow currents fill the page; leave the list and it spins itself down a drain
+    if (hrow >= 0) { wasOn = 1; leaveT = 0; lastP[0] = (hmP[0] + 1) / 2; lastP[1] = (hmP[1] + 1) / 2; } else if (wasOn) { wasOn = 0; leaveT = now; }
+    const draining = leaveT && now - leaveT < 2600;
     if (fluid && (heat > .004 || fluidOn > 0)) {
-      fluidOn = heat > .004 ? 3 : fluidOn - rdt; const fdt = Math.min(rdt, 1 / 30), t = now / 1000, ar = w / h;
+      fluidOn = heat > .004 || draining ? 3 : fluidOn - rdt; const fdt = Math.min(rdt, 1 / 30), t = now / 1000, ar = w / h;
       if (fluidOn > 0 && fdt > 0) {
         const hue = (o) => { const f = ((t * .32 + o) % 4 + 4) % 4, i = Math.floor(f), k = f - i, kk = k * k * (3 - 2 * k), a = i * 3, b = ((i + 1) % 4) * 3; return [0, 1, 2].map((c) => pal[a + c] + (pal[b + c] - pal[a + c]) * kk); };
         const P = [(hmP[0] + 1) / 2, (hmP[1] + 1) / 2], dx = P[0] - prevP[0], dy = P[1] - prevP[1]; prevP[0] = P[0]; prevP[1] = P[1];
+        const dye = (c, a) => [c[0] * a, c[1] * a, c[2] * a, a];
         if (hrow >= 0) {
           const sp = Math.hypot(dx, dy);
-          if (sp > 1e-4 && sp < .3) { const c = hue(0), a = Math.min(2, .4 + sp * 30); fluid.splat(P, [dx * 6200 * ar, dy * 6200], [c[0] * a, c[1] * a, c[2] * a, a], .0022); }
-          for (let e = 0; e < 2; e++) { const an = t * (.5 + e * .23) + e * 3.1, q = [.5 + Math.cos(an) * .22 / ar * 1.6, .5 + Math.sin(an * 1.3) * .28], c = hue(1.5 + e * 2), a = .09;
-            fluid.splat(q, [-Math.sin(an) * 140, Math.cos(an * 1.3) * 160], [c[0] * a, c[1] * a, c[2] * a, a], .006); }
+          if (sp > 1e-4 && sp < .3) fluid.splat(P, [dx * 6200 * ar, dy * 6200], dye(hue(0), Math.min(2.4, .5 + sp * 34)), .0026);
+          fluid.splat(P, [Math.cos(t * 2.1) * 60, Math.sin(t * 1.7) * 60], dye(hue(.7), .12), .0055);   // a steady bloom under the pointer
+          for (let e = 0; e < 3; e++) { const an = t * (.42 + e * .17) + e * 2.1, q = [.5 + Math.cos(an) * (.3 + e * .08), .5 + Math.sin(an * 1.3 + e) * (.3 + e * .05)], c = hue(1.2 + e * 1.1);
+            fluid.splat(q, [-Math.sin(an) * 200, Math.cos(an * 1.3 + e) * 220], dye(c, .1), .014); }
+        } else if (draining) {
+          // a vortex where you left, tightening as it goes, so the colour spirals away
+          const k = (now - leaveT) / 2600, str = 900 * (1 - k * .6);
+          for (let e = 0; e < 6; e++) { const an = e / 6 * 6.283 + t * 3, rr = .16 * (1 - k * .7), q = [lastP[0] + Math.cos(an) * rr / ar, lastP[1] + Math.sin(an) * rr];
+            fluid.splat(q, [-Math.sin(an) * str - Math.cos(an) * str * .35, Math.cos(an) * str - Math.sin(an) * str * .35], [0, 0, 0, 0], .004); }
         }
-        fluid.step(fdt, hrow >= 0 ? .22 : 2.2);
+        fluid.step(fdt, hrow >= 0 ? .18 : draining ? .4 + Math.pow((now - leaveT) / 2600, 2) * 5 : 6);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height); gl.useProgram(pr);
         gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
       }
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, fluid.dye); gl.uniform1i(U.D, 1); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(U.T, 0);
     }
-    gl.uniform1f(U.FL, fluid ? 1 : 0);
-    { const m = [0, 1, 2].map((c) => (pal[c] + pal[3 + c] + pal[6 + c] + pal[9 + c]) / 4); gl.uniform3f(U.PB, ...m.map((c) => 1 - (1 - c) * .2)); }
+    gl.uniform1f(U.FL, fluid && fluidOn > 0 ? 1 : 0);
+    { const m = [0, 1, 2].map((c) => (pal[c] + pal[3 + c] + pal[6 + c] + pal[9 + c]) / 4); gl.uniform3f(U.PB, ...m.map((c) => 1 - (1 - c) * .28)); }
     if (flatK > .5) placeList(S1, C1);
     lst.style.setProperty("--row", `${(rowH * S1) / Math.min(1.5, devicePixelRatio || 1)}px`); lst.style.setProperty("--wide", `${(T.widest * S1) / Math.min(1.5, devicePixelRatio || 1)}px`);
     gl.uniform2f(U.R, w, h); gl.uniform1f(U.off, off); gl.uniform1f(U.N, N); gl.uniform1f(U.rowH, rowH); gl.uniform1f(U.texW, texW); gl.uniform1f(U.texH, texH);
