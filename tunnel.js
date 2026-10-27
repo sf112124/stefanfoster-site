@@ -1,4 +1,5 @@
 import { makeFluid } from "./fluid.js";
+const PAINT = false;   // the colour paint behind the index on hover (switched off for now)
 // The index as a tunnel: every project name stacked in a loop and pulled through a lens.
 // The middle line sits small and sharp; the lines above and below swell, stretch and smear out towards the edges.
 // Wheel, drag or swipe spins it with weight, and it always clicks to rest on a name. Everything is drawn on the GPU, so it stays smooth.
@@ -108,7 +109,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr); gl.useProgram(pr);
   const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
   const loc = gl.getAttribLocation(pr, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-  const fluid = reduce ? null : makeFluid(gl, buf); gl.useProgram(pr);
+  const fluid = reduce || !PAINT ? null : makeFluid(gl, buf); gl.useProgram(pr);
   const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
@@ -238,11 +239,11 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     mxS += (mouseX - mxS) * (1 - Math.pow(.003, rdt));
     gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1fv(U.G, gs); gl.uniform1f(U.mx, mxS); gl.uniform1f(U.SP, SP);
     // the colour flood: fades in on the hovered project's palette, eases between palettes, follows the pointer softly
-    const ht = hrow >= 0 && fk > .5 ? 1 : 0, pk = 1 - Math.pow(.03, rdt); heat += (ht - heat) * (1 - Math.pow(ht ? .08 : .02, rdt));
+    const ht = PAINT && hrow >= 0 && fk > .5 ? 1 : 0, pk = 1 - Math.pow(.03, rdt); heat += (ht - heat) * (1 - Math.pow(ht ? .08 : .02, rdt));
     if (hrow >= 0) { const tgt = (PALS[LIST[hrow].slug] || PALS._).flat(); for (let j = 0; j < 12; j++) pal[j] += (tgt[j] - pal[j]) * pk; }
     // a loose spring: flick the mouse and the colour swings after it, overshoots and settles
     for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h2 = Math.min(.008, rdt / n); for (let j = 0; j < 2; j++) { hmV[j] += ((hmP[j] - hmS[j]) * 34 - hmV[j] * 5.2) * h2; hmS[j] += hmV[j] * h2; } }
-    gl.uniform1f(U.hc, heat * heat * (3 - 2 * heat)); gl.uniform1f(U.tm, now / 1000); gl.uniform2f(U.hm, hmS[0], hmS[1]); gl.uniform2f(U.hv, Math.max(-1.5, Math.min(1.5, hmV[0] * .25)), Math.max(-1.5, Math.min(1.5, hmV[1] * .25))); lst.classList.toggle("hot", heat > .35 || (leaveT && now - leaveT < DR * .55));
+    gl.uniform1f(U.hc, heat * heat * (3 - 2 * heat)); gl.uniform1f(U.tm, now / 1000); gl.uniform2f(U.hm, hmS[0], hmS[1]); gl.uniform2f(U.hv, Math.max(-1.5, Math.min(1.5, hmV[0] * .25)), Math.max(-1.5, Math.min(1.5, hmV[1] * .25))); lst.classList.toggle("hot", heat > .35 || (PAINT && leaveT && now - leaveT < DR * .55));
     gl.uniform3f(U.P0, pal[0], pal[1], pal[2]); gl.uniform3f(U.P1, pal[3], pal[4], pal[5]); gl.uniform3f(U.P2, pal[6], pal[7], pal[8]);
     // drive the fluid: the pointer stirs it and pours colour, three slow currents fill the page; leave the list and it spins itself down a drain
     if (hrow >= 0) { wasOn = 1; leaveT = 0; lastP[0] = (hmP[0] + 1) / 2; lastP[1] = (hmP[1] + 1) / 2; } else if (wasOn) { wasOn = 0; leaveT = now; DR = 3200 + Math.random() * 1800; XS[0] = Math.random() * 40; XS[1] = Math.random() * 40; }
