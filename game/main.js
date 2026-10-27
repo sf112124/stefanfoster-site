@@ -681,8 +681,10 @@ async function fight(def, slug, trId) {
     if (slug) await catchIt(foe);
     else { au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is ${tr ? "dealt with" : "beaten"}.`); }
     au.music(null); au.chip.fanfare();
-    const lvBefore = {}, nmBefore = {}; for (const k of used) { lvBefore[k] = lvlOf(k); nmBefore[k] = formFor(k).name; }
-    const up = (n = 1) => { S.lvl = Math.min(CAP, S.lvl + n); used.forEach((k) => { if (k !== "tool" && !(S.inf || {})[k]) S.plv[k] = Math.min(CAP, (S.plv[k] || S.lvl) + n); }); };
+    const bench = party().filter((k) => k !== "tool" && k !== slug && !used.has(k) && S.plv[k] != null && !(S.inf || {})[k]);   // the ones sat in the folio learn too, at half the pace
+    const lvBefore = {}, nmBefore = {}; for (const k of [...used, ...bench]) { lvBefore[k] = lvlOf(k); nmBefore[k] = formFor(k).name; }
+    const up = (n = 1) => { S.lvl = Math.min(CAP, S.lvl + n); used.forEach((k) => { if (k !== "tool" && !(S.inf || {})[k]) S.plv[k] = Math.min(CAP, (S.plv[k] || S.lvl) + n); });
+      S.bxp = S.bxp || {}; bench.forEach((k) => { S.bxp[k] = (S.bxp[k] || 0) + n * .5; const g = Math.floor(S.bxp[k]); if (g > 0) { S.bxp[k] -= g; S.plv[k] = Math.min(CAP, (S.plv[k] || S.lvl) + g); } }); };
     // money: clients pay a fee, wild things drop a bit of change
     const fee = Math.round((tr ? (again ? 1 + L * .15 : 2 + L * .35) * (tr.final ? 3 : boss ? 2 : 1) : slug ? 1 + L * .15 : .5 + L * .1) * 10) / 10;
     if (tr) {
@@ -695,7 +697,9 @@ async function fight(def, slug, trId) {
     await ui.line(`${tr ? `${tr.name} paid you` : "You picked up"} ${money(fee)}.`);
     // say who grew, then evolve anyone who's ready
     for (const k of used) { const was = lvBefore[k], now = lvlOf(k); if (now > was) { await ui.line(`${nmBefore[k]} grew to level ${now}!`, { auto: .9 }); } }
-    for (const k of used) { await evolve(k, lvBefore[k], me); keepStage(k); } save();
+    const grew = bench.filter((k) => lvlOf(k) > lvBefore[k]);
+    if (grew.length) await ui.line(grew.length === 1 ? `Back in your folio, ${nmBefore[grew[0]]} grew to level ${lvlOf(grew[0])}.` : `Back in your folio, ${grew.length} of your team grew a level.`, { auto: .9 });
+    for (const k of [...used, ...grew]) { await evolve(k, lvBefore[k], me); keepStage(k); } save();
     if (slug) await ui.line(`${def.name} joined your folio. You can send it out in battle now.`);
     // knocks stay with you until you get a coffee
     if (me.hp < me.max * .35) await ui.line(`${me.name} is looking worn out. A coffee would sort that.`);

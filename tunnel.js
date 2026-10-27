@@ -68,7 +68,7 @@ void main(){
     vec4 dy = texture(D, v * .5 + .5); vec3 dc = dy.rgb / max(dy.a, 1e-3); float lu = dot(dc, vec3(.3, .55, .15)); dc = clamp(mix(vec3(lu), dc, 1.35), 0., 1.); float amt = clamp(1. - exp(-dy.a * 5.), 0., 1.);
     // leaving: the paint carries on along its paths and crumbles away, thinnest and roughest bits first
     if (EX > 0.) { float er = fbm(v * vec2(R.x / R.y, 1.) * 4.2 + XS + tm * .35) * .55 + fbm(v * 11. - XS.yx - tm * .2) * .25; amt *= smoothstep(EX - .05, EX + .05, amt * .3 + er * .95); }
-    dc = mix(dc, vec3(1.), .06); paper = mix(paper, dc, amt * .92);
+    float rim = 1. - smoothstep(.12, .62, amt); dc = mix(dc, PB, rim * .95); paper = mix(paper, dc, clamp(amt * .92 + rim * smoothstep(0., .1, amt) * .4, 0., 1.));
   } else if (hc > .002) {
     float asp = R.x / R.y; vec2 p = v * vec2(asp, 1.), m = hm * vec2(asp, 1.), d = p - m;
     float t = tm * .55; d -= hv * .35 * exp(-dot(d, d) / 1.4); float rad = length(d);   // flung colour lags behind and overshoots with the pointer
@@ -141,11 +141,12 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const hx = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255), PAL = (a, b, c) => [...hx(a), ...hx(b), ...hx(c)];
   // each project's colours: four bright, harmonious hues the flow cycles through
   // juicy, analogous palettes: neighbouring hues only, so wherever they swirl together they stay bright and never go muddy
-  const PALS = { "ai-experiments": ["#ff2fb9", "#8a3cff", "#ff6a8a", "#ffb03a"], "la-croisiere": ["#0a8cff", "#00d0ff", "#ff5fa2", "#ffd84a"],
-    "les-benjamins": ["#ff3d6e", "#ff7a2f", "#ffc23c", "#ff4fb0"], "ai-commissions": ["#00cf8a", "#00b0ff", "#b8f02e", "#2fe0d0"],
-    "3d-explorations": ["#7b3cff", "#2f6bff", "#ff4fd8", "#b04dff"], "summer-of-sport": ["#ff5a1f", "#ff2e7e", "#ffc400", "#ff7a45"],
-    relax: ["#0a8bff", "#00e1ff", "#6f5bff", "#00d6b0"], "coca-cola": ["#ff1f4b", "#ff5a2e", "#ff3fa4", "#ff8a3d"],
-    gumtree: ["#14d873", "#00c4c4", "#a8f03a", "#00b0ff"], _: ["#ff3fae", "#7a5cff", "#00b8ff", "#ff8a3d"] };
+  // four colours that flow from the cursor, then a fifth that only shows round the edges of the splash
+  const PALS = { "ai-experiments": ["#ff8a12", "#ffb81c", "#0aa6ad", "#2f45d8", "#e8197f"], "la-croisiere": ["#1f62e6", "#14c4cb", "#ffac17", "#ff6a35", "#ff8a12"],
+    "les-benjamins": ["#f2421b", "#ff8a12", "#ffc61a", "#0aa6ad", "#2f45d8"], "ai-commissions": ["#0fb37a", "#0a8bd0", "#3fe0b4", "#ffb300", "#f2421b"],
+    "3d-explorations": ["#2f45d8", "#1f72ff", "#7a3cff", "#ff8a12", "#14c4cb"], "summer-of-sport": ["#ff7a00", "#ef3b24", "#ffc400", "#1f6fff", "#0aa6ad"],
+    relax: ["#0aa6ad", "#1a6bff", "#2fd6d0", "#ffb300", "#f2421b"], "coca-cola": ["#e8261c", "#ff8a12", "#ffc21a", "#e8197f", "#0aa6ad"],
+    gumtree: ["#13b86a", "#19c8c0", "#ffcc1a", "#1f6fff", "#ff8a12"], _: ["#ff8a12", "#ffb81c", "#0aa6ad", "#2f45d8", "#e8197f"] };
   for (const k in PALS) PALS[k] = PALS[k].map((c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255));
   let heat = 0; const pal = PALS._.flat(), hmP = [0, 0], hmS = [0, 0], hmV = [0, 0], prevP = [0, 0]; let fluidOn = 0, wasOn = 0, leaveT = 0, DR = 3800; const XS = [0, 0]; const lastP = [.5, .5];
   mount.addEventListener("pointermove", (e) => { const r = mount.getBoundingClientRect(); hmP[0] = 2 * (e.clientX - r.left) / r.width - 1; hmP[1] = 1 - 2 * (e.clientY - r.top) / r.height; });
@@ -240,7 +241,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1fv(U.G, gs); gl.uniform1f(U.mx, mxS); gl.uniform1f(U.SP, SP);
     // the colour flood: fades in on the hovered project's palette, eases between palettes, follows the pointer softly
     const ht = PAINT && hrow >= 0 && fk > .5 ? 1 : 0, pk = 1 - Math.pow(.03, rdt); heat += (ht - heat) * (1 - Math.pow(ht ? .08 : .02, rdt));
-    if (hrow >= 0) { const tgt = (PALS[LIST[hrow].slug] || PALS._).flat(); for (let j = 0; j < 12; j++) pal[j] += (tgt[j] - pal[j]) * pk; }
+    if (hrow >= 0) { const tgt = (PALS[LIST[hrow].slug] || PALS._).flat(); for (let j = 0; j < 15; j++) pal[j] += (tgt[j] - pal[j]) * pk; }
     // a loose spring: flick the mouse and the colour swings after it, overshoots and settles
     for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h2 = Math.min(.008, rdt / n); for (let j = 0; j < 2; j++) { hmV[j] += ((hmP[j] - hmS[j]) * 34 - hmV[j] * 5.2) * h2; hmS[j] += hmV[j] * h2; } }
     gl.uniform1f(U.hc, 0); gl.uniform1f(U.tm, now / 1000); gl.uniform2f(U.hm, hmS[0], hmS[1]); gl.uniform2f(U.hv, Math.max(-1.5, Math.min(1.5, hmV[0] * .25)), Math.max(-1.5, Math.min(1.5, hmV[1] * .25))); 
@@ -251,7 +252,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     if (fluid && (heat > .004 || fluidOn > 0)) {
       fluidOn = heat > .004 || draining ? 3 : fluidOn - rdt; const fdt = Math.min(rdt, 1 / 30), t = now / 1000, ar = w / h;
       if (fluidOn > 0 && fdt > 0) {
-        const hue = (o) => { const f = ((t * .32 + o) % 4 + 4) % 4, i = Math.floor(f), k = f - i, kk = k * k * (3 - 2 * k), a = i * 3, b = ((i + 1) % 4) * 3; return [0, 1, 2].map((c) => pal[a + c] + (pal[b + c] - pal[a + c]) * kk); };
+        const hue = (o) => { const f = ((t * .32 + o) % 4 + 4) % 4, i = Math.floor(f), k = f - i, kk = Math.min(1, Math.max(0, (k - .7) / .3)), kk2 = kk * kk * (3 - 2 * kk), a = i * 3, b = ((i + 1) % 4) * 3; return [0, 1, 2].map((c) => pal[a + c] + (pal[b + c] - pal[a + c]) * kk2); };
         const P = [(hmP[0] + 1) / 2, (hmP[1] + 1) / 2], dx = P[0] - prevP[0], dy = P[1] - prevP[1]; prevP[0] = P[0]; prevP[1] = P[1];
         const dye = (c, a) => [c[0] * a, c[1] * a, c[2] * a, a];
         if (hrow >= 0) {
@@ -265,7 +266,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, fluid.dye); gl.uniform1i(U.D, 1); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(U.T, 0);
     }
     gl.uniform1f(U.FL, fluid && fluidOn > 0 ? 1 : 0); gl.uniform1f(U.EX, 0); const hs = heat * heat * (3 - 2 * heat); gl.uniform1f(U.BT, 0); gl.uniform2f(U.XS, XS[0], XS[1]);
-    { const m = [0, 1, 2].map((c) => (pal[c] + pal[3 + c] + pal[6 + c] + pal[9 + c]) / 4); gl.uniform3f(U.PB, ...m.map((c) => 1 - (1 - c) * .28)); }
+    { const m = [0, 1, 2].map((c) => (pal[c] + pal[3 + c] + pal[6 + c] + pal[9 + c]) / 4); gl.uniform3f(U.PB, pal[12], pal[13], pal[14]); }
     if (flatK > .5) placeList(S1, C1);
     lst.style.setProperty("--row", `${(rowH * S1) / Math.min(1.5, devicePixelRatio || 1)}px`); lst.style.setProperty("--wide", `${(T.widest * S1) / Math.min(1.5, devicePixelRatio || 1)}px`);
     gl.uniform2f(U.R, w, h); gl.uniform1f(U.off, off); gl.uniform1f(U.N, N); gl.uniform1f(U.rowH, rowH); gl.uniform1f(U.texW, texW); gl.uniform1f(U.texH, texH);
