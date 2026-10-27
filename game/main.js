@@ -258,11 +258,12 @@ function walk(dt) {
   if (took("a")) { const [dx, dy] = DIRS[P.dir], o = objAt(P.x + dx, P.y + dy); if (o && o.act) { run(o.act, o); return; } if (S.bike && map.id === "world") { script(hopOff); return; } }
   for (const d of ["up", "down", "left", "right"]) if (keys[d]) {
     const [dx, dy] = DIRS[d]; P.dir = d;
-    if (blocked(P.x + dx, P.y + dy) && !tryPush(P.x + dx, P.y + dy, dx, dy)) { if (tap[d]) au.sfx("bump"); tap[d] = false; return; }
+    if (blocked(P.x + dx, P.y + dy) && !tryPush(P.x + dx, P.y + dy, dx, dy)) { if (tap[d]) { au.sfx("bump"); if (/^mal/.test(map.id) && ++stuckN % 6 === 0) toast("BOXED IN? THE MENU CAN START THIS FLOOR AGAIN", 3200); } tap[d] = false; return; }
     tap[d] = false; trail(); P.fx = P.x; P.fy = P.y; P.x += dx; P.y += dy; P.t = 0; P.moving = true; P.steps++; return;
   }
 }
 // gym puzzles: wheelie chairs you can shove one square, as long as there's room behind them
+let stuckN = 0;
 function tryPush(x, y, dx, dy) {
   const o = map.objs.find((q) => q.push && !q.gone && q.x === x && q.y === y); if (!o || o.mv) return false;
   const bx = x + dx, by = y + dy;
@@ -907,16 +908,18 @@ function hud() { $("hud").hidden = mode !== "world" || !S.starter; }
 const fsOn = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
 function fullscreen() { const d = document.documentElement; try { if (fsOn()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else (d.requestFullscreen || d.webkitRequestFullscreen).call(d); } catch (e) {} }
 function toggleSound() { au.on = !au.on; if (au.on) au.unlock(); au.toggle(); toast(au.on ? "SOUND ON" : "SOUND OFF", 1200); }
+// where you come in on each office floor, for starting it again if the furniture boxes you in
+const FLOOR_IN = { mal0: [15, 12, "up"], mal1: [20, 3, "down"], mal2: [1, 3, "down"] };
 function openMenu() {
   if (busy || mode !== "world" || !S.starter || folioOpen) return;
   let then = null;
   script(async () => {
     au.sfx("ok");
     ui.show(`FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8 · CHATS ${S.beat.length}/${Object.keys(TRAINERS).length} · ${money(S.cash || 0)}${S.flags.badge ? " · ★ MAL BADGE" : ""}`);
-    const opts = [["folio", "FOLIO"], ["bag", "BAG"], ["fs", fsOn() ? "EXIT FULLSCREEN" : "FULLSCREEN"], ["snd", au.on ? "SOUND: ON" : "SOUND: OFF"], ["exit", "BACK TO THE SITE"]];
+    const inOffice = /^mal/.test(map.id), opts = [["folio", "FOLIO"], ["bag", "BAG"], ...(inOffice ? [["redo", "START THIS FLOOR AGAIN"], ["out", "LEAVE THE OFFICE"]] : []), ["fs", fsOn() ? "EXIT FULLSCREEN" : "FULLSCREEN"], ["snd", au.on ? "SOUND: ON" : "SOUND: OFF"], ["exit", "BACK TO THE SITE"]];
     const c = await ui.choose(opts.map((o) => o[1]), { cls: "pmenu", cancel: true }); ui.hide();
     if (c < 0) return; const k = opts[c][0];
-    if (k === "folio") then = folio; else if (k === "bag") { await useItem(null); ui.hide(); } else if (k === "fs") fullscreen(); else if (k === "snd") toggleSound(); else if (k === "exit") location.href = "./#ai-experiments";
+    if (k === "folio") then = folio; else if (k === "bag") { await useItem(null); ui.hide(); } else if (k === "fs") fullscreen(); else if (k === "snd") toggleSound(); else if (k === "exit") location.href = "./#ai-experiments"; else if (k === "redo") { const e = FLOOR_IN[map.id] || FLOOR_IN.mal0; then = () => script(() => warp(map, ...e)); } else if (k === "out") then = () => script(() => warp(maps.world, 46, 36, "down"));
   }).then(() => then && then());
 }
 // tap or click a thing near you to interact with it
