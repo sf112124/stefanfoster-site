@@ -210,6 +210,8 @@ export function buildArt() {
   A.obj.chair = shape(14, 20, (g) => { box(g, 2, 0, 10, 9, "#3a3350"); box(g, 3, 1, 8, 7, "#57507a"); box(g, 1, 9, 12, 4, "#3a3350"); box(g, 2, 10, 10, 2, "#6e43b8"); box(g, 6, 13, 2, 4, "#9aa0b5"); box(g, 1, 17, 12, 1, "#9aa0b5"); ell(g, 2, 18.5, 1.5, 1.5, "#2b1f3b"); ell(g, 12, 18.5, 1.5, 1.5, "#2b1f3b"); ell(g, 7, 18.5, 1.5, 1.5, "#2b1f3b"); });
   A.obj.wetsign = shape(12, 18, (g) => { poly(g, [[6, 0], [11, 17], [1, 17]], "#ffd23f"); poly(g, [[6, 2], [9, 13], [3, 13]], "#ffe58a"); box(g, 5, 5, 2, 5, "#2b1f3b"); box(g, 5, 11, 2, 2, "#2b1f3b"); box(g, 1, 16, 10, 2, "#c99a2e"); });
   A.obj.tape = shape(16, 18, (g) => { box(g, 1, 4, 2, 14, "#9aa0b5"); box(g, 13, 4, 2, 14, "#9aa0b5"); box(g, 0, 3, 4, 2, "#cfd3e0"); box(g, 12, 3, 4, 2, "#cfd3e0"); poly(g, [[0, 7], [16, 11], [16, 14], [0, 10]], "#f0546a"); poly(g, [[0, 13], [16, 6], [16, 9], [0, 16]], "#ff7d8e"); box(g, 3, 9, 3, 1, "#fff"); box(g, 10, 9, 3, 1, "#fff"); });
+  // a production flight case: silver, black corners, chunky latches
+  A.obj.kitcase = shape(18, 15, (g) => { box(g, 0, 2, 18, 13, "#c9ccd6"); box(g, 0, 2, 18, 3, "#e3e6ee"); box(g, 0, 8, 18, 1, "#8f95a8"); [[0, 2], [15, 2], [0, 12], [15, 12]].forEach(([x, y]) => box(g, x, y, 3, 3, "#2b2b33")); box(g, 5, 7, 2, 3, "#2b2b33"); box(g, 11, 7, 2, 3, "#2b2b33"); box(g, 7, 0, 4, 3, "#2b2b33"); box(g, 8, 1, 2, 1, "#c9ccd6"); box(g, 3, 11, 6, 2, "#ffd23f"); });
   A.obj.bench = shape(32, 16, (g) => { box(g, 0, 4, 32, 4, "#b98758"); box(g, 0, 0, 32, 3, "#96683f"); box(g, 2, 8, 2, 8, "#5d4030"); box(g, 28, 8, 2, 8, "#5d4030"); box(g, 14, 0, 3, 4, "#d5f4ff"); box(g, 15, -1, 1, 1, "#ff9dbb"); });
   // ---- the MAL office ----
   const PUR = "#8a5ad6", PUR2 = "#6e43b8", PUR3 = "#a97df0";

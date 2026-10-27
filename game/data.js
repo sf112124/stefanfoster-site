@@ -48,12 +48,12 @@ export const pstage = (slug, lvl) => (FOES[slug].evo || []).filter((e) => lvl >=
 export const pform = (slug, lvl) => { const f = FOES[slug], k = pstage(slug, lvl); return k ? { ...f, name: f.evo[k - 1].name, art: f.evo[k - 1].art, stage: k } : { ...f, stage: 0 }; };
 // ---- the coffee kiosk on the square ----
 export const ITEMS = {
-  americano: { name: "AMERICANO", price: 20, about: "A quick hit. Heals one of your folio by half.", use: "heal" },
-  oat: { name: "OAT FLAT WHITE", price: 45, about: "The proper one. One of your folio back to full.", use: "full" },
-  matcha: { name: "MATCHA LATTE", price: 90, about: "Calm, green, restorative. Your whole folio back to full, tired ones included.", use: "all" },
-  sparkling: { name: "SPARKLING WATER", price: 25, about: "Wakes a tired one up with half its health.", use: "revive" },
-  hojicha: { name: "HOJICHA", price: 35, about: "Roasted, grounding. In a fight, nothing gets to you: defence up.", use: "def", battle: 1 },
-  beer: { name: "BEER", price: 50, about: "Dutch courage. In a fight, attack way up, but your guard drops.", use: "beer", battle: 1 },
+  americano: { name: "AMERICANO", price: 4.5, about: "A quick hit. Heals one of your folio by half.", use: "heal" },
+  oat: { name: "OAT FLAT WHITE", price: 5.2, about: "The proper one. One of your folio back to full.", use: "full" },
+  matcha: { name: "MATCHA LATTE", price: 6.8, about: "Calm, green, restorative. Your whole folio back to full, tired ones included.", use: "all" },
+  sparkling: { name: "SPARKLING WATER", price: 4.8, about: "Wakes a tired one up with half its health.", use: "revive" },
+  hojicha: { name: "HOJICHA", price: 5.8, about: "Roasted, grounding. In a fight, nothing gets to you: defence up.", use: "def", battle: 1 },
+  beer: { name: "BEER", price: 7, about: "Dutch courage. In a fight, attack way up, but your guard drops.", use: "beer", battle: 1 },
 };
 // the one thing out there that isn't a project: the spider from the main site
 export const EXTRA = {
@@ -134,7 +134,7 @@ export const TRAINERS = {
 // ---- what people and things say ----
 export const SAY = {
   intro: ["Hi, I'm Stefan. This is my portfolio.", "My projects are out in the long grass around the valley.", "Find one and beat it, and you get to see the work.", "First, pick a tool to take with you: AI, Photoshop or Premiere. They're on the stands behind me."],
-  after: ["The door is at the bottom of the room. Walk into long grass to find a project.", "AI beats FILM, PHOTOSHOP beats AI, PREMIERE beats IMAGE.", "There are eight film reels hidden around the valley too. Each one makes your tool stronger.", "Watch out on the roads. Agency people and clients hang about out there, and they all want a quick chat. If one spots you, you'll have to fight their way through it.", "The coffee machine in here brings your tool back to full health.", "Win fights and pick up the coins lying about, and you can spend it at the coffee kiosk on the square. Each drink helps in its own way."],
+  after: ["The door is at the bottom of the room. Walk into long grass to find a project.", "AI beats FILM, PHOTOSHOP beats AI, PREMIERE beats IMAGE.", "There are eight film reels hidden around the valley too. Each one makes your tool stronger.", "Watch out on the roads. Agency people and clients hang about out there, and they all want a quick chat. If one spots you, you'll have to fight their way through it.", "The coffee machine in here brings your tool back to full health.", "Win fights and smash open the flight cases left by the roads, and you can spend it at the coffee kiosk on the square. Come back tomorrow and your day rate will have landed too. Each drink helps in its own way."],
   ending: ["That's all of them. Thanks for playing through my work.", "If you'd like to work together, my details are on the next screen."],
   needPick: ["Pick a tool from the stands first."],
   noPick: ["Pick one of the three tools on the stands."],

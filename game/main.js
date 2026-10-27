@@ -51,7 +51,7 @@ const iw = (s) => s.width / (s._s || 1), ih = (s) => s.height / (s._s || 1);
 // ---------- what's remembered between visits ----------
 const S = { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [], beat: [], look: "boy", cash: 0, bag: {}, plv: {}, coins: {} };
 const save = () => { try { localStorage.setItem("foster-valley", JSON.stringify(S)); } catch (e) {} };
-const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; S.beat = (S.beat || []).filter((b) => TRAINERS[b]); S.look = S.look || "boy"; S.cash = S.cash || 0; S.bag = S.bag || {}; S.coins = S.coins || {}; S.plv = S.plv || {}; S.won.forEach((k) => { if (!S.plv[k]) S.plv[k] = S.lvl; }); S.stg = S.stg || {}; if (S.stg.tool == null) S.stg.tool = (S.lvl >= 5) + (S.lvl >= 8); A.who.you = A.who[S.look] || A.who.boy; return true; } } catch (e) {} return false; };
+const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; S.beat = (S.beat || []).filter((b) => TRAINERS[b]); S.look = S.look || "boy"; S.cash = S.cash || 0; S.bag = S.bag || {}; S.coins = S.coins || {}; S.plv = S.plv || {}; S.won.forEach((k) => { if (!S.plv[k]) S.plv[k] = S.lvl; }); S.stg = S.stg || {}; if (S.stg.tool == null) S.stg.tool = (S.lvl >= 5) + (S.lvl >= 8); if (!S.econ) { S.econ = 1; S.cash = 0; } A.who.you = A.who[S.look] || A.who.boy; return true; } } catch (e) {} return false; };
 const stats = (lvl, st = S.starter ? stageFor("tool", lvl) : 0) => ({ max: 30 + lvl * 6 + (S.reels || []).length * 2 + st * 10, atk: 10 + lvl + (S.reels || []).length + st * 3, def: 10 + lvl + st * 2 });
 // every project in your folio has its own level now, and evolves at 14 and 24
 const lvlOf = (k) => (k === "tool" ? S.lvl : S.plv[k] || S.lvl);
@@ -61,7 +61,7 @@ const formFor = (k, lvl = lvlOf(k)) => { const base = k === "tool" ? STARTERS[S.
   const f = e ? { ...base, name: e.name, art: e.art, stage: st } : { ...base, stage: 0 }; if (!A.mon[f.art]) return { ...f, art: base.art }; return f; };
 const keepStage = (k) => { S.stg = S.stg || {}; S.stg[k] = Math.max(S.stg[k] || 0, stageFor(k)); };
 const statsFor = (k) => { const L = lvlOf(k); if (k === "tool") return stats(L); const st = stats(L, stageFor(k, L)); return { ...st, max: Math.round(st.max * .9) }; };
-const money = (n) => `£${n.toLocaleString("en-GB")}`;
+const money = (n) => { n = Math.round(n * 100) / 100; return `£${n % 1 ? n.toFixed(2) : n.toLocaleString("en-GB")}`; };
 
 // ---------- sound: a few square waves, like an old handheld ----------
 const au = {
@@ -199,11 +199,15 @@ const maps = { world: prep(buildWorld()), house: prep(buildHouse()), mal0: prep(
 { const m = maps.world, spots = [[6, 18], [44, 15], [68, 19], [20, 25], [56, 31], [27, 47], [47, 47], [4, 34]];
   const free = (x, y) => x > 1 && y > 1 && x < m.W - 2 && y < m.H - 2 && !m.solid[m.I(x, y)] && !m.tg[m.I(x, y)] && !m.objs.some((o) => !o.flat && y === o.y && x >= o.x && x < o.x + (o.w || 1));
   spots.forEach(([sx, sy], n) => { for (let r = 0; r < 8; r++) { let done = false; for (let dy = -r; dy <= r && !done; dy++) for (let dx = -r; dx <= r && !done; dx++) if (free(sx + dx, sy + dy)) { m.objs.push({ k: "reel", n, x: sx + dx, y: sy + dy, w: 1, flat: 1 }); done = true; } if (done) break; } });
-  // loose change dropped all over the valley; each coin comes back a few minutes after you pick it up
-  let seed = 7, n = 0; const rr = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  for (let tries = 0; n < 28 && tries < 6000; tries++) { const x = 2 + Math.floor(rr() * (m.W - 4)), y = 2 + Math.floor(rr() * (m.H - 4)); if (free(x, y) && !m.objs.some((o) => o.x === x && o.y === y)) m.objs.push({ k: "coin", n: n++, x, y, w: 1, flat: 1 }); }
-  m.flat = m.objs.filter((o) => o.flat); }
-const coinUp = (o) => !S.coins[o.n] || Date.now() - S.coins[o.n] > 6 * 60 * 1000;
+  // flight cases left behind after shoots, dotted along the roadsides. Smash one open: there's usually someone's per diem inside.
+  let seed = 11, n = 0; const rr = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const byRoad = (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => m.base[m.I(x + dx, y + dy)] === TT.path);
+  for (let tries = 0; n < 10 && tries < 8000; tries++) { const x = 3 + Math.floor(rr() * (m.W - 6)), y = 3 + Math.floor(rr() * (m.H - 6));
+    if (free(x, y) && m.base[m.I(x, y)] === TT.grass && byRoad(x, y) && !m.objs.some((o) => Math.abs(o.x - x) + Math.abs(o.y - y) < 2) && !m.objs.some((o) => o.k === "kitcase" && Math.abs(o.x - x) + Math.abs(o.y - y) < 10)) { m.objs.push({ k: "kitcase", n: n++, x, y, w: 1, solid: 1, act: "kitcase" }); m.solid[m.I(x, y)] = 1; } }
+  m.flat = m.objs.filter((o) => o.flat); m.tall = m.objs.filter((o) => !o.flat); }
+const coinUp = () => false;
+// London's date, for the day rate and for when the flight cases turn up again
+const today = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London" }).format(new Date());
 let map = maps.house, mode = "title", busy = false, t0 = 0, cam = { x: 0, y: 0 }, nightOn = false, zoneNow = "", fade = 0, bt = null;
 const P = { x: 3, y: 4, fx: 3, fy: 4, px: 48, py: 64, dir: "down", moving: false, t: 0, steps: 0, grass: 0 };
 const objAt = (x, y) => map.objs.find((o) => !o.gone && y === o.y && x >= o.x && x < o.x + o.w && (o.solid || o.act));
@@ -310,6 +314,15 @@ async function run(act, o) {
     else if (a === "coffee") { await ui.say(SAY.coffee[0]); healAll(); au.sfx("heal"); if (S.starter) await ui.say(SAY.coffee[1]); save(); }
     else if (a === "trainer") await chat(o);
     else if (a === "shop") await shop();
+    else if (a === "kitcase") {
+      await ui.say(["A flight case, left behind after a shoot. Nobody's coming back for it."], { keep: true });
+      const c = await ui.choose(["Smash it open", "Leave it"], { cls: "yn" }); ui.hide(); if (c !== 0) return;
+      for (let k = 0; k < 3; k++) { au.sfx("hit"); o.dx = (k % 2 ? 2 : -2); await sleep(90); } o.dx = 0; au.sfx("super");
+      o.gone = true; map.solid[map.I(o.x, o.y)] = 0; S.cases = S.cases || {}; S.cases[o.n] = today();
+      const roll = Math.random();
+      if (roll < .22) { const k = pick(IK); S.bag[k] = (S.bag[k] || 0) + 1; save(); au.sfx("level"); await ui.say([`Inside: a ${ITEMS[k].name}, still warm somehow. It goes in your bag.`]); }
+      else { const v = Math.round((2 + Math.random() * 10) * 2) / 2; S.cash = (S.cash || 0) + v; save(); au.sfx("level"); await ui.say([`Inside: an envelope marked PER DIEMS. ${money(v)}.`, pick(["Someone's lunch money, technically.", "The runner will never know.", "Production will be furious.", "There's a call sheet in here from 2019."])]); }
+    }
     else if (a === "tape") {
       const nm = S.starter ? formFor("tool").name : "your hands";
       await ui.say(["A tangle of red tape. Nobody gets past this without a fight."], { keep: true });
@@ -452,7 +465,7 @@ async function shop() {
     ui.show(it.about); const y = await ui.choose([`Buy for ${money(it.price)}`, "Not that one"], { cls: "yn" });
     if (y !== 0) continue;
     if ((S.cash || 0) < it.price) { await ui.line("Ah, you're a bit short for that one. Battles pay, and there's change on the ground if you look."); continue; }
-    S.cash -= it.price; S.bag[IK[c]] = (S.bag[IK[c]] || 0) + 1; save(); au.sfx("level");
+    S.cash = Math.round((S.cash - it.price) * 100) / 100; S.bag[IK[c]] = (S.bag[IK[c]] || 0) + 1; save(); au.sfx("level");
     await ui.line(`One ${it.name}. It's in your bag.`);
   }
   ui.hide(); await ui.say(["See you soon!"], { who: "BARISTA" });
@@ -635,7 +648,7 @@ async function fight(def, slug, trId) {
     const lvBefore = {}, nmBefore = {}; for (const k of used) { lvBefore[k] = lvlOf(k); nmBefore[k] = formFor(k).name; }
     const up = (n = 1) => { S.lvl = Math.min(CAP, S.lvl + n); used.forEach((k) => { if (k !== "tool") S.plv[k] = Math.min(CAP, (S.plv[k] || S.lvl) + n); }); };
     // money: clients pay a fee, wild things drop a bit of change
-    const fee = tr ? (again ? 20 + L * 4 : 40 + L * 10) * (tr.final ? 3 : boss ? 2 : 1) : slug ? 25 + L * 5 : 8 + L * 3;
+    const fee = Math.round((tr ? (again ? 1 + L * .15 : 2 + L * .35) * (tr.final ? 3 : boss ? 2 : 1) : slug ? 1 + L * .15 : .5 + L * .1) * 10) / 10;
     if (tr) {
       if (!again) S.beat.push(trId); up(); me.lvl = lvlOf(me.key); bars(); save(); hud();
       await ui.line(again ? `You got through ${tr.name} again.` : `You got through ${tr.name}'s quick chat.`); au.sfx("level");
@@ -1016,7 +1029,9 @@ function fit() {
 addEventListener("resize", fit); fit();
 async function start(fresh) {
   au.unlock(); au.sfx("ok");
-  if (fresh) { Object.assign(S, { starter: null, lvl: 3, hp: null, php: {}, won: [], flags: {}, reels: [], spent: 0, bike: false, beat: [], look: "boy" }); save(); }
+  if (fresh) { Object.assign(S, { starter: null, lvl: 3, hp: null, php: {}, won: [], flags: {}, reels: [], spent: 0, bike: false, beat: [], look: "boy", cash: 0, bag: {}, plv: {}, stg: {}, cases: {}, econ: 1, paid: today() }); save(); }
+  // flight cases you smashed today stay smashed
+  maps.world.objs.forEach((o) => { if (o.k === "kitcase" && (S.cases || {})[o.n] === today()) { o.gone = true; maps.world.solid[maps.world.I(o.x, o.y)] = 0; } });
   await fadeTo(1, 250); $("title").hidden = true; mode = "world"; hud();
   if (S.starter) place(maps.world, 35, 37, "down"); else place(maps.house, 3, 4, "right");
   au.music("world");
@@ -1028,6 +1043,8 @@ async function start(fresh) {
     S.look = c === 1 ? "girl" : "boy"; S.flags.look = 1; A.who.you = A.who[S.look]; save();
   });
   if (!S.flags.intro) { await sleep(350); P.dir = "right"; script(() => stefan()); }
+  // come back on a new day and your day rate has landed
+  else if (S.paid !== today()) { S.paid = today(); S.cash = (S.cash || 0) + 500; save(); await sleep(400); au.sfx("win"); await script(async () => { await ui.say(["Ping! Your day rate just landed.", `+£500. You've got ${money(S.cash)}.`]); }); }
 }
 const had = load();
 // ---------- the title screen: a shooting star, the logo drops in, PRESS START ----------
