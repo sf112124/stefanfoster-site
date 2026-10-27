@@ -183,3 +183,40 @@ button.with .tag{position:static}
 .fbox b{font-size:.7em;text-transform:uppercase}
 .fbox button{width:100%;font:inherit;font-size:.6em;font-weight:600;padding:calc(var(--u)*2.4);border:calc(var(--u)*.8) solid var(--ink);border-radius:calc(var(--u)*2);background:#fff;color:var(--ink);cursor:pointer}
 .fbox button:hover{background:var(--pink)}
+/* wardrobe: who you are */
+.wd{text-align:center}
+.wd h2{margin:0 0 calc(var(--u)*4)}
+.wrow{display:flex;gap:calc(var(--u)*6);align-items:center;justify-content:center}
+#wpv{width:calc(var(--u)*57);height:calc(var(--u)*90);image-rendering:pixelated;background:#fff;border:calc(var(--u)*1) solid var(--ink);border-radius:calc(var(--u)*3)}
+.wcol{display:grid;gap:calc(var(--u)*3.5);min-width:calc(var(--u)*120)}
+.wname{display:grid;gap:calc(var(--u)*1);font-size:.5em;letter-spacing:.08em;text-align:left;opacity:.9}
+.wname input{font:inherit;font-size:1.7em;font-weight:600;letter-spacing:.06em;padding:calc(var(--u)*2) calc(var(--u)*3);border:calc(var(--u)*.8) solid var(--ink);border-radius:calc(var(--u)*2);background:#fff;color:var(--ink);text-transform:uppercase;width:100%}
+.wname input.need{background:#ffd9e4}
+.wseg{display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--u)*1.5)}
+.wseg button,.wst button{font:inherit;font-size:.6em;font-weight:600;padding:calc(var(--u)*2);border:calc(var(--u)*.8) solid var(--ink);border-radius:calc(var(--u)*2);background:#fff;color:var(--ink);cursor:pointer}
+.wseg button.on{background:var(--ink);color:#fff8ec}
+.wst{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:calc(var(--u)*2)}
+.wst b{font-size:.62em;letter-spacing:.06em}
+.whair{display:flex;gap:calc(var(--u)*2);justify-content:center}
+.whair button{width:calc(var(--u)*11);height:calc(var(--u)*11);border-radius:50%;border:calc(var(--u)*.8) solid var(--ink);background:var(--c);cursor:pointer;padding:0}
+.whair button.on{outline:calc(var(--u)*1) solid var(--ink);outline-offset:calc(var(--u)*1)}
+.wd .btns{margin-top:calc(var(--u)*5);display:flex;gap:calc(var(--u)*2);justify-content:center}
+.wd .btns button{font:inherit;font-size:.62em;font-weight:600;padding:calc(var(--u)*2.4) calc(var(--u)*6);border:calc(var(--u)*.8) solid var(--ink);border-radius:calc(var(--u)*2);background:#fff;color:var(--ink);cursor:pointer}
+.wd .btns .go{background:var(--ink);color:#fff8ec}
+/* leaderboard */
+.lb .lbw{font-size:.62em;opacity:.7;margin:calc(var(--u)*4) 0}
+.lbl{list-style:none;margin:calc(var(--u)*3) 0 0;padding:0;display:grid;gap:calc(var(--u)*1.2)}
+.lbl li{display:grid;grid-template-columns:calc(var(--u)*10) 1fr auto;grid-template-rows:auto auto;column-gap:calc(var(--u)*3);align-items:center;padding:calc(var(--u)*2) calc(var(--u)*3);border:calc(var(--u)*.6) solid var(--ink);border-radius:calc(var(--u)*2);background:#fff}
+.lbl li.me{background:var(--pink)}
+.lbl .rk{grid-row:1/3;font-weight:700;font-size:.8em}
+.lbl b{font-size:.62em;letter-spacing:.05em}
+.lbl i{font-style:normal;font-size:.42em;opacity:.6;letter-spacing:.05em;grid-column:2}
+.lbl .sc{grid-row:1/3;grid-column:3;font-weight:700;font-size:.7em}
+/* the welcome: Stefan on a soft stage, like the professor at the start */
+.oak{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 62%,#fff8ec 0%,#ffe3ef 34%,#cfe3ff 70%,#9fb4e8 100%);opacity:0;transition:opacity .6s}
+.oak.in{opacity:1}.oak.out{opacity:0}
+.oak::after{content:"";position:absolute;left:50%;bottom:calc(var(--u)*46);width:calc(var(--u)*90);height:calc(var(--u)*14);transform:translateX(-50%);border-radius:50%;background:rgba(43,31,59,.14)}
+.oak img{position:relative;z-index:1;height:calc(var(--u)*116);margin-top:calc(var(--u)*-34);image-rendering:pixelated;transform:translateY(calc(var(--u)*8));opacity:0;transition:transform .7s cubic-bezier(.2,1.2,.4,1) .15s,opacity .5s .15s}
+.oak.in img{transform:none;opacity:1}
+.oak.dim img{opacity:.25}
+.wlab{font-size:.42em;letter-spacing:.1em;opacity:.6;text-align:left;margin-bottom:calc(var(--u)*-2)}

@@ -20,20 +20,44 @@ let VW = 320, OX = 0; const VH = 180, DIRS = { up: [0, -1], down: [0, 1], left: 
 const touch = matchMedia("(hover: none) and (pointer: coarse)").matches;
 document.documentElement.classList.toggle("touch", touch);
 
+// ---------- you: six styles for him or her, any hair colour ----------
+const STYLES = [["classic", "CLASSIC"], ["gorp", "GORPCORE"], ["baggy", "BAGGY"], ["work", "WORKWEAR"], ["suede", "SUEDE"], ["bloke", "BLOKECORE"], ["lux", "PREPPY"], ["y2k", "Y2K"]];
+const HAIRS = [["brown", [92, 58, 40]], ["black", [34, 28, 40]], ["blonde", [236, 206, 128]], ["ginger", [214, 104, 44]], ["pink", [255, 140, 190]], ["blue", [110, 160, 255]]];
+const lookKey = (g, st) => (st === "classic" ? (g === "f" ? "girl" : "boy") : `${st}_${g}`);
+const LOOKKEYS = STYLES.flatMap(([st]) => ["m", "f"].map((g) => lookKey(g, st)));
+const SKINS = [["s1", [255, 224, 200]], ["s2", [240, 192, 158]], ["s3", [212, 156, 114]], ["s4", [174, 116, 76]], ["s5", [124, 80, 52]], ["s6", [84, 54, 38]]];
+// each look has a mask drawn alongside it (red is skin, green is hair), so both can be any colour you like
+const tint = (src, m, hair, skin) => {
+  const c = document.createElement("canvas"); c.width = src.width || src.naturalWidth; c.height = src.height || src.naturalHeight; const x = c.getContext("2d"); x.drawImage(src, 0, 0); c._s = src._s;
+  const ht = HAIRS.find((q) => q[0] === hair)?.[1], st = SKINS.find((q) => q[0] === skin)?.[1]; if (!m || (!ht && !st)) return c;
+  const mc = document.createElement("canvas"); mc.width = c.width; mc.height = c.height; mc.getContext("2d").drawImage(m, 0, 0, c.width, c.height);
+  const d = x.getImageData(0, 0, c.width, c.height), p = d.data, q = mc.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+  const L = (i) => p[i] * .3 + p[i + 1] * .55 + p[i + 2] * .15; let sl = 0, sn = 0, hl = 0, hn = 0;
+  for (let i = 0; i < p.length; i += 4) { if (p[i + 3] < 40) continue; if (q[i] > 127) { sl += L(i); sn++; } else if (q[i + 1] > 127) { hl += L(i); hn++; } }
+  const go = (i, t, mean, lo, hi) => { const f = Math.max(lo, Math.min(hi, L(i) / mean)); p[i] = Math.min(255, t[0] * f); p[i + 1] = Math.min(255, t[1] * f); p[i + 2] = Math.min(255, t[2] * f); };
+  for (let i = 0; i < p.length; i += 4) { if (p[i + 3] < 40) continue; if (st && sn && q[i] > 127) go(i, st, sl / sn, .55, 1.25); else if (ht && hn && q[i + 1] > 127) go(i, ht, hl / hn, .35, 1.6); }
+  x.putImageData(d, 0, 0); return c; };
+function applyLook() {
+  const k = A.who[S.look] ? S.look : "boy", h = S.hair, sk = S.skin, M = A.lm[k] || {};
+  const dirs = (set, ms) => { const o = {}; ["down", "left", "up"].forEach((d) => (o[d] = set[d].map((f, i) => tint(f, ms && ms[d][i], h, sk)))); o.right = o.left.map((f) => A.flip(f)); return o; };
+  A.who.you = dirs(A.who[k], M.walk);
+  const bk = A.bike[k] ? k : k === "girl" || k.endsWith("_f") ? "girl" : "boy"; if (A.bike[bk]) A.bike.you = dirs(A.bike[bk], (A.lm[bk] || {}).bike);
+  const bb = A.back[k] || A.back.boy; if (bb) A.back.you = tint(bb, M.back, h, sk);
+}
 const A = buildArt();
 // people are drawn from outfit recipes; every creature and portrait is a painted sprite in game/art
 for (const k in LOOKS) A.who[k] = person(LOOKS[k]);
 A.who.you = A.who.boy; A.port = {}; A.monF = {};
 const ART = ["balloon", "ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "bear", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "t_tora", "t_paris", "t_branco", "t_anna", "t_lucy", "t_alysha", "bunny", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo", "angel", "butterfly", "kitten", "noself", "truffle", "disco", "vibe", ...Object.values(FOES).flatMap((f) => (f.evo || []).map((e) => e.art))];
 // walking sprites: one strip per person, nine frames (front, left, back; standing then each foot), right is the left mirrored
-const WALK = ["stefan", "boy", "girl", "ad", "mm", "mp", "bs", "sl", "cmo", "tim", "pat", "chris", "jeremy", "jimi", "smoker", "vaper", "tora", "paris", "branco", "anna", "lucy", "alysha"];
+const WALK = [...LOOKKEYS, "stefan", "ad", "mm", "mp", "bs", "sl", "cmo", "tim", "pat", "chris", "jeremy", "jimi", "smoker", "vaper", "tora", "paris", "branco", "anna", "lucy", "alysha"];
 await Promise.all(WALK.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => {
   const fw = im.width / 9, fh = im.height, cut = (i) => { const c = document.createElement("canvas"); c.width = fw; c.height = fh; c.getContext("2d").drawImage(im, i * fw, 0, fw, fh, 0, 0, fw, fh); return c; };
   const f = [...Array(9)].map((_, i) => cut(i)); A.who[k] = { down: f.slice(0, 3), left: f.slice(3, 6), up: f.slice(6, 9) }; A.who[k].right = A.who[k].left.map((c) => A.flip(c)); res(); };
   im.onerror = res; im.src = `game/art/g_${k}.png`; })));
 // the hire bike: six frames, two each for down, left and up
 A.bike = {};
-await Promise.all(["boy", "girl"].map((k) => new Promise((res) => { const im = new Image(); im.onload = () => {
+await Promise.all(LOOKKEYS.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => {
   const fw = im.width / 6, cut = (i) => { const c = document.createElement("canvas"); c.width = fw; c.height = im.height; c.getContext("2d").drawImage(im, i * fw, 0, fw, im.height, 0, 0, fw, im.height); return c; };
   const f = [...Array(6)].map((_, i) => cut(i)); A.bike[k] = { down: f.slice(0, 2), left: f.slice(2, 4), up: f.slice(4, 6) }; A.bike[k].right = A.bike[k].left.map((c) => A.flip(c)); res(); };
   im.onerror = res; im.src = `game/art/b_${k}.png`; })));
@@ -43,15 +67,19 @@ A.who.you = A.who.boy;
 await Promise.all(ART.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => { im._s = 2; if (k.startsWith("t_")) A.port[k.slice(2)] = im; else { A.mon[k] = im; const f = A.flip(im); f._s = 2; A.monF[k] = f; } res(); }; im.onerror = res; im.src = `game/art/${k}.png`; })));
 // your own back, for the start of a fight
 A.back = {};
-await Promise.all(["boy", "girl"].map((k) => new Promise((res) => { const im = new Image(); im.onload = () => { im._s = 2; A.back[k] = im; res(); }; im.onerror = res; im.src = `game/art/back_${k}.png`; })));
+await Promise.all(LOOKKEYS.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => { im._s = 2; A.back[k] = im; res(); }; im.onerror = res; im.src = `game/art/back_${k}.png`; })));
+A.lm = {};
+const cutM = (im, n, w) => [...Array(n)].map((_, i) => { const c = document.createElement("canvas"); c.width = w; c.height = im.height; c.getContext("2d").drawImage(im, i * w, 0, w, im.height, 0, 0, w, im.height); return c; });
+await Promise.all(LOOKKEYS.flatMap((k) => [["mg_", 9], ["mb_", 6], ["mback_", 1]].map(([p, n]) => new Promise((res) => { const im = new Image(); im.onload = () => { const L2 = (A.lm[k] ||= {});
+  if (n === 1) L2.back = im; else { const f = cutM(im, n, im.width / n); L2[n === 9 ? "walk" : "bike"] = n === 9 ? { down: f.slice(0, 3), left: f.slice(3, 6), up: f.slice(6, 9) } : { down: f.slice(0, 2), left: f.slice(2, 4), up: f.slice(4, 6) }; } res(); }; im.onerror = res; im.src = `game/art/${p}${k}.png`; }))));
 // the screen is 320 by 180 game pixels, drawn at double density so the painted sprites keep their detail
 const cv = $("cv"), g = cv.getContext("2d"); cv.width = 640; cv.height = 360; g.imageSmoothingEnabled = false;
 const iw = (s) => s.width / (s._s || 1), ih = (s) => s.height / (s._s || 1);
 
 // ---------- what's remembered between visits ----------
 const S = { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [], beat: [], look: "boy", cash: 0, bag: {}, plv: {}, coins: {} };
-const save = () => { try { localStorage.setItem("foster-valley", JSON.stringify(S)); } catch (e) {} };
-const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; S.beat = (S.beat || []).filter((b) => TRAINERS[b]); S.look = S.look || "boy"; S.cash = S.cash || 0; S.bag = S.bag || {}; S.coins = S.coins || {}; S.plv = S.plv || {}; S.gifts = S.gifts || []; S.got = S.got || {}; S.inf = S.inf || {}; S.won.forEach((k) => { if (!S.plv[k]) S.plv[k] = S.lvl; }); S.stg = S.stg || {}; if (S.stg.tool == null) S.stg.tool = (S.lvl >= 5) + (S.lvl >= 8); if (!S.econ) { S.econ = 1; S.cash = 0; } A.who.you = A.who[S.look] || A.who.boy; return true; } } catch (e) {} return false; };
+let pushT = 0; const save = () => { try { localStorage.setItem("foster-valley", JSON.stringify(S)); } catch (e) {} clearTimeout(pushT); pushT = setTimeout(() => typeof board !== "undefined" && board.push(), 1500); };
+const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; S.beat = (S.beat || []).filter((b) => TRAINERS[b]); S.look = S.look || "boy"; S.cash = S.cash || 0; S.bag = S.bag || {}; S.coins = S.coins || {}; S.plv = S.plv || {}; S.gifts = S.gifts || []; S.got = S.got || {}; S.inf = S.inf || {}; S.won.forEach((k) => { if (!S.plv[k]) S.plv[k] = S.lvl; }); S.stg = S.stg || {}; if (S.stg.tool == null) S.stg.tool = (S.lvl >= 5) + (S.lvl >= 8); if (!S.econ) { S.econ = 1; S.cash = 0; } return true; } } catch (e) {} return false; };
 const stats = (lvl, st = S.starter ? stageFor("tool", lvl) : 0) => ({ max: 30 + lvl * 6 + (S.reels || []).length * 2 + st * 10, atk: 10 + lvl + (S.reels || []).length + st * 3, def: 10 + lvl + st * 2 });
 // every project in your folio has its own level now, and evolves at 14 and 24
 const lvlOf = (k) => (S.inf && S.inf[k] ? 999 : k === "tool" ? S.lvl : S.plv[k] || S.lvl);
@@ -115,7 +143,7 @@ const KEY = { arrowup: "up", w: "up", arrowdown: "down", s: "down", arrowleft: "
 const KONAMI = ["arrowup", "arrowup", "arrowdown", "arrowdown", "arrowleft", "arrowright", "arrowleft", "arrowright", "b", "a"]; let kpos = 0;
 const press = (k) => { if (!keys[k]) tap[k] = true; keys[k] = true; lastInput = performance.now(); au.unlock(); };
 addEventListener("keydown", (e) => {
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.metaKey || e.ctrlKey || e.altKey || e.target?.tagName === "INPUT") return;
   const raw = e.key.toLowerCase(); kpos = raw === KONAMI[kpos] ? kpos + 1 : raw === KONAMI[0] ? 1 : 0; if (kpos === KONAMI.length) { kpos = 0; night(); }
   const k = KEY[raw]; if (!k) return; e.preventDefault(); if (!e.repeat) press(k);
 });
@@ -392,7 +420,7 @@ async function choosePick(id) {
 }
 async function stefan() {
   const who = "STEFAN";
-  if (!S.flags.intro) { S.flags.intro = 1; await speak("stefan", SAY.intro, who); return; }
+  if (!S.flags.intro) { S.flags.intro = 1; await speak("stefan", S.name ? [`Hi ${S.name}! I'm Stefan. This is my portfolio.`, ...SAY.intro.slice(1)] : SAY.intro, who); return; }
   if (!S.starter) { await speak("stefan", SAY.noPick, who); return; }
   const n = S.won.length;
   if (n >= PROJECTS.length && !S.flags.badge) { await speak("stefan", ["That's all of them. You've seen everything I've made.", "Which means the MAL office has opened its doors for you. It's just east of the square.", "Tim's at the top, in the glass office. Good luck."], who); return; }
@@ -534,7 +562,7 @@ async function useItem(me) {
   return { turn: 1 };
 }
 // ---------- the hire bike ----------
-function bike(on) { S.bike = !!on && !!A.bike[S.look]; }
+function bike(on) { S.bike = !!on && !!A.bike.you; }
 // drop the bike on a tile: it becomes a parked lime bike anyone can pick up again
 function dropBike(m, x, y) {
   if (!m || m.id !== "world" || x < 0 || y < 0 || x >= m.W || y >= m.H || m.solid[m.I(x, y)] || m.base[m.I(x, y)] === TT.water || m.objs.some((o) => !o.gone && o.x === x && o.y === y)) return false;
@@ -588,7 +616,7 @@ async function fight(def, slug, trId) {
   au.sfx("encounter"); au.music(null);
   for (let k = 0; k < 2; k++) { fade = .9; await sleep(60); fade = 0; await sleep(60); }
   await tween(420, (k) => (wipe = k)); fade = 1; wipe = 0;
-  bt = { fx: [], me, foe, bg: BG[slug] || (tr ? BG.corp : BG.x), shake: 0, t: 0, pops: [], parts: [], flash: 0, qte: null, port: tr ? { img: A.port[tr.port.slice(2)], ox: 200 } : null, you: { img: A.back[S.look] || A.back.boy, ox: -200 } };
+  bt = { fx: [], me, foe, bg: BG[slug] || (tr ? BG.corp : BG.x), shake: 0, t: 0, pops: [], parts: [], flash: 0, qte: null, port: tr ? { img: A.port[tr.port.slice(2)], ox: 200 } : null, you: { img: A.back.you || A.back.boy, ox: -200 } };
   mode = "battle"; hud(); au.music(tr ? "trainer" : "battle"); bars(); $("sme").hidden = true; $("sfoe").hidden = !!tr;
   // you and them slide in from either side, like the handhelds
   await fadeTo(0, 200);
@@ -910,16 +938,75 @@ function fullscreen() { const d = document.documentElement; try { if (fsOn()) (d
 function toggleSound() { au.on = !au.on; if (au.on) au.unlock(); au.toggle(); toast(au.on ? "SOUND ON" : "SOUND OFF", 1200); }
 // where you come in on each office floor, for starting it again if the furniture boxes you in
 const FLOOR_IN = { mal0: [15, 12, "up"], mal1: [20, 3, "down"], mal2: [1, 3, "down"] };
+// ---------- the welcome: Stefan steps out of the dark and asks who you are, like the professor does ----------
+async function welcome(fresh) {
+  const o = $("oak"), im = $("oakimg"); im.src = A.port.stefan?.src || "game/art/t_stefan.png"; o.hidden = false; requestAnimationFrame(() => o.classList.add("in"));
+  au.music("title"); await sleep(700);
+  const say = (lines) => ui.say(lines, { who: "STEFAN" });
+  if (fresh) await say(["Hello there! Welcome to the world of POKÉ-FOLIO!", "My name is STEFAN. People call me a creative director.", "This world is full of creatures made from my projects. To some people they're just work. To me, they're friends.", "But first, tell me a little about yourself."]);
+  else await say(["Oh, hello again! I don't think I ever caught your name.", "Tell me a little about yourself."]);
+  o.classList.add("dim"); await wardrobe(true); o.classList.remove("dim"); S.flags.look = 1; save();
+  if (fresh) await say([`Right! So you're ${S.name}.`, `${S.name}! Your very own portfolio adventure is about to unfold.`, "A world of briefs, deadlines and wonder awaits. Let's go!"]);
+  else await say([`${S.name}. Of course. Looking sharp.`, "Right, back to it!"]);
+  ui.hide(); o.classList.add("out"); await sleep(650); o.hidden = true; o.className = "oak"; au.music("world");
+}
+// ---------- making yourself: name, him or her, a style and a hair colour ----------
+function wardrobe(first) {
+  return new Promise((res) => {
+    const el = $("wardrobe"); let g = S.look && (S.look === "girl" || S.look.endsWith("_f")) ? "f" : "m", st = (STYLES.find(([k]) => lookKey(g, k) === S.look) || STYLES[0])[0], hair = S.hair || null, skin = S.skin || null;
+    const keep = { look: S.look, hair: S.hair, skin: S.skin };
+    el.innerHTML = `<div class="sheet wd"><h2>${first ? "WHO ARE YOU?" : "WARDROBE"}</h2>
+      <div class="wrow"><canvas id="wpv" width="76" height="120"></canvas><div class="wcol">
+        <label class="wname">NAME<input id="wnm" maxlength="12" autocomplete="off" spellcheck="false" value="${esc(S.name || "")}" placeholder="YOUR NAME"></label>
+        <div class="wseg" id="wg"><button type="button" data-g="m">HIM</button><button type="button" data-g="f">HER</button></div>
+        <div class="wst"><button type="button" id="wpr" aria-label="Previous style">◀</button><b id="wsn"></b><button type="button" id="wnx" aria-label="Next style">▶</button></div>
+        <div class="wlab">SKIN</div><div class="whair" id="wsk">${SKINS.map(([k, c]) => `<button type="button" data-s="${k}" style="--c:rgb(${c.join(",")})" aria-label="skin tone"></button>`).join("")}</div>
+        <div class="wlab">HAIR</div><div class="whair" id="wh">${HAIRS.map(([k, c]) => `<button type="button" data-h="${k}" style="--c:rgb(${c.join(",")})" aria-label="${k} hair"></button>`).join("")}</div>
+      </div></div>
+      <div class="btns"><button type="button" id="wok" class="go">${first ? "LET'S GO" : "DONE"}</button>${first ? "" : '<button type="button" id="wx">CANCEL</button>'}</div></div>`;
+    el.hidden = false; au.sfx("ok");
+    const pv = $("wpv"), px = pv.getContext("2d"); px.imageSmoothingEnabled = false; let t0 = performance.now(), live = true;
+    const sync = () => { S.look = lookKey(g, st); S.hair = hair; S.skin = skin; applyLook(); el.querySelectorAll("[data-s]").forEach((b) => b.classList.toggle("on", b.dataset.s === skin)); $("wsn").textContent = STYLES.find(([k]) => k === st)[1];
+      el.querySelectorAll("[data-g]").forEach((b) => b.classList.toggle("on", b.dataset.g === g)); el.querySelectorAll("[data-h]").forEach((b) => b.classList.toggle("on", b.dataset.h === hair)); };
+    const draw = () => { if (!live) return; const t = (performance.now() - t0) / 1000, dirs = ["down", "left", "up", "right"], d = dirs[Math.floor(t / 1.4) % 4], f = A.who.you[d][Math.floor(t * 4) % 2 ? 1 + (Math.floor(t * 2) % 2) : 0];
+      px.clearRect(0, 0, 76, 120); px.fillStyle = "rgba(43,31,59,.12)"; px.beginPath(); px.ellipse(38, 112, 22, 5, 0, 0, 7); px.fill(); const sc = Math.min(3.6, 108 / f.height); px.drawImage(f, Math.round(38 - f.width * sc / 2), Math.round(114 - f.height * sc), Math.round(f.width * sc), Math.round(f.height * sc)); requestAnimationFrame(draw); };
+    el.querySelectorAll("[data-g]").forEach((b) => b.onclick = () => { g = b.dataset.g; au.sfx("blip"); sync(); });
+    el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => { hair = b.dataset.h; au.sfx("blip"); sync(); });
+    el.querySelectorAll("[data-s]").forEach((b) => b.onclick = () => { skin = b.dataset.s; au.sfx("blip"); sync(); });
+    const step = (n) => { const i = STYLES.findIndex(([k]) => k === st); st = STYLES[(i + n + STYLES.length) % STYLES.length][0]; au.sfx("blip"); sync(); };
+    $("wpr").onclick = () => step(-1); $("wnx").onclick = () => step(1);
+    const nm = $("wnm"); nm.addEventListener("input", () => { nm.value = nm.value.toUpperCase().replace(/[^A-Z0-9 .'-]/g, ""); });
+    const done = (ok) => { if (ok) { const n = nm.value.trim(); if (!n) { nm.focus(); nm.classList.add("need"); au.sfx("bump"); return; } S.name = n; au.sfx("level"); } else { S.look = keep.look; S.hair = keep.hair; S.skin = keep.skin; applyLook(); au.sfx("back"); }
+      live = false; el.hidden = true; save(); board.push(); res(); };
+    $("wok").onclick = () => done(true); if ($("wx")) $("wx").onclick = () => done(false);
+    nm.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); done(true); } });
+    sync(); draw(); if (first) setTimeout(() => nm.focus(), 200);
+  });
+}
+// ---------- the leaderboard: how far everyone's got ----------
+const board = {
+  id() { if (!S.pid) { S.pid = Array.from(crypto.getRandomValues(new Uint8Array(10)), (b) => b.toString(36).padStart(2, "0")).join("").slice(0, 16); save(); } return S.pid; },
+  data() { return { id: board.id(), name: S.name || "PLAYER", look: S.look, folio: S.won.length, chats: S.beat.length, reels: (S.reels || []).length, badge: !!S.flags.badge, alysha: !!S.flags.alysha, lvl: S.lvl, team: party().reduce((n, k) => n + Math.min(40, lvlOf(k)), 0) }; },
+  last: "", push() { if (!S.name || !S.starter) return; const d = board.data(), k = JSON.stringify(d); if (k === board.last) return; board.last = k; fetch("/api/leaderboard", { method: "POST", headers: { "Content-Type": "application/json" }, body: k }).catch(() => {}); },
+  async show() {
+    const el = $("board"); el.innerHTML = `<div class="sheet lb"><div class="fh"><h2>LEADERBOARD</h2><button type="button" id="lbx">Close</button></div><p class="lbw">Loading…</p></div>`; el.hidden = false; au.sfx("ok");
+    const close = () => { el.hidden = true; au.sfx("back"); }; $("lbx").onclick = close; el.onclick = (e) => { if (e.target === el) close(); };
+    let j = null; try { j = await (await fetch("/api/leaderboard", { cache: "no-store" })).json(); } catch (e) {}
+    const top = (j && j.top) || [], me = board.id();
+    el.querySelector(".lbw").outerHTML = !j || !j.ok ? `<p class="lbw">The leaderboard is warming up. Check back soon.</p>` : !top.length ? `<p class="lbw">No one's on the board yet. Be the first.</p>`
+      : `<ol class="lbl">${top.map((r, i) => `<li class="${r.name === (S.name || "") ? "me" : ""}"><span class="rk">${i + 1}</span><b>${esc(r.name)}</b><i>LV ${r.lvl} · FOLIO ${r.folio}/9 · CHATS ${r.chats}${r.badge ? " · ★" : ""}${r.alysha ? " · ♡" : ""}</i><span class="sc">${r.score}</span></li>`).join("")}</ol>`;
+  },
+};
 function openMenu() {
   if (busy || mode !== "world" || !S.starter || folioOpen) return;
   let then = null;
   script(async () => {
     au.sfx("ok");
     ui.show(`FOLIO ${S.won.length}/${PROJECTS.length} · REELS ${(S.reels || []).length}/8 · CHATS ${S.beat.length}/${Object.keys(TRAINERS).length} · ${money(S.cash || 0)}${S.flags.badge ? " · ★ MAL BADGE" : ""}`);
-    const inOffice = /^mal/.test(map.id), opts = [["folio", "FOLIO"], ["bag", "BAG"], ...(inOffice ? [["redo", "START THIS FLOOR AGAIN"], ["out", "LEAVE THE OFFICE"]] : []), ["fs", fsOn() ? "EXIT FULLSCREEN" : "FULLSCREEN"], ["snd", au.on ? "SOUND: ON" : "SOUND: OFF"], ["exit", "BACK TO THE SITE"]];
+    const inOffice = /^mal/.test(map.id), opts = [["folio", "FOLIO"], ["bag", "BAG"], ...(inOffice ? [["redo", "START THIS FLOOR AGAIN"], ["out", "LEAVE THE OFFICE"]] : []), ["fs", fsOn() ? "EXIT FULLSCREEN" : "FULLSCREEN"], ["board", "LEADERBOARD"], ["look", "WARDROBE"], ["snd", au.on ? "SOUND: ON" : "SOUND: OFF"], ["exit", "BACK TO THE SITE"]];
     const c = await ui.choose(opts.map((o) => o[1]), { cls: "pmenu", cancel: true }); ui.hide();
     if (c < 0) return; const k = opts[c][0];
-    if (k === "folio") then = folio; else if (k === "bag") { await useItem(null); ui.hide(); } else if (k === "fs") fullscreen(); else if (k === "snd") toggleSound(); else if (k === "exit") location.href = "./#ai-experiments"; else if (k === "redo") { const e = FLOOR_IN[map.id] || FLOOR_IN.mal0; then = () => script(() => warp(map, ...e)); } else if (k === "out") then = () => script(() => warp(maps.world, 46, 36, "down"));
+    if (k === "folio") then = folio; else if (k === "bag") { await useItem(null); ui.hide(); } else if (k === "fs") fullscreen(); else if (k === "board") then = () => board.show(); else if (k === "look") then = () => script(() => wardrobe(false)); else if (k === "snd") toggleSound(); else if (k === "exit") location.href = "./#ai-experiments"; else if (k === "redo") { const e = FLOOR_IN[map.id] || FLOOR_IN.mal0; then = () => script(() => warp(map, ...e)); } else if (k === "out") then = () => script(() => warp(maps.world, 46, 36, "down"));
   }).then(() => then && then());
 }
 // tap or click a thing near you to interact with it
@@ -973,7 +1060,7 @@ function drawWorld(now) {
   map.flat.forEach(put);
   // everything standing up, back to front, with you in among it
   const row = map.tall.filter((o) => !o.gone && o.y >= y0 - 2 && o.y <= y1 + 3).sort((a, b) => a.y - b.y); let drawn = false;
-  const me = () => { const s = S.bike && A.bike[S.look] ? A.bike[S.look][P.dir][P.moving ? Math.floor(now / 120) % 2 : 0] : pose(A.who.you, P.dir, P.moving && !P.sliding && P.t < .55 ? 1 + (P.steps % 2) : 0), x = Math.round(P.px - cx), y = Math.round(P.py - cy); g.drawImage(A.sh[12], x + 2, y + 12); g.drawImage(s, Math.round(x + 8 - iw(s) / 2), y + 16 - ih(s), iw(s), ih(s)); drawn = true; };
+  const me = () => { const s = S.bike && A.bike.you ? A.bike.you[P.dir][P.moving ? Math.floor(now / 120) % 2 : 0] : pose(A.who.you, P.dir, P.moving && !P.sliding && P.t < .55 ? 1 + (P.steps % 2) : 0), x = Math.round(P.px - cx), y = Math.round(P.py - cy); g.drawImage(A.sh[12], x + 2, y + 12); g.drawImage(s, Math.round(x + 8 - iw(s) / 2), y + 16 - ih(s), iw(s), ih(s)); drawn = true; };
   const py = P.py / 16, pk = palKey(), pal = pk && !F.hide && !S.bike ? palSprite(pk) : null;
   const fpx = (F.fx + (F.x - F.fx) * (P.moving ? P.t : 1)) * 16, fpy = (F.fy + (F.y - F.fy) * (P.moving ? P.t : 1)) * 16; let pdrawn = !pal;
   const buddy = () => { pdrawn = true; const x = Math.round(fpx - cx + 8), y = Math.round(fpy - cy + 16), hop = P.moving ? Math.round(Math.abs(Math.sin(P.t * Math.PI)) * 2) : Math.round(Math.sin(now / 380) * .6);
@@ -1111,22 +1198,17 @@ async function start(fresh) {
   if (S.starter) place(maps.world, 35, 37, "down"); else place(maps.house, 3, 4, "right");
   au.music("world");
   await fadeTo(0, 300);
-  if (!S.flags.look) await script(async () => {
-    const pic = (k) => `<img class="pk" src="${A.who[k].down[0].toDataURL()}" alt="">`;   // (their standing frame)
-    ui.show("Before we start: are you a boy or a girl?");
-    const c = await ui.choose([{ html: `${pic("boy")}BOY` }, { html: `${pic("girl")}GIRL` }], { cls: "yn look", cols: 2 }); ui.hide();
-    S.look = c === 1 ? "girl" : "boy"; S.flags.look = 1; A.who.you = A.who[S.look]; save();
-  });
+  if (!S.flags.look || !S.name) await script(() => welcome(!S.starter && !S.won.length));
   if (!S.flags.intro) { await sleep(350); P.dir = "right"; script(() => stefan()); }
   // come back on a new day and your day rate has landed
   else if (S.paid !== today()) { S.paid = today(); S.cash = (S.cash || 0) + 500; save(); await sleep(400); au.sfx("win"); await script(async () => { await ui.say(["Ping! Your day rate just landed.", `+£500. You've got ${money(S.cash)}.`]); }); }
 }
-const had = load();
+const had = load(); applyLook();
 // ---------- the title screen: a shooting star, the logo drops in, PRESS START ----------
 const T = { stage: "intro", t0: performance.now(), sel: 0, stars: Array.from({ length: 40 }, () => ({ x: Math.random() * VW, y: Math.random() * 70, p: Math.random() * 7 })), trail: [] };
 const tEl = $("title"), tItems = () => [...$("tmenu").querySelectorAll("button:not([hidden]), a")];
 $("bcont").hidden = !had;
-if (had) $("tinfo").innerHTML = `<i>${S.look === "girl" ? "GIRL" : "BOY"}</i><i>FOLIO ${S.won.length}/${PROJECTS.length}</i><i>REELS ${(S.reels || []).length}/8</i><i>BADGES ${S.flags.badge ? 1 : 0}</i>`;
+if (had) $("tinfo").innerHTML = `<i>${esc(S.name || (S.look === "girl" ? "GIRL" : "BOY"))}</i><i>FOLIO ${S.won.length}/${PROJECTS.length}</i><i>REELS ${(S.reels || []).length}/8</i><i>BADGES ${S.flags.badge ? 1 : 0}</i>`;
 function toTitle() { if (T.stage !== "intro") return; T.stage = "title"; T.t0 = performance.now(); fade = 1; fadeTo(0, 500); tEl.classList.remove("intro"); au.music("title"); }
 function toMenu() { T.stage = "menu"; au.unlock(); au.sfx("level"); fade = .8; fadeTo(0, 300); tEl.classList.add("menu-on"); $("tmenu").hidden = false; T.sel = 0; markT(); }
 function markT() { tItems().forEach((b, i) => b.classList.toggle("sel", i === T.sel)); }
@@ -1134,7 +1216,7 @@ function pickT(el) { if (T.stage !== "menu") return; if (el.id === "bcont") star
 tItems().forEach((b, i) => { b.addEventListener("pointerenter", () => { T.sel = i; markT(); }); b.addEventListener("click", (e) => { e.stopPropagation(); if (b.tagName === "A") return; pickT(b); }); });
 tEl.addEventListener("click", () => { au.unlock(); if (T.stage === "intro") toTitle(); else if (T.stage === "title") toMenu(); });
 addEventListener("keydown", (e) => {
-  if (mode !== "title") return; const k = e.key;
+  if (mode !== "title" || e.target?.tagName === "INPUT" || !$("wardrobe").hidden) return; const k = e.key;
   if (T.stage === "menu" && (k === "ArrowDown" || k === "s" || k === "ArrowUp" || k === "w")) { const n = tItems().length; T.sel = (T.sel + (k === "ArrowDown" || k === "s" ? 1 : n - 1)) % n; au.sfx("blip"); markT(); e.preventDefault(); return; }
   if (k === "Enter" || k === " " || k === "z") { e.preventDefault(); if (T.stage === "intro") toTitle(); else if (T.stage === "title") toMenu(); else pickT(tItems()[T.sel]); }
 });
