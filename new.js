@@ -318,7 +318,7 @@ const crawler = new Crawler({
 { let ly = scrollY; addEventListener("scroll", () => { const dy = scrollY - ly; ly = scrollY; if (dy && !jumping) crawler.shift(0, -dy); }, { passive: true }); }
 let jumping = false;
 const leapIn = () => { jumping = true; setTimeout(() => { jumping = false; crawler.leap("bottom"); }, 60); };
-addEventListener("hashchange", leapIn);
+if (!touch) addEventListener("hashchange", leapIn);
 
 // contact: a card that pops out over the page and tilts towards your hand
 const ct = $("#ct"), card = $("#ctCard");

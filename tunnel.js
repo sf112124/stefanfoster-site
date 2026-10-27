@@ -216,7 +216,8 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     requestAnimationFrame(frame);
     if (mount.closest("[hidden]")) { wasHidden = true; return; }
     // coming back from a page: start fully flown-in and pull back out to the stack
-    if (wasHidden) { wasHidden = false; outK = 1; going = null; lab.classList.remove("gone"); last = now; }
+    if (wasHidden) { wasHidden = false; outK = touch || W() < 700 ? 0 : 1;   // phones just come straight back to the list
+      going = null; lab.classList.remove("gone"); last = now; }
     if (going) { outK = Math.min(1, (now - going.t) / 240); if (outK >= 1) { const p = going.p; going = null; onOpen(p); } }
     else if (outK > 0) outK = Math.max(0, outK - Math.min(.05, (now - last) / 1000) / .32);
     const rdt = Math.min(.5, (now - last) / 1000), dt = Math.min(.05, rdt); last = now; fpsA += (1 / Math.max(dt, .001) - fpsA) * .05;
