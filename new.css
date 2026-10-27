@@ -527,3 +527,5 @@ body[data-tunnel] #view:not([hidden]){animation:pageOpen .5s cubic-bezier(.7,0,.
 .is-list .tun-hit{pointer-events:none!important}
 body[data-tunnel] .top{mix-blend-mode:normal;z-index:1000}
 body[data-tunnel] .brand{position:relative;z-index:1001}
+/* over the colour flood the little numbers and clients turn white too */
+.tun-list.hot .n,.tun-list.hot .c{color:rgba(255,255,255,.9)!important;transition:color .4s}
