@@ -1,5 +1,5 @@
 import { makeFluid } from "./fluid.js";
-const PAINT = false;   // the colour paint behind the index on hover (switched off for now)
+const PAINT = true;   // a light splash of paint trailing the cursor over the index
 // The index as a tunnel: every project name stacked in a loop and pulled through a lens.
 // The middle line sits small and sharp; the lines above and below swell, stretch and smear out towards the edges.
 // Wheel, drag or swipe spins it with weight, and it always clicks to rest on a name. Everything is drawn on the GPU, so it stays smooth.
@@ -68,7 +68,7 @@ void main(){
     vec4 dy = texture(D, v * .5 + .5); vec3 dc = dy.rgb / max(dy.a, 1e-3); float lu = dot(dc, vec3(.3, .55, .15)); dc = clamp(mix(vec3(lu), dc, 1.35), 0., 1.); float amt = clamp(1. - exp(-dy.a * 5.), 0., 1.);
     // leaving: the paint carries on along its paths and crumbles away, thinnest and roughest bits first
     if (EX > 0.) { float er = fbm(v * vec2(R.x / R.y, 1.) * 4.2 + XS + tm * .35) * .55 + fbm(v * 11. - XS.yx - tm * .2) * .25; amt *= smoothstep(EX - .05, EX + .05, amt * .3 + er * .95); }
-    paper = mix(mix(paper, PB, BT), dc, amt); ink = mix(ink, vec3(1.), clamp(max(hc, amt * 1.4), 0., 1.));
+    dc = mix(dc, vec3(1.), .4); paper = mix(paper, dc, amt * .8);
   } else if (hc > .002) {
     float asp = R.x / R.y; vec2 p = v * vec2(asp, 1.), m = hm * vec2(asp, 1.), d = p - m;
     float t = tm * .55; d -= hv * .35 * exp(-dot(d, d) / 1.4); float rad = length(d);   // flung colour lags behind and overshoots with the pointer
@@ -243,10 +243,10 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     if (hrow >= 0) { const tgt = (PALS[LIST[hrow].slug] || PALS._).flat(); for (let j = 0; j < 12; j++) pal[j] += (tgt[j] - pal[j]) * pk; }
     // a loose spring: flick the mouse and the colour swings after it, overshoots and settles
     for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h2 = Math.min(.008, rdt / n); for (let j = 0; j < 2; j++) { hmV[j] += ((hmP[j] - hmS[j]) * 34 - hmV[j] * 5.2) * h2; hmS[j] += hmV[j] * h2; } }
-    gl.uniform1f(U.hc, heat * heat * (3 - 2 * heat)); gl.uniform1f(U.tm, now / 1000); gl.uniform2f(U.hm, hmS[0], hmS[1]); gl.uniform2f(U.hv, Math.max(-1.5, Math.min(1.5, hmV[0] * .25)), Math.max(-1.5, Math.min(1.5, hmV[1] * .25))); lst.classList.toggle("hot", heat > .35 || (PAINT && leaveT && now - leaveT < DR * .55));
+    gl.uniform1f(U.hc, 0); gl.uniform1f(U.tm, now / 1000); gl.uniform2f(U.hm, hmS[0], hmS[1]); gl.uniform2f(U.hv, Math.max(-1.5, Math.min(1.5, hmV[0] * .25)), Math.max(-1.5, Math.min(1.5, hmV[1] * .25))); 
     gl.uniform3f(U.P0, pal[0], pal[1], pal[2]); gl.uniform3f(U.P1, pal[3], pal[4], pal[5]); gl.uniform3f(U.P2, pal[6], pal[7], pal[8]);
     // drive the fluid: the pointer stirs it and pours colour, three slow currents fill the page; leave the list and it spins itself down a drain
-    if (hrow >= 0) { wasOn = 1; leaveT = 0; lastP[0] = (hmP[0] + 1) / 2; lastP[1] = (hmP[1] + 1) / 2; } else if (wasOn) { wasOn = 0; leaveT = now; DR = 3200 + Math.random() * 1800; XS[0] = Math.random() * 40; XS[1] = Math.random() * 40; }
+    if (hrow >= 0) { wasOn = 1; leaveT = 0; lastP[0] = (hmP[0] + 1) / 2; lastP[1] = (hmP[1] + 1) / 2; } else if (wasOn) { wasOn = 0; leaveT = now; DR = 3000; XS[0] = Math.random() * 40; XS[1] = Math.random() * 40; }
     const draining = leaveT && now - leaveT < DR, lk = leaveT ? Math.min(1, (now - leaveT) / DR) : 0;
     if (fluid && (heat > .004 || fluidOn > 0)) {
       fluidOn = heat > .004 || draining ? 3 : fluidOn - rdt; const fdt = Math.min(rdt, 1 / 30), t = now / 1000, ar = w / h;
@@ -256,18 +256,15 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
         const dye = (c, a) => [c[0] * a, c[1] * a, c[2] * a, a];
         if (hrow >= 0) {
           const sp = Math.hypot(dx, dy);
-          if (sp > 1e-4 && sp < .3) fluid.splat(P, [dx * 6200 * ar, dy * 6200], dye(hue(0), Math.min(2.4, .5 + sp * 34)), .0026);
-          fluid.splat(P, [Math.cos(t * 2.1) * 60, Math.sin(t * 1.7) * 60], dye(hue(.7), .12), .0055);   // a steady bloom under the pointer
-          for (let e = 0; e < 3; e++) { const an = t * (.42 + e * .17) + e * 2.1, q = [.5 + Math.cos(an) * (.3 + e * .08), .5 + Math.sin(an * 1.3 + e) * (.3 + e * .05)], c = hue(1.2 + e * 1.1);
-            fluid.splat(q, [-Math.sin(an) * 200, Math.cos(an * 1.3 + e) * 220], dye(c, .1), .014); }
+          if (sp > 1e-4 && sp < .3) fluid.splat(P, [dx * 5200 * ar, dy * 5200], dye(hue(0), Math.min(.9, .12 + sp * 14)), .0016);
         }
-        fluid.step(fdt, hrow >= 0 ? .18 : draining ? .3 : 4);
+        fluid.step(fdt, 1.1);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height); gl.useProgram(pr);
         gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
       }
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, fluid.dye); gl.uniform1i(U.D, 1); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(U.T, 0);
     }
-    gl.uniform1f(U.FL, fluid && fluidOn > 0 ? 1 : 0); gl.uniform1f(U.EX, hrow >= 0 || !leaveT ? 0 : .34 + Math.pow(lk, 1.25) * .7); const hs = heat * heat * (3 - 2 * heat); gl.uniform1f(U.BT, hrow >= 0 || !leaveT ? hs : Math.max(hs, Math.pow(1 - lk, 2.2))); gl.uniform2f(U.XS, XS[0], XS[1]);
+    gl.uniform1f(U.FL, fluid && fluidOn > 0 ? 1 : 0); gl.uniform1f(U.EX, 0); const hs = heat * heat * (3 - 2 * heat); gl.uniform1f(U.BT, 0); gl.uniform2f(U.XS, XS[0], XS[1]);
     { const m = [0, 1, 2].map((c) => (pal[c] + pal[3 + c] + pal[6 + c] + pal[9 + c]) / 4); gl.uniform3f(U.PB, ...m.map((c) => 1 - (1 - c) * .28)); }
     if (flatK > .5) placeList(S1, C1);
     lst.style.setProperty("--row", `${(rowH * S1) / Math.min(1.5, devicePixelRatio || 1)}px`); lst.style.setProperty("--wide", `${(T.widest * S1) / Math.min(1.5, devicePixelRatio || 1)}px`);
