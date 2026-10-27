@@ -98,6 +98,7 @@ export const EXTRA = {
 // ---- the creatures the clients carry around with them ----
 export const CORP = {
   brief: { name: "THE BRIEF", type: "NONE", art: "brief", moves: [{ n: "DUE YESTERDAY", p: 9, fx: "paper" }, { n: "SCOPE CREEP", p: 7, fx: "coins" }, { n: "QUICK TWEAK", p: 6, fx: "paper" }] },
+  pinscher: { name: "TRUFFLE", type: "IMAGE", art: "pinscher", moves: [{ n: "THE FACE", p: 9, fx: "glitch" }, { n: "ZOOMIES", p: 8, fx: "slash" }, { n: "TINY BARK", p: 7, fx: "notes" }] },
   kpi: { name: "KPI", type: "FILM", art: "kpi", moves: [{ n: "MOVE THE NEEDLE", p: 9, fx: "slash" }, { n: "NORTH STAR", p: 7, fx: "beam" }, { n: "DASHBOARD", p: 6, fx: "glitch" }] },
   roi: { name: "ROI", type: "AI", art: "roi", moves: [{ n: "SHOW ME THE ROI", p: 9, fx: "coins" }, { n: "COST PER VIEW", p: 7, fx: "coins" }, { n: "BUDGET CUT", p: 8, fx: "slash" }] },
   mediaplan: { name: "MEDIA PLAN", type: "IMAGE", art: "mediaplan", moves: [{ n: "FLIGHTING", p: 9, fx: "paper" }, { n: "REACH & FREQUENCY", p: 7, fx: "beam" }, { n: "ALWAYS ON", p: 6, fx: "glitch" }] },
@@ -135,11 +136,14 @@ export const TRAINERS = {
   mia: { name: "ANNA", role: "SOCIAL LEAD", look: "anna", port: "t_anna", x: 62, y: 11, dir: "left", lv: 2, team: ["vertical"],
     intro: ["Omg hiii. Can it be a trend?", "Like, vertical, but it has to feel organic.", "And can we hook them in the first half a second?"],
     win: ["Okay that's actually so good. Posting it now."], after: ["It's doing numbers. Like, real numbers."] },
-  priya: { name: "TORA", role: "MARKETING LEAD", look: "tora", port: "t_tora", x: 55, y: 28, dir: "left", lv: 1, team: ["kpi"],
+  katia: { name: "KATIA", role: "COPYWRITER", look: "katia", port: "t_katia", x: 53, y: 31, dir: "down", lv: 2, team: ["pinscher"],
+    intro: ["Oh, it's you. Stef's new favourite.", "I'm his creative partner. Every idea he's ever had, I wrote the line for.", "Truffle! Do the face."],
+    win: ["Truffle did the face and everything.", "Fine. You can borrow Stef. Bring him back by Friday."], after: ["Truffle says hi. Well. Truffle says that face."] },
+  priya: { name: "TORA", role: "MARKETING LEAD", look: "tora", port: "t_tora", map: "mal0", x: 19, y: 11, dir: "left", lv: 3, team: ["kpi"],
     intro: ["Hi! Huge fan of the work.", "Before we brief, can we align on the verticals?", "And I'll need KPIs for each one. Per platform. Per week."],
     win: ["Fine. I'll tell the team the KPI is vibes."], after: ["We're seeing really strong engagement on this chat."] },
-  cmo: { name: "TOMMY", role: "CMO", look: "cmo", port: "t_cmo", x: 35, y: 9, dir: "down", lv: 4, boss: 1, team: ["roi"], needs: ["darren", "priya", "gary", "jules", "mia"], unlock: "THE CMO WANTS A WORD. NORTH ROAD.",
-    gate: ["My team speaks for me.", "Get past Jimi, Tora, Paris, Branco and Anna first. Then we'll talk."],
+  cmo: { name: "TOMMY", role: "CMO", look: "cmo", port: "t_cmo", x: 35, y: 9, dir: "down", lv: 4, boss: 1, team: ["roi"], needs: ["darren", "katia", "gary", "jules", "mia"], unlock: "THE CMO WANTS A WORD. NORTH ROAD.",
+    gate: ["My team speaks for me.", "Get past Jimi, Katia, Paris, Branco and Anna first. Then we'll talk."],
     intro: ["So. You're the one who's been getting past my team.", "Let's talk numbers. Then stakeholders. Then numbers again."],
     win: ["...Fine. It's approved.", "Don't change a thing."], after: ["Approved. Go and make it."] },
   // home: the last and hardest test
