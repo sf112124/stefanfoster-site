@@ -98,7 +98,7 @@ export const EXTRA = {
 // ---- the creatures the clients carry around with them ----
 export const CORP = {
   brief: { name: "THE BRIEF", type: "NONE", art: "brief", moves: [{ n: "DUE YESTERDAY", p: 9, fx: "paper" }, { n: "SCOPE CREEP", p: 7, fx: "coins" }, { n: "QUICK TWEAK", p: 6, fx: "paper" }] },
-  pinscher: { name: "TRUFFLE", type: "IMAGE", art: "pinscher", moves: [{ n: "THE FACE", p: 9, fx: "glitch" }, { n: "ZOOMIES", p: 8, fx: "slash" }, { n: "TINY BARK", p: 7, fx: "notes" }] },
+  pinscher: { name: "TRUFFLE", type: "IMAGE", art: "pinscher", moves: [{ n: "SPIN", p: 9, fx: "slash" }, { n: "SPEAK", p: 8, fx: "notes" }, { n: "WHISPER", p: 7, fx: "sparkle" }, { n: "PLAY DEAD", p: 10, fx: "glitch" }] },
   kpi: { name: "KPI", type: "FILM", art: "kpi", moves: [{ n: "MOVE THE NEEDLE", p: 9, fx: "slash" }, { n: "NORTH STAR", p: 7, fx: "beam" }, { n: "DASHBOARD", p: 6, fx: "glitch" }] },
   roi: { name: "ROI", type: "AI", art: "roi", moves: [{ n: "SHOW ME THE ROI", p: 9, fx: "coins" }, { n: "COST PER VIEW", p: 7, fx: "coins" }, { n: "BUDGET CUT", p: 8, fx: "slash" }] },
   mediaplan: { name: "MEDIA PLAN", type: "IMAGE", art: "mediaplan", moves: [{ n: "FLIGHTING", p: 9, fx: "paper" }, { n: "REACH & FREQUENCY", p: 7, fx: "beam" }, { n: "ALWAYS ON", p: 6, fx: "glitch" }] },
