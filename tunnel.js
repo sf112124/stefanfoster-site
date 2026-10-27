@@ -64,7 +64,7 @@ void main(){
   if (FL > .5) {
     // the real fluid: dye carried through a simulated flow, poured in from the pointer. It outlives the hover, so it can
     // swirl itself away rather than just fading; the type goes white wherever there's colour under it
-    vec4 dy = texture(D, v * .5 + .5); vec3 dc = dy.rgb / max(dy.a, 1e-3); float lu = dot(dc, vec3(.3, .55, .15)); dc = clamp(mix(vec3(lu), dc, 1.3), 0., 1.) * .93; float amt = clamp(1. - exp(-dy.a * 5.), 0., 1.);
+    vec4 dy = texture(D, v * .5 + .5); vec3 dc = dy.rgb / max(dy.a, 1e-3); float lu = dot(dc, vec3(.3, .55, .15)); dc = clamp(mix(vec3(lu), dc, 1.35), 0., 1.); float amt = clamp(1. - exp(-dy.a * 5.), 0., 1.);
     paper = mix(mix(paper, PB, hc), dc, amt); ink = mix(ink, vec3(1.), clamp(max(hc, amt * 1.4), 0., 1.));
   } else if (hc > .002) {
     float asp = R.x / R.y; vec2 p = v * vec2(asp, 1.), m = hm * vec2(asp, 1.), d = p - m;
@@ -137,11 +137,12 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   // each project's colours, from pale edge to hot core
   const hx = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255), PAL = (a, b, c) => [...hx(a), ...hx(b), ...hx(c)];
   // each project's colours: four bright, harmonious hues the flow cycles through
-  const PALS = { "ai-experiments": ["#ff2fb9", "#7b3cff", "#1fb6ff", "#ff7a3d"], "la-croisiere": ["#2f9bff", "#ff5fae", "#ff9f40", "#21c7b8"],
-    "les-benjamins": ["#ff7a1f", "#ff2f6e", "#e0a800", "#9a5cff"], "ai-commissions": ["#00c48c", "#3fa9ff", "#7d5cff", "#8fd400"],
-    "3d-explorations": ["#7b4dff", "#3f6dff", "#ff4fd2", "#00b7e0"], "summer-of-sport": ["#ff6a00", "#ff2f7a", "#e6b800", "#47c400"],
-    relax: ["#0096ff", "#3d4dff", "#00c2b2", "#a04dff"], "coca-cola": ["#ff1f3d", "#ff6a3d", "#d6249f", "#ff9a1f"],
-    gumtree: ["#1fbf4f", "#00a8a8", "#9ad400", "#2f7dff"], _: ["#ff3d9a", "#ff8a1f", "#5a5cff", "#00c2a8"] };
+  // juicy, analogous palettes: neighbouring hues only, so wherever they swirl together they stay bright and never go muddy
+  const PALS = { "ai-experiments": ["#ff4fd8", "#b05cff", "#6f7bff", "#ff7eb6"], "la-croisiere": ["#36b4ff", "#5fd4ff", "#8a7dff", "#ff8ccf"],
+    "les-benjamins": ["#ff6f91", "#ff9671", "#ffc75f", "#ff5fa8"], "ai-commissions": ["#00d6a4", "#22c3ff", "#5eead4", "#7c9cff"],
+    "3d-explorations": ["#8f5cff", "#5b7cff", "#c56bff", "#ff6ad5"], "summer-of-sport": ["#ff7a45", "#ff4f81", "#ffb347", "#ff6fb5"],
+    relax: ["#1fa7ff", "#38e0ff", "#6b6bff", "#48f0c8"], "coca-cola": ["#ff2e5b", "#ff5c8a", "#ff7a59", "#ff3fa4"],
+    gumtree: ["#2fe08a", "#00c9b7", "#7ff07a", "#21b8ff"], _: ["#ff6fb5", "#b56bff", "#59b8ff", "#5fe8c8"] };
   for (const k in PALS) PALS[k] = PALS[k].map((c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255));
   let heat = 0; const pal = PALS._.flat(), hmP = [0, 0], hmS = [0, 0], hmV = [0, 0], prevP = [0, 0]; let fluidOn = 0, wasOn = 0, leaveT = 0; const lastP = [.5, .5];
   mount.addEventListener("pointermove", (e) => { const r = mount.getBoundingClientRect(); hmP[0] = 2 * (e.clientX - r.left) / r.width - 1; hmP[1] = 1 - 2 * (e.clientY - r.top) / r.height; });
