@@ -63,9 +63,10 @@ void main(){
   vec3 paper = vec3(.937, .933, .914), ink = mix(vec3(.047), vec3(.42, .415, .40), e * .85);
   // hover a project in the list and the whole page floods with its colours: a liquid gradient that pours out from your pointer
   if (FL > .5) {
+    // the dye only remembers where it sits between the project's two colours, so overlapping paint never mixes to mud
     // the real fluid: dye carried through a simulated flow, poured in from the pointer. It outlives the hover, so it can
     // swirl itself away rather than just fading; the type goes white wherever there's colour under it
-    vec2 du = v * .5 + .5, dq = vec2(R.y / R.x, 1.) * .02; vec4 dy = texture(D, du) * .28; for (int i = 0; i < 6; i++) { float an = float(i) * 1.0472; dy += texture(D, du + vec2(cos(an), sin(an)) * dq) * .12; } vec3 dc = dy.rgb / max(dy.a, 1e-3); float lu = dot(dc, vec3(.3, .55, .15)); dc = clamp(mix(vec3(lu), dc, 1.35), 0., 1.); float amt = smoothstep(0., 1., clamp(1. - exp(-dy.a * 3.2), 0., 1.));
+    vec2 du = v * .5 + .5, dq = vec2(R.y / R.x, 1.) * .02; vec4 dy = texture(D, du) * .28; for (int i = 0; i < 6; i++) { float an = float(i) * 1.0472; dy += texture(D, du + vec2(cos(an), sin(an)) * dq) * .12; } float pu = clamp(dy.r / max(dy.a, 1e-3), 0., 1.); vec3 dc = mix(P0, P1, smoothstep(0., 1., pu)); float amt = smoothstep(0., 1., clamp(1. - exp(-dy.a * 3.2), 0., 1.));
     // leaving: the paint carries on along its paths and crumbles away, thinnest and roughest bits first
     if (EX > 0.) { float er = fbm(v * vec2(R.x / R.y, 1.) * 4.2 + XS + tm * .35) * .55 + fbm(v * 11. - XS.yx - tm * .2) * .25; amt *= smoothstep(EX - .05, EX + .05, amt * .3 + er * .95); }
     float rim = 1. - smoothstep(.05, .55, amt); dc = mix(dc, mix(dc, PB, .45), rim); paper = mix(paper, dc, clamp(amt * .88 + rim * smoothstep(0., .08, amt) * .28, 0., 1.));
@@ -263,7 +264,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
         const dye = (c, a) => [c[0] * a, c[1] * a, c[2] * a, a];
         if (hrow >= 0) {
           const sp = Math.hypot(dx, dy);
-          fluid.splat(P, sp < .3 ? [dx * 2600 * ar, dy * 2600] : [0, 0], dye(hue(0), Math.min(.5, .05 + sp * 7)), .0045);
+          fluid.splat(P, sp < .3 ? [dx * 2600 * ar, dy * 2600] : [0, 0], dye([.5 + .5 * Math.sin(t * 1.3), 0, 0], Math.min(.5, .05 + sp * 7)), .0045);
         }
         fluid.step(fdt, 1.6, 3);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height); gl.useProgram(pr);
