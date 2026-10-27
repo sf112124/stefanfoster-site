@@ -27,7 +27,7 @@ const FS = {
     void main(){ float L = texture(P, uv - vec2(tx.x, 0)).x, R = texture(P, uv + vec2(tx.x, 0)).x, T = texture(P, uv + vec2(0, tx.y)).x, B = texture(P, uv - vec2(0, tx.y)).x; o = vec4(texture(V, uv).xy - vec2(R - L, T - B), 0, 1); }`,
 };
 
-export function makeFluid(gl, buf) {
+export function makeFluid(gl, buf, opt = {}) {
   if (!gl.getExtension("EXT_color_buffer_float") && !gl.getExtension("EXT_color_buffer_half_float")) return null;
   const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) console.warn(gl.getShaderInfoLog(o)); return o; };
   const vs = sh(gl.VERTEX_SHADER, VS), P = {};
@@ -47,7 +47,7 @@ export function makeFluid(gl, buf) {
   const dbl = (w, h) => { let a = tgt(w, h), b = tgt(w, h); return { get r() { return a; }, get w() { return b; }, swap() { [a, b] = [b, a]; }, W: w, H: h }; };
   let S = null;
   const size = (aspect) => {
-    const sh2 = 160, dh = 540, sw = Math.round(sh2 * aspect), dw = Math.round(dh * aspect);
+    const sh2 = opt.sim || 160, dh = opt.dye || 540, sw = Math.round(sh2 * aspect), dw = Math.round(dh * aspect);
     if (S && S.sw === sw && S.dw === dw) return;
     S = { sw, dw, vel: dbl(sw, sh2), dye: dbl(dw, dh), prs: dbl(sw, sh2), div: tgt(sw, sh2), curl: tgt(sw, sh2) };
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);

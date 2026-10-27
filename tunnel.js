@@ -66,10 +66,10 @@ void main(){
     // the dye only remembers where it sits between the project's two colours, so overlapping paint never mixes to mud
     // the real fluid: dye carried through a simulated flow, poured in from the pointer. It outlives the hover, so it can
     // swirl itself away rather than just fading; the type goes white wherever there's colour under it
-    vec2 du = v * .5 + .5, dq = vec2(R.y / R.x, 1.) * .02; vec4 dy = texture(D, du) * .28; for (int i = 0; i < 6; i++) { float an = float(i) * 1.0472; dy += texture(D, du + vec2(cos(an), sin(an)) * dq) * .12; } float pu = clamp(dy.r / max(dy.a, 1e-3), 0., 1.); vec3 dc = mix(P0, P1, smoothstep(0., 1., pu)); float amt = smoothstep(0., 1., clamp(1. - exp(-dy.a * 3.2), 0., 1.));
+    vec2 du = v * .5 + .5, dq = vec2(R.y / R.x, 1.) / 160.; vec4 dy = vec4(0.); float ws = 0.; for (int j = -2; j <= 2; j++) for (int i = -2; i <= 2; i++) { float wt = exp(-float(i * i + j * j) / 3.); dy += texture(D, du + vec2(i, j) * dq * 1.2) * wt; ws += wt; } dy /= ws; float pu = clamp(dy.r / max(dy.a, 1e-3), 0., 1.); vec3 dc = mix(P0, P1, smoothstep(0., 1., pu)); float amt = clamp(1. - exp(-dy.a * 3.), 0., 1.); amt = amt * amt * (3. - 2. * amt);
     // leaving: the paint carries on along its paths and crumbles away, thinnest and roughest bits first
     if (EX > 0.) { float er = fbm(v * vec2(R.x / R.y, 1.) * 4.2 + XS + tm * .35) * .55 + fbm(v * 11. - XS.yx - tm * .2) * .25; amt *= smoothstep(EX - .05, EX + .05, amt * .3 + er * .95); }
-    float rim = 1. - smoothstep(.05, .55, amt); dc = mix(dc, mix(dc, PB, .45), rim); paper = mix(paper, dc, clamp(amt * .88 + rim * smoothstep(0., .08, amt) * .28, 0., 1.));
+    dc = mix(dc, PB, (1. - amt) * .35); paper = mix(paper, dc, amt * .9);
   } else if (hc > .002) {
     float asp = R.x / R.y; vec2 p = v * vec2(asp, 1.), m = hm * vec2(asp, 1.), d = p - m;
     float t = tm * .55; d -= hv * .35 * exp(-dot(d, d) / 1.4); float rad = length(d);   // flung colour lags behind and overshoots with the pointer
@@ -110,7 +110,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr); gl.useProgram(pr);
   const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
   const loc = gl.getAttribLocation(pr, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-  const fluid = reduce || !PAINT ? null : makeFluid(gl, buf); gl.useProgram(pr);
+  const fluid = reduce || !PAINT ? null : makeFluid(gl, buf, { sim: 96, dye: 160 }); gl.useProgram(pr);
   const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
@@ -277,7 +277,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
           const sp = Math.hypot(dx, dy);
           fluid.splat(P, sp < .3 ? [dx * 2600 * ar, dy * 2600] : [0, 0], dye([.5 + .5 * Math.sin(t * 1.3), 0, 0], Math.min(.5, .05 + sp * 7)), .0045);
         }
-        fluid.step(fdt, 1.6, 3);
+        fluid.step(fdt, 1.5, 0);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height); gl.useProgram(pr);
         gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
       }
