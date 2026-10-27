@@ -167,3 +167,19 @@ body:not(.tall) .frame{border-radius:0;box-shadow:none}
 .menu.shop button{align-items:center}
 .menu.shop b{flex:1}
 .menu.shop .ic{width:calc(var(--u)*10);height:calc(var(--u)*10);image-rendering:pixelated}
+/* folio: who leads, who walks with you */
+button.with{width:100%;border:0;background:none;padding:calc(var(--u)*2);border-radius:calc(var(--u)*3);font:inherit;font-size:.66em;color:inherit;text-align:left;cursor:pointer;flex-wrap:wrap}
+button.with:hover{background:var(--pink)}
+.slot{position:relative}
+.tag{position:absolute;top:calc(var(--u)*2);left:calc(var(--u)*2);font-style:normal;font-size:.42em;letter-spacing:.06em;font-weight:600;padding:calc(var(--u)*.6) calc(var(--u)*1.4);border-radius:calc(var(--u)*2);background:var(--ink);color:#fff8ec}
+.tag.walk{left:auto;right:calc(var(--u)*2);background:#57c9b5;color:var(--ink)}
+.slot .tag+.tag.walk{right:calc(var(--u)*2)}
+button.with .tag{position:static}
+.fhint{font-size:.5em;opacity:.6;letter-spacing:.04em;margin:calc(var(--u)*3) 0 0;text-transform:uppercase}
+.sheet{position:relative}
+.fpick{position:absolute;inset:0;display:grid;place-items:center;background:rgba(43,31,59,.45);z-index:3}
+.fbox{display:grid;justify-items:center;gap:calc(var(--u)*2);min-width:58%;padding:calc(var(--u)*5);background:#fff8ec;border:calc(var(--u)*1) solid var(--ink);border-radius:calc(var(--u)*3)}
+.fbox img{width:calc(var(--u)*26);height:calc(var(--u)*26);image-rendering:auto}
+.fbox b{font-size:.7em;text-transform:uppercase}
+.fbox button{width:100%;font:inherit;font-size:.6em;font-weight:600;padding:calc(var(--u)*2.4);border:calc(var(--u)*.8) solid var(--ink);border-radius:calc(var(--u)*2);background:#fff;color:var(--ink);cursor:pointer}
+.fbox button:hover{background:var(--pink)}

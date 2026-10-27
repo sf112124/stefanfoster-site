@@ -143,7 +143,7 @@ export const TRAINERS = {
     intro: ["So. You're the one who's been getting past my team.", "Let's talk numbers. Then stakeholders. Then numbers again."],
     win: ["...Fine. It's approved.", "Don't change a thing."], after: ["Approved. Go and make it."] },
   // home: the last and hardest test
-  alysha: { name: "ALYSHA", role: "THE ALYSHA TEST", look: "alysha", port: "t_alysha", map: "house", x: 8, y: 4, dir: "left", lv: 20, fixed: 28, boss: 2, final: 1, team: ["bunny", "angel", "butterfly", "kitten"],
+  alysha: { name: "ALYSHA", role: "THE ALYSHA TEST", look: "alysha", port: "t_alysha", map: "house", x: 8, y: 4, dir: "left", lv: 20, fixed: 26, boss: 2, final: 1, team: ["bunny", "angel", "butterfly", "kitten"],
     gate: ["Hi. Have you finished it yet?", "Bring me the whole portfolio. Every project, and the MAL badge.", "Then you can do the test. I'm not easy to impress."],
     intro: ["So. This is the whole portfolio?", "Talk me through it. Slowly.", "If something's not good, I'll know."],
     win: ["...Okay.", "It's actually really good. I'm proud of you.", "You passed the Alysha Test."],
