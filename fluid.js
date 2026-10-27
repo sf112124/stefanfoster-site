@@ -72,11 +72,11 @@ export function makeFluid(gl, buf) {
       run("splat", vel.w, { X: vel.r, pt, col: [v[0], v[1], 0, 0], r: r * .6, asp, tx: [1 / vel.W, 1 / vel.H] }); vel.swap();
       run("splat", dye.w, { X: dye.r, pt, col, r, asp, tx: [1 / dye.W, 1 / dye.H] }); dye.swap();
     },
-    step(dt, dyeFade) {
+    step(dt, dyeFade, vk = 26) {
       const { vel, dye, prs, div, curl } = S, vt = [1 / vel.W, 1 / vel.H];
       gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
       run("curl", curl, { V: vel.r, tx: vt });
-      run("vort", vel.w, { V: vel.r, C: curl, k: 26, dt, tx: vt }); vel.swap();
+      run("vort", vel.w, { V: vel.r, C: curl, k: vk, dt, tx: vt }); vel.swap();
       run("div", div, { V: vel.r, tx: vt });
       run("fade", prs.w, { X: prs.r, k: .8, tx: vt }); prs.swap();
       for (let i = 0; i < 18; i++) { run("press", prs.w, { P: prs.r, D: div, tx: vt }); prs.swap(); }

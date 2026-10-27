@@ -65,10 +65,10 @@ void main(){
   if (FL > .5) {
     // the real fluid: dye carried through a simulated flow, poured in from the pointer. It outlives the hover, so it can
     // swirl itself away rather than just fading; the type goes white wherever there's colour under it
-    vec4 dy = texture(D, v * .5 + .5); vec3 dc = dy.rgb / max(dy.a, 1e-3); float lu = dot(dc, vec3(.3, .55, .15)); dc = clamp(mix(vec3(lu), dc, 1.35), 0., 1.); float amt = clamp(1. - exp(-dy.a * 5.), 0., 1.);
+    vec2 du = v * .5 + .5, dq = vec2(R.y / R.x, 1.) * .02; vec4 dy = texture(D, du) * .28; for (int i = 0; i < 6; i++) { float an = float(i) * 1.0472; dy += texture(D, du + vec2(cos(an), sin(an)) * dq) * .12; } vec3 dc = dy.rgb / max(dy.a, 1e-3); float lu = dot(dc, vec3(.3, .55, .15)); dc = clamp(mix(vec3(lu), dc, 1.35), 0., 1.); float amt = smoothstep(0., 1., clamp(1. - exp(-dy.a * 3.2), 0., 1.));
     // leaving: the paint carries on along its paths and crumbles away, thinnest and roughest bits first
     if (EX > 0.) { float er = fbm(v * vec2(R.x / R.y, 1.) * 4.2 + XS + tm * .35) * .55 + fbm(v * 11. - XS.yx - tm * .2) * .25; amt *= smoothstep(EX - .05, EX + .05, amt * .3 + er * .95); }
-    float rim = 1. - smoothstep(.12, .62, amt); dc = mix(dc, PB, rim * .95); paper = mix(paper, dc, clamp(amt * .92 + rim * smoothstep(0., .1, amt) * .4, 0., 1.));
+    float rim = 1. - smoothstep(.05, .55, amt); dc = mix(dc, mix(dc, PB, .45), rim); paper = mix(paper, dc, clamp(amt * .88 + rim * smoothstep(0., .08, amt) * .28, 0., 1.));
   } else if (hc > .002) {
     float asp = R.x / R.y; vec2 p = v * vec2(asp, 1.), m = hm * vec2(asp, 1.), d = p - m;
     float t = tm * .55; d -= hv * .35 * exp(-dot(d, d) / 1.4); float rad = length(d);   // flung colour lags behind and overshoots with the pointer
@@ -141,12 +141,17 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const hx = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255), PAL = (a, b, c) => [...hx(a), ...hx(b), ...hx(c)];
   // each project's colours: four bright, harmonious hues the flow cycles through
   // juicy, analogous palettes: neighbouring hues only, so wherever they swirl together they stay bright and never go muddy
-  // four colours that flow from the cursor, then a fifth that only shows round the edges of the splash
-  const PALS = { "ai-experiments": ["#ff8a12", "#ffb81c", "#0aa6ad", "#2f45d8", "#e8197f"], "la-croisiere": ["#1f62e6", "#14c4cb", "#ffac17", "#ff6a35", "#ff8a12"],
-    "les-benjamins": ["#f2421b", "#ff8a12", "#ffc61a", "#0aa6ad", "#2f45d8"], "ai-commissions": ["#0fb37a", "#0a8bd0", "#3fe0b4", "#ffb300", "#f2421b"],
-    "3d-explorations": ["#2f45d8", "#1f72ff", "#7a3cff", "#ff8a12", "#14c4cb"], "summer-of-sport": ["#ff7a00", "#ef3b24", "#ffc400", "#1f6fff", "#0aa6ad"],
-    relax: ["#0aa6ad", "#1a6bff", "#2fd6d0", "#ffb300", "#f2421b"], "coca-cola": ["#e8261c", "#ff8a12", "#ffc21a", "#e8197f", "#0aa6ad"],
-    gumtree: ["#13b86a", "#19c8c0", "#ffcc1a", "#1f6fff", "#ff8a12"], _: ["#ff8a12", "#ffb81c", "#0aa6ad", "#2f45d8", "#e8197f"] };
+  // two neighbouring colours make the blob, a third softens its edge
+  const PALS = { "ai-experiments": ["#ff7a1a", "#ffb21c", "#ff7a1a", "#ffb21c", "#ff4f8b"],
+    "la-croisiere": ["#1f7bff", "#18c6d6", "#1f7bff", "#18c6d6", "#8c7bff"],
+    "les-benjamins": ["#ff5a2a", "#ffb21c", "#ff5a2a", "#ffb21c", "#ff4fa0"],
+    "ai-commissions": ["#11c08a", "#19c6d6", "#11c08a", "#19c6d6", "#c9e83a"],
+    "3d-explorations": ["#4a5bff", "#8a4dff", "#4a5bff", "#8a4dff", "#2fb8ff"],
+    "summer-of-sport": ["#ff7a00", "#ff4a4a", "#ff7a00", "#ff4a4a", "#ffc400"],
+    relax: ["#1a8cff", "#22d3d0", "#1a8cff", "#22d3d0", "#6f7bff"],
+    "coca-cola": ["#ff2e3e", "#ff7a1a", "#ff2e3e", "#ff7a1a", "#ff4fa0"],
+    gumtree: ["#14cf75", "#8fe03a", "#14cf75", "#8fe03a", "#19c6d6"],
+    _: ["#ff7a1a", "#ffb21c", "#ff7a1a", "#ffb21c", "#ff4f8b"] };
   for (const k in PALS) PALS[k] = PALS[k].map((c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255));
   let heat = 0; const pal = PALS._.flat(), hmP = [0, 0], hmS = [0, 0], hmV = [0, 0], prevP = [0, 0]; let fluidOn = 0, wasOn = 0, leaveT = 0, DR = 3800; const XS = [0, 0]; const lastP = [.5, .5];
   mount.addEventListener("pointermove", (e) => { const r = mount.getBoundingClientRect(); hmP[0] = 2 * (e.clientX - r.left) / r.width - 1; hmP[1] = 1 - 2 * (e.clientY - r.top) / r.height; });
@@ -253,14 +258,14 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     if (fluid && (heat > .004 || fluidOn > 0)) {
       fluidOn = heat > .004 || draining ? 3 : fluidOn - rdt; const fdt = Math.min(rdt, 1 / 30), t = now / 1000, ar = w / h;
       if (fluidOn > 0 && fdt > 0) {
-        const hue = (o) => { const f = ((t * .32 + o) % 4 + 4) % 4, i = Math.floor(f), k = f - i, kk = Math.min(1, Math.max(0, (k - .7) / .3)), kk2 = kk * kk * (3 - 2 * kk), a = i * 3, b = ((i + 1) % 4) * 3; return [0, 1, 2].map((c) => pal[a + c] + (pal[b + c] - pal[a + c]) * kk2); };
+        const hue = (o) => { const f = ((t * .25 + o) % 2 + 2) % 2, i = Math.floor(f), k = f - i, kk2 = k * k * (3 - 2 * k), a = i * 3, b = ((i + 1) % 2) * 3; return [0, 1, 2].map((c) => pal[a + c] + (pal[b + c] - pal[a + c]) * kk2); };
         const P = [(hmP[0] + 1) / 2, (hmP[1] + 1) / 2], dx = P[0] - prevP[0], dy = P[1] - prevP[1]; prevP[0] = P[0]; prevP[1] = P[1];
         const dye = (c, a) => [c[0] * a, c[1] * a, c[2] * a, a];
         if (hrow >= 0) {
           const sp = Math.hypot(dx, dy);
-          if (sp > 1e-4 && sp < .3) fluid.splat(P, [dx * 5200 * ar, dy * 5200], dye(hue(0), Math.min(.9, .12 + sp * 14)), .0016);
+          fluid.splat(P, sp < .3 ? [dx * 2600 * ar, dy * 2600] : [0, 0], dye(hue(0), Math.min(.5, .05 + sp * 7)), .0045);
         }
-        fluid.step(fdt, 1.1);
+        fluid.step(fdt, 1.6, 3);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height); gl.useProgram(pr);
         gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
       }
