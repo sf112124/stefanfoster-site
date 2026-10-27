@@ -135,8 +135,11 @@ export const TRAINERS = {
   mia: { name: "ANNA", role: "SOCIAL LEAD", look: "anna", port: "t_anna", x: 62, y: 11, dir: "left", lv: 2, team: ["vertical"],
     intro: ["Omg hiii. Can it be a trend?", "Like, vertical, but it has to feel organic.", "And can we hook them in the first half a second?"],
     win: ["Okay that's actually so good. Posting it now."], after: ["It's doing numbers. Like, real numbers."] },
-  cmo: { name: "TOMMY", role: "CMO", look: "cmo", port: "t_cmo", x: 35, y: 9, dir: "down", lv: 4, boss: 1, team: ["roi"], needs: ["darren", "gary", "jules", "mia"], unlock: "THE CMO WANTS A WORD. NORTH ROAD.",
-    gate: ["My team speaks for me.", "Get past Jimi, Paris, Branco and Anna first. Then we'll talk."],
+  priya: { name: "TORA", role: "MARKETING LEAD", look: "tora", port: "t_tora", x: 55, y: 28, dir: "left", lv: 1, team: ["kpi"],
+    intro: ["Hi! Huge fan of the work.", "Before we brief, can we align on the verticals?", "And I'll need KPIs for each one. Per platform. Per week."],
+    win: ["Fine. I'll tell the team the KPI is vibes."], after: ["We're seeing really strong engagement on this chat."] },
+  cmo: { name: "TOMMY", role: "CMO", look: "cmo", port: "t_cmo", x: 35, y: 9, dir: "down", lv: 4, boss: 1, team: ["roi"], needs: ["darren", "priya", "gary", "jules", "mia"], unlock: "THE CMO WANTS A WORD. NORTH ROAD.",
+    gate: ["My team speaks for me.", "Get past Jimi, Tora, Paris, Branco and Anna first. Then we'll talk."],
     intro: ["So. You're the one who's been getting past my team.", "Let's talk numbers. Then stakeholders. Then numbers again."],
     win: ["...Fine. It's approved.", "Don't change a thing."], after: ["Approved. Go and make it."] },
   // home: the last and hardest test
