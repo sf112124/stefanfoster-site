@@ -11,7 +11,7 @@ in vec2 v; out vec4 o;
 uniform sampler2D T; uniform vec2 R; uniform float off, N, rowH, texW, texH, S0, B, C, hov, fly, flt, S1, C1, hrow;
 // screen y (-1..1) to a position in the stack, and how many screen pixels one texel takes there
 // in the list, only the line under the pointer grows (G per line), swelling over its own spot without nudging the others
-uniform float G[16], mx, SP, hc, tm; uniform vec2 hm, hv; uniform vec3 P0, P1, P2, PB; uniform sampler2D D; uniform float FL;
+uniform float G[16], mx, SP, hc, tm; uniform vec2 hm, hv; uniform vec3 P0, P1, P2, PB; uniform sampler2D D; uniform float FL, EX, BT; uniform vec2 XS;
 float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float nz(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(hsh(i), hsh(i + vec2(1, 0)), f.x), mix(hsh(i + vec2(0, 1)), hsh(i + vec2(1, 1)), f.x), f.y); }
 float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 3; i++) { v += a * nz(p); p = p * 2.03 + vec2(1.7, 9.2); a *= .5; } return v; }
@@ -65,7 +65,9 @@ void main(){
     // the real fluid: dye carried through a simulated flow, poured in from the pointer. It outlives the hover, so it can
     // swirl itself away rather than just fading; the type goes white wherever there's colour under it
     vec4 dy = texture(D, v * .5 + .5); vec3 dc = dy.rgb / max(dy.a, 1e-3); float lu = dot(dc, vec3(.3, .55, .15)); dc = clamp(mix(vec3(lu), dc, 1.35), 0., 1.); float amt = clamp(1. - exp(-dy.a * 5.), 0., 1.);
-    paper = mix(mix(paper, PB, hc), dc, amt); ink = mix(ink, vec3(1.), clamp(max(hc, amt * 1.4), 0., 1.));
+    // leaving: the paint carries on along its paths and crumbles away, thinnest and roughest bits first
+    if (EX > 0.) { float er = fbm(v * vec2(R.x / R.y, 1.) * 4.2 + XS + tm * .35) * .55 + fbm(v * 11. - XS.yx - tm * .2) * .25; amt *= smoothstep(EX - .05, EX + .05, amt * .3 + er * .95); }
+    paper = mix(mix(paper, PB, BT), dc, amt); ink = mix(ink, vec3(1.), clamp(max(hc, amt * 1.4), 0., 1.));
   } else if (hc > .002) {
     float asp = R.x / R.y; vec2 p = v * vec2(asp, 1.), m = hm * vec2(asp, 1.), d = p - m;
     float t = tm * .55; d -= hv * .35 * exp(-dot(d, d) / 1.4); float rad = length(d);   // flung colour lags behind and overshoots with the pointer
@@ -110,7 +112,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "G", "mx", "SP", "hc", "tm", "hm", "hv", "P0", "P1", "P2", "PB", "D", "FL", "T"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
+  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "G", "mx", "SP", "hc", "tm", "hm", "hv", "P0", "P1", "P2", "PB", "D", "FL", "T", "EX", "BT", "XS"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
   draw(); document.fonts.ready.then(draw);
 
   // the label beside the line in the middle: who it was for, what it is, and a little moving picture in brackets
@@ -144,7 +146,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     relax: ["#1fa7ff", "#38e0ff", "#6b6bff", "#48f0c8"], "coca-cola": ["#ff2e5b", "#ff5c8a", "#ff7a59", "#ff3fa4"],
     gumtree: ["#2fe08a", "#00c9b7", "#7ff07a", "#21b8ff"], _: ["#ff6fb5", "#b56bff", "#59b8ff", "#5fe8c8"] };
   for (const k in PALS) PALS[k] = PALS[k].map((c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255));
-  let heat = 0; const pal = PALS._.flat(), hmP = [0, 0], hmS = [0, 0], hmV = [0, 0], prevP = [0, 0]; let fluidOn = 0, wasOn = 0, leaveT = 0; const lastP = [.5, .5];
+  let heat = 0; const pal = PALS._.flat(), hmP = [0, 0], hmS = [0, 0], hmV = [0, 0], prevP = [0, 0]; let fluidOn = 0, wasOn = 0, leaveT = 0, DR = 3800; const XS = [0, 0]; const lastP = [.5, .5];
   mount.addEventListener("pointermove", (e) => { const r = mount.getBoundingClientRect(); hmP[0] = 2 * (e.clientX - r.left) / r.width - 1; hmP[1] = 1 - 2 * (e.clientY - r.top) / r.height; });
   mount.addEventListener("pointermove", (e) => { const a = e.target.closest && e.target.closest(".tun-list a"); if (!a || e.target !== a) { mouseY = null; return; } const r = mount.getBoundingClientRect(); mouseY = 1 - 2 * (e.clientY - r.top) / r.height - .05; mouseX = 2 * (e.clientX - r.left) / r.width - 1; });
   mount.addEventListener("pointerleave", () => (mouseY = null));
@@ -240,11 +242,11 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     if (hrow >= 0) { const tgt = (PALS[LIST[hrow].slug] || PALS._).flat(); for (let j = 0; j < 12; j++) pal[j] += (tgt[j] - pal[j]) * pk; }
     // a loose spring: flick the mouse and the colour swings after it, overshoots and settles
     for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h2 = Math.min(.008, rdt / n); for (let j = 0; j < 2; j++) { hmV[j] += ((hmP[j] - hmS[j]) * 34 - hmV[j] * 5.2) * h2; hmS[j] += hmV[j] * h2; } }
-    gl.uniform1f(U.hc, heat * heat * (3 - 2 * heat)); gl.uniform1f(U.tm, now / 1000); gl.uniform2f(U.hm, hmS[0], hmS[1]); gl.uniform2f(U.hv, Math.max(-1.5, Math.min(1.5, hmV[0] * .25)), Math.max(-1.5, Math.min(1.5, hmV[1] * .25))); lst.classList.toggle("hot", heat > .35 || (leaveT && now - leaveT < 1800));
+    gl.uniform1f(U.hc, heat * heat * (3 - 2 * heat)); gl.uniform1f(U.tm, now / 1000); gl.uniform2f(U.hm, hmS[0], hmS[1]); gl.uniform2f(U.hv, Math.max(-1.5, Math.min(1.5, hmV[0] * .25)), Math.max(-1.5, Math.min(1.5, hmV[1] * .25))); lst.classList.toggle("hot", heat > .35 || (leaveT && now - leaveT < DR * .55));
     gl.uniform3f(U.P0, pal[0], pal[1], pal[2]); gl.uniform3f(U.P1, pal[3], pal[4], pal[5]); gl.uniform3f(U.P2, pal[6], pal[7], pal[8]);
     // drive the fluid: the pointer stirs it and pours colour, three slow currents fill the page; leave the list and it spins itself down a drain
-    if (hrow >= 0) { wasOn = 1; leaveT = 0; lastP[0] = (hmP[0] + 1) / 2; lastP[1] = (hmP[1] + 1) / 2; } else if (wasOn) { wasOn = 0; leaveT = now; }
-    const draining = leaveT && now - leaveT < 2600;
+    if (hrow >= 0) { wasOn = 1; leaveT = 0; lastP[0] = (hmP[0] + 1) / 2; lastP[1] = (hmP[1] + 1) / 2; } else if (wasOn) { wasOn = 0; leaveT = now; DR = 3200 + Math.random() * 1800; XS[0] = Math.random() * 40; XS[1] = Math.random() * 40; }
+    const draining = leaveT && now - leaveT < DR, lk = leaveT ? Math.min(1, (now - leaveT) / DR) : 0;
     if (fluid && (heat > .004 || fluidOn > 0)) {
       fluidOn = heat > .004 || draining ? 3 : fluidOn - rdt; const fdt = Math.min(rdt, 1 / 30), t = now / 1000, ar = w / h;
       if (fluidOn > 0 && fdt > 0) {
@@ -257,19 +259,14 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
           fluid.splat(P, [Math.cos(t * 2.1) * 60, Math.sin(t * 1.7) * 60], dye(hue(.7), .12), .0055);   // a steady bloom under the pointer
           for (let e = 0; e < 3; e++) { const an = t * (.42 + e * .17) + e * 2.1, q = [.5 + Math.cos(an) * (.3 + e * .08), .5 + Math.sin(an * 1.3 + e) * (.3 + e * .05)], c = hue(1.2 + e * 1.1);
             fluid.splat(q, [-Math.sin(an) * 200, Math.cos(an * 1.3 + e) * 220], dye(c, .1), .014); }
-        } else if (draining) {
-          // a vortex where you left, tightening as it goes, so the colour spirals away
-          const k = (now - leaveT) / 2600, str = 900 * (1 - k * .6);
-          for (let e = 0; e < 6; e++) { const an = e / 6 * 6.283 + t * 3, rr = .16 * (1 - k * .7), q = [lastP[0] + Math.cos(an) * rr / ar, lastP[1] + Math.sin(an) * rr];
-            fluid.splat(q, [-Math.sin(an) * str - Math.cos(an) * str * .35, Math.cos(an) * str - Math.sin(an) * str * .35], [0, 0, 0, 0], .004); }
         }
-        fluid.step(fdt, hrow >= 0 ? .18 : draining ? .4 + Math.pow((now - leaveT) / 2600, 2) * 5 : 6);
+        fluid.step(fdt, hrow >= 0 ? .18 : draining ? .3 : 4);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height); gl.useProgram(pr);
         gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
       }
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, fluid.dye); gl.uniform1i(U.D, 1); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(U.T, 0);
     }
-    gl.uniform1f(U.FL, fluid && fluidOn > 0 ? 1 : 0);
+    gl.uniform1f(U.FL, fluid && fluidOn > 0 ? 1 : 0); gl.uniform1f(U.EX, hrow >= 0 || !leaveT ? 0 : .34 + Math.pow(lk, 1.25) * .7); const hs = heat * heat * (3 - 2 * heat); gl.uniform1f(U.BT, hrow >= 0 || !leaveT ? hs : Math.max(hs, Math.pow(1 - lk, 2.2))); gl.uniform2f(U.XS, XS[0], XS[1]);
     { const m = [0, 1, 2].map((c) => (pal[c] + pal[3 + c] + pal[6 + c] + pal[9 + c]) / 4); gl.uniform3f(U.PB, ...m.map((c) => 1 - (1 - c) * .28)); }
     if (flatK > .5) placeList(S1, C1);
     lst.style.setProperty("--row", `${(rowH * S1) / Math.min(1.5, devicePixelRatio || 1)}px`); lst.style.setProperty("--wide", `${(T.widest * S1) / Math.min(1.5, devicePixelRatio || 1)}px`);

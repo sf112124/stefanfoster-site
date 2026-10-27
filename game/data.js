@@ -46,6 +46,38 @@ const PE = { "la-croisiere": [["SUN HAT", "croisiere2"], ["LA GRANDE", "croisier
 for (const k in PE) FOES[k].evo = PE[k].map((n, i) => ({ lvl: PEVO.lvls[i], name: n[0], art: n[1] }));
 export const pstage = (slug, lvl) => (FOES[slug].evo || []).filter((e) => lvl >= e.lvl).length;
 export const pform = (slug, lvl) => { const f = FOES[slug], k = pstage(slug, lvl); return k ? { ...f, name: f.evo[k - 1].name, art: f.evo[k - 1].art, stage: k } : { ...f, stage: 0 }; };
+// ---- rare creatures nobody catches: people give them to you ----
+export const GIFTS = {
+  noself: { name: "NO SELF", type: "NONE", art: "noself", moves: [{ n: "THERE IS NO YOU", p: 16, fx: "sparkle" }, { n: "PURE AWARENESS", kind: "heal" }, { n: "ALREADY WHOLE", p: 13, fx: "beam" }],
+    about: "Has no edges. Can't be hit where it isn't." },
+  truffle: { name: "TRUFFLE", type: "IMAGE", art: "truffle", moves: [{ n: "CLOSED-EYE VISUALS", p: 14, fx: "glitch" }, { n: "COSMIC GIGGLE", p: 11, fx: "sparkle" }, { n: "MYCELIUM", p: 12, fx: "leaf" }],
+    about: "Found in the woods. Changes everyone who meets it." },
+  disco: { name: "WRAP PARTY", type: "FILM", art: "disco", moves: [{ n: "MIRROR BALL", p: 14, fx: "flash" }, { n: "LAST SONG", p: 11, fx: "notes" }, { n: "AFTERPARTY", kind: "buff" }],
+    about: "Hasn't stopped spinning since the shoot wrapped." },
+  vibe: { name: "VIBE CODER", type: "AI", art: "vibe", moves: [{ n: "SHIP IT", p: 15, fx: "beam" }, { n: "HALLUCINATE", p: 12, fx: "glitch" }, { n: "REFACTOR", kind: "heal" }],
+    about: "Built over a weekend. Writes its own moves." },
+};
+// ---- people around the valley and the office with something for you ----
+export const GIVERS = [
+  { id: "planner", map: "mal0", x: 6, y: 12, look: "sl", name: "A VERY CALM PLANNER", give: { mon: "noself" },
+    lines: ["Oh, did you know Stef's really into non-duality?", "He asked me to give you this. Well. He said there's nobody to give it to, and nobody to give it.", "Then he laughed for quite a long time."],
+    after: ["Who's asking?"] },
+  { id: "innovation", map: "mal2", x: 20, y: 10, look: "mp", name: "HEAD OF INNOVATION", needs: "badge", give: { item: "forever" },
+    lines: ["Stef always says AI will make us all live forever.", "Well, little does he know: I've already worked it out.", "Here. Don't tell legal."],
+    gate: ["Come back when you've got Tim's badge. This isn't for interns."], after: ["Version two will do pets."] },
+  { id: "runner", map: "world", x: 30, y: 12, look: "ad", name: "THE RUNNER", give: { mon: "disco" },
+    lines: ["Found this in the kit room after the wrap party.", "It hasn't stopped spinning. Nobody will take it home.", "You look like you could use a friend that's always up."],
+    after: ["If production asks, you never saw me."] },
+  { id: "milosh", map: "world", x: 7, y: 33, look: "bs", name: "MILOSH", give: { mon: "truffle" },
+    lines: ["Me and Stef found this in the woods once.", "Honestly it changed both of us.", "It wants to come with you. I can tell. It's telling me."],
+    after: ["Look at the trees. No, really look at them."] },
+  { id: "dev", map: "mal1", x: 19, y: 13, look: "mm", name: "THE CREATIVE TECHNOLOGIST", give: { mon: "vibe" },
+    lines: ["I built a little guy over the weekend.", "Prompted it, shipped it, didn't read a single line.", "It's yours. If it breaks, just tell it it's wrong."],
+    after: ["It's on version forty-six now. I don't know how."] },
+  { id: "awards", map: "mal2", x: 9, y: 13, look: "sl", name: "THE AWARDS ENTRY PERSON", needs: "badge", give: { item: "lion" },
+    lines: ["We had a spare one of these from the cabinet.", "Give it to any project of yours. It'll grow up on the spot.", "That's how awards work, basically."],
+    gate: ["Awards are for people with badges. Go and see Tim."], after: ["Don't put it on the shelf. Use it."] },
+];
 // ---- the coffee kiosk on the square ----
 export const ITEMS = {
   americano: { name: "AMERICANO", price: 4.5, about: "A quick hit. Heals one of your folio by half.", use: "heal" },
@@ -54,6 +86,8 @@ export const ITEMS = {
   sparkling: { name: "SPARKLING WATER", price: 4.8, about: "Wakes a tired one up with half its health.", use: "revive" },
   hojicha: { name: "HOJICHA", price: 5.8, about: "Roasted, grounding. In a fight, nothing gets to you: defence up.", use: "def", battle: 1 },
   beer: { name: "BEER", price: 7, about: "Dutch courage. In a fight, attack way up, but your guard drops.", use: "beer", battle: 1 },
+  forever: { name: "IMMORTALITY PROTOCOL", price: 0, rare: 1, about: "One of your folio goes to level infinity. Forever.", use: "inf" },
+  lion: { name: "THE GOLDEN LION", price: 0, rare: 1, about: "A project evolves on the spot.", use: "evolve" },
 };
 // the one thing out there that isn't a project: the spider from the main site
 export const EXTRA = {

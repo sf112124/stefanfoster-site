@@ -4,7 +4,7 @@ import { PROJECTS as ALLP, ABOUT } from "../projects.js";
 const PROJECTS = ALLP.filter((p) => !p.page || p.slug === "les-benjamins"); // pages of their own (and locked ones) stay out of the game
 import MEDIA from "../media.js";
 import { buildArt, C } from "./art.js";
-import { buildWorld, buildHouse, buildOffice, STARTERS, FOES, EXTRA, CORP, TRAINERS, SAY, ZONES, TT, TNAME, eff, formOf, stageOf, pform, pstage, ITEMS, PEVO } from "./data.js";
+import { buildWorld, buildHouse, buildOffice, STARTERS, FOES, EXTRA, CORP, TRAINERS, SAY, ZONES, TT, TNAME, eff, formOf, stageOf, pform, pstage, ITEMS, PEVO, GIFTS, GIVERS } from "./data.js";
 import { person, LOOKS } from "./people.js";
 import { Chip } from "./music.js";
 
@@ -24,7 +24,7 @@ const A = buildArt();
 // people are drawn from outfit recipes; every creature and portrait is a painted sprite in game/art
 for (const k in LOOKS) A.who[k] = person(LOOKS[k]);
 A.who.you = A.who.boy; A.port = {}; A.monF = {};
-const ART = ["balloon", "ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "bear", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "t_tora", "t_paris", "t_branco", "t_anna", "t_lucy", "t_alysha", "bunny", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo", "angel", "butterfly", "kitten", ...Object.values(FOES).flatMap((f) => (f.evo || []).map((e) => e.art))];
+const ART = ["balloon", "ai2", "ai3", "ps2", "ps3", "pr2", "pr3", "easing", "dj", "budget", "timesheet", "bigidea", "bear", "t_tim", "t_pat", "t_chris", "t_jeremy", "t_jimi", "t_tora", "t_paris", "t_branco", "t_anna", "t_lucy", "t_alysha", "bunny", "ai", "ps", "pr", "croisiere", "commish", "blob", "goat", "sport", "relax", "fizz", "gum", "crawler", "brief", "kpi", "roi", "mediaplan", "vertical", "stakeholder", "deck", "t_stefan", "t_ad", "t_mm", "t_mp", "t_bs", "t_sl", "t_cmo", "angel", "butterfly", "kitten", "noself", "truffle", "disco", "vibe", ...Object.values(FOES).flatMap((f) => (f.evo || []).map((e) => e.art))];
 // walking sprites: one strip per person, nine frames (front, left, back; standing then each foot), right is the left mirrored
 const WALK = ["stefan", "boy", "girl", "ad", "mm", "mp", "bs", "sl", "cmo", "tim", "pat", "chris", "jeremy", "jimi", "smoker", "vaper", "tora", "paris", "branco", "anna", "lucy", "alysha"];
 await Promise.all(WALK.map((k) => new Promise((res) => { const im = new Image(); im.onload = () => {
@@ -51,13 +51,13 @@ const iw = (s) => s.width / (s._s || 1), ih = (s) => s.height / (s._s || 1);
 // ---------- what's remembered between visits ----------
 const S = { starter: null, lvl: 3, hp: null, won: [], flags: {}, reels: [], beat: [], look: "boy", cash: 0, bag: {}, plv: {}, coins: {} };
 const save = () => { try { localStorage.setItem("foster-valley", JSON.stringify(S)); } catch (e) {} };
-const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; S.beat = (S.beat || []).filter((b) => TRAINERS[b]); S.look = S.look || "boy"; S.cash = S.cash || 0; S.bag = S.bag || {}; S.coins = S.coins || {}; S.plv = S.plv || {}; S.won.forEach((k) => { if (!S.plv[k]) S.plv[k] = S.lvl; }); S.stg = S.stg || {}; if (S.stg.tool == null) S.stg.tool = (S.lvl >= 5) + (S.lvl >= 8); if (!S.econ) { S.econ = 1; S.cash = 0; } A.who.you = A.who[S.look] || A.who.boy; return true; } } catch (e) {} return false; };
+const load = () => { try { const d = JSON.parse(localStorage.getItem("foster-valley") || "null"); if (d && STARTERS[d.starter]) { Object.assign(S, d); S.reels = S.reels || []; S.beat = (S.beat || []).filter((b) => TRAINERS[b]); S.look = S.look || "boy"; S.cash = S.cash || 0; S.bag = S.bag || {}; S.coins = S.coins || {}; S.plv = S.plv || {}; S.gifts = S.gifts || []; S.got = S.got || {}; S.inf = S.inf || {}; S.won.forEach((k) => { if (!S.plv[k]) S.plv[k] = S.lvl; }); S.stg = S.stg || {}; if (S.stg.tool == null) S.stg.tool = (S.lvl >= 5) + (S.lvl >= 8); if (!S.econ) { S.econ = 1; S.cash = 0; } A.who.you = A.who[S.look] || A.who.boy; return true; } } catch (e) {} return false; };
 const stats = (lvl, st = S.starter ? stageFor("tool", lvl) : 0) => ({ max: 30 + lvl * 6 + (S.reels || []).length * 2 + st * 10, atk: 10 + lvl + (S.reels || []).length + st * 3, def: 10 + lvl + st * 2 });
 // every project in your folio has its own level now, and evolves at 14 and 24
-const lvlOf = (k) => (k === "tool" ? S.lvl : S.plv[k] || S.lvl);
+const lvlOf = (k) => (S.inf && S.inf[k] ? 999 : k === "tool" ? S.lvl : S.plv[k] || S.lvl);
 // once something has evolved it stays evolved, even if the levels it evolves at ever move
-const stageFor = (k, lvl = lvlOf(k)) => Math.max(k === "tool" ? stageOf(S.starter, lvl) : pstage(k, lvl), (S.stg || {})[k] || 0);
-const formFor = (k, lvl = lvlOf(k)) => { const base = k === "tool" ? STARTERS[S.starter] : FOES[k], st = Math.min(stageFor(k, lvl), (base.evo || []).length), e = st ? base.evo[st - 1] : null;
+const stageFor = (k, lvl = lvlOf(k)) => GIFTS[k] ? 0 : Math.max(k === "tool" ? stageOf(S.starter, lvl) : pstage(k, lvl), (S.stg || {})[k] || 0);
+const formFor = (k, lvl = lvlOf(k)) => { if (GIFTS[k]) return { ...GIFTS[k], stage: 0 }; const base = k === "tool" ? STARTERS[S.starter] : FOES[k], st = Math.min(stageFor(k, lvl), (base.evo || []).length), e = st ? base.evo[st - 1] : null;
   const f = e ? { ...base, name: e.name, art: e.art, stage: st } : { ...base, stage: 0 }; if (!A.mon[f.art]) return { ...f, art: base.art }; return f; };
 const keepStage = (k) => { S.stg = S.stg || {}; S.stg[k] = Math.max(S.stg[k] || 0, stageFor(k)); };
 const statsFor = (k) => { const L = lvlOf(k); if (k === "tool") return stats(L); const st = stats(L, stageFor(k, L)); return { ...st, max: Math.round(st.max * .9) }; };
@@ -207,6 +207,13 @@ const maps = { world: prep(buildWorld()), house: prep(buildHouse()), mal0: prep(
     if (free(x, y) && m.base[m.I(x, y)] === TT.grass && byRoad(x, y) && !m.objs.some((o) => Math.abs(o.x - x) + Math.abs(o.y - y) < 2) && !m.objs.some((o) => o.k === "kitcase" && Math.abs(o.x - x) + Math.abs(o.y - y) < 22)) { m.objs.push({ k: "kitcase", n: n++, x, y, w: 1, solid: 1, act: "kitcase" }); m.solid[m.I(x, y)] = 1; } }
   m.flat = m.objs.filter((o) => o.flat); m.tall = m.objs.filter((o) => !o.flat); }
 const coinUp = () => false;
+// the people with something for you, each on the nearest free tile to their spot
+for (const gv of GIVERS) {
+  const m = maps[gv.map]; if (!m) continue;
+  const ok = (x, y) => x > 0 && y > 1 && x < m.W - 1 && y < m.H - 1 && !m.solid[m.I(x, y)] && !m.tg[m.I(x, y)] && !m.objs.some((o) => !o.gone && o.y === y && x >= o.x && x < o.x + (o.w || 1)) && !(m.warps || []).some((w) => Math.abs(w.x - x) + Math.abs(w.y - y) <= 1) && m.base[m.I(x, y)] !== TT.wet && m.base[m.I(x, y)] !== TT.mat;
+  let spot = null; for (let r = 0; r < 8 && !spot; r++) for (let dy = -r; dy <= r && !spot; dy++) for (let dx = -r; dx <= r && !spot; dx++) if (ok(gv.x + dx, gv.y + dy)) spot = [gv.x + dx, gv.y + dy];
+  if (!spot) continue; const o = { k: "npc", who: gv.look, x: spot[0], y: spot[1], w: 1, solid: 1, dir: "down", act: "gift:" + gv.id }; m.objs.push(o); m.tall.push(o);
+}
 // London's date, for the day rate and for when the flight cases turn up again
 const today = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London" }).format(new Date());
 const thisWeek = () => { const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/London" })); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toDateString(); };
@@ -316,6 +323,19 @@ async function run(act, o) {
     else if (a === "coffee") { await ui.say(SAY.coffee[0]); healAll(); au.sfx("heal"); if (S.starter) await ui.say(SAY.coffee[1]); save(); }
     else if (a === "trainer") await chat(o);
     else if (a === "shop") await shop();
+    else if (a === "gift") {
+      const gv = GIVERS.find((q) => q.id === b); if (!gv) return; o.dir = OPP[P.dir];
+      if (S.got[gv.id]) { await ui.say(gv.after, { who: gv.name }); return; }
+      if (!S.starter) { await ui.say(["Come back when you've got a tool."], { who: gv.name }); return; }
+      if (gv.needs === "badge" && !S.flags.badge) { await ui.say(gv.gate, { who: gv.name }); return; }
+      await ui.say(gv.lines, { who: gv.name });
+      if (gv.give.mon) {
+        const k = gv.give.mon, g = GIFTS[k]; S.gifts = [...(S.gifts || []), k]; S.plv[k] = Math.max(5, S.lvl - 1); S.got[gv.id] = 1; save();
+        talk = { img: A.mon[g.art], k: 0, show: 1 }; au.sfx("win"); await tween(260, (q) => talk && (talk.k = q));
+        await ui.say([`You received ${g.name}!`, g.about, `${g.name} joined your folio.`]);
+        { const t = talk; await tween(180, (q) => t && (t.k = 1 - q)); talk = null; }
+      } else { const k = gv.give.item; S.bag[k] = (S.bag[k] || 0) + 1; S.got[gv.id] = 1; save(); au.sfx("win"); await ui.say([`You received ${ITEMS[k].name}!`, ITEMS[k].about, "It's in your bag."]); }
+    }
     else if (a === "kitcase") {
       await ui.say(["A flight case, left behind after a shoot. Nobody's coming back for it."], { keep: true });
       const c = await ui.choose(["Smash it open", "Leave it"], { cls: "yn" }); ui.hide(); if (c !== 0) return;
@@ -454,7 +474,7 @@ async function duel(o) {
 }
 
 // ---------- the coffee kiosk, and your bag ----------
-const IK = Object.keys(ITEMS);
+const IK = Object.keys(ITEMS).filter((k) => !ITEMS[k].rare), BAGK = Object.keys(ITEMS);
 async function shop() {
   au.sfx("ok");
   await ui.say(["Morning! What can I get you?"], { who: "BARISTA" });
@@ -473,7 +493,7 @@ async function shop() {
 }
 // use something from the bag: in a fight (me is who's out) or walking about. Returns falsy if nothing was used.
 async function useItem(me) {
-  const have = IK.filter((k) => S.bag[k] > 0 && (me || !ITEMS[k].battle));
+  const have = BAGK.filter((k) => S.bag[k] > 0 && (me || !ITEMS[k].battle));
   if (!have.length) { await ui.line(me ? "Your bag is empty. The kiosk on the square sells coffee." : "Nothing in your bag you can use right now."); return null; }
   ui.show(`What will you have? (${money(S.cash || 0)} left)`);
   const c = await ui.choose(have.map((k) => ({ html: `<img class="ic" src="game/art/i_${k}.png" alt=""><b>${esc(ITEMS[k].name)}</b><i>×${S.bag[k]}</i>` })), { cls: "shop", cols: 2, cancel: true });
@@ -486,11 +506,22 @@ async function useItem(me) {
     else { me.am = Math.min(2.2, me.am * 1.6); me.dm = Math.max(.6, me.dm * .8); await ui.line(`${me.name} necks a BEER. Attack shot up! Guard dropped a bit.`); }
     return { turn: 1 };
   }
+  if (it.use === "inf" || it.use === "evolve") {
+    const ks = party().filter((q) => (q === "tool" || FOES[q] || GIFTS[q]) && (it.use === "inf" ? !(S.inf || {})[q] : q !== "tool" && FOES[q] && stageFor(q) < (FOES[q].evo || []).length));
+    if (!ks.length) { await ui.line(it.use === "inf" ? "Everyone's already immortal. Steady on." : "None of your projects has anything left to grow into."); return null; }
+    ui.show(it.use === "inf" ? "Who gets to live forever?" : "Which project gets the award?");
+    const w = await ui.choose(ks.map((q) => { const m = member(q); return { html: `<img class="pm" src="${monImg(m.art)}" alt=""><b>${esc(m.name)}</b><i>Lv ${m.lvl >= 999 ? "∞" : m.lvl}</i>` }; }), { cls: "party", cols: 2, cancel: true });
+    if (w < 0) return null; const q = ks[w], nm = member(q).name; take();
+    if (it.use === "inf") { S.inf = S.inf || {}; S.inf[q] = 1; hpSet(q, statsFor(q).max); save(); au.sfx("secret"); await ui.line(`${nm} uploads itself to the cloud. Its level is now ∞.`); }
+    else { S.stg = S.stg || {}; S.stg[q] = stageFor(q) + 1; save(); au.sfx("level"); await ui.line(`${nm} lifts THE GOLDEN LION... and evolves into ${formFor(q).name}!`); }
+    if (me && me.key === q) { const st = statsFor(q), f = formFor(q); Object.assign(me, { art: f.art, name: f.name, lvl: lvlOf(q), max: st.max, atk: st.atk, def: st.def }); me.hp = Math.min(me.max, Math.max(me.hp, st.max)); }
+    return { turn: 1 };
+  }
   if (it.use === "all") {
     take(); healAll(); if (me) { me.hp = me.max; } au.sfx("heal"); await ui.line("A MATCHA LATTE all round. Your whole folio is back to full."); return { turn: 1 };
   }
   // pick who it's for
-  const ks = party().filter((q) => q === "tool" || FOES[q]);
+  const ks = party().filter((q) => q === "tool" || FOES[q] || GIFTS[q]);
   ui.show(`Who's the ${it.name} for?`);
   const w = await ui.choose(ks.map((q) => { const m = member(q), hp = me && me.key === q ? me.hp : m.hp; return { html: `<img class="pm" src="${monImg(m.art)}" alt=""><b>${esc(m.name)}</b><i>${hp <= 0 ? "TIRED" : `${Math.ceil(hp)}/${m.max}`}</i>` }; }), { cls: "party", cols: 2, cancel: true });
   if (w < 0) return null;
@@ -517,20 +548,20 @@ async function hopOff() {
 const TCOL = { AI: "#57c9b5", IMAGE: "#6ea4f2", FILM: "#b79cff", NONE: "#ff2d4a" };
 const BG = { "les-benjamins": ["#bfe3ff", "#9be15d", "#ff9dbb"], corp: ["#e8edf5", "#9fb4d9", "#ffd76a"],  "la-croisiere": ["#bfeaf7", "#ffe9b8", "#ff9dbb"], "ai-commissions": ["#b7f3e4", "#57c9b5", "#b79cff"], "3d-explorations": ["#e0d4ff", "#a58cf0", "#86d2ec"], "ai-experiments": ["#ffc4f1", "#e772cf", "#ffd76a"], "summer-of-sport": ["#c4f0b0", "#ffd76a", "#f2907f"], relax: ["#a5e8cf", "#86d2ec", "#fff4e0"], "coca-cola": ["#ffd9a6", "#e6a25a", "#f0546a"], gumtree: ["#ffd0e3", "#ff86b6", "#a9dcbc"], x: ["#e9e4f0", "#b79cff", "#ffb38a"] };
 // ---------- your party: your tool first, then every project you've caught, each with its own health ----------
-const party = () => ["tool", ...S.won];
+const party = () => ["tool", ...S.won, ...(S.gifts || [])];
 const hpGet = (k) => (k === "tool" ? S.hp : (S.php || {})[k]);
 const hpSet = (k, v) => { if (k === "tool") S.hp = v; else { S.php = S.php || {}; S.php[k] = v; } };
 const healAll = () => { S.hp = statsFor("tool").max; S.php = {}; };
 const MV = [14, 22, 11];
 function member(key) {
   const st = statsFor(key), f = formFor(key);
-  const base = key === "tool" ? f : { ...f, moves: f.moves.map((m, i) => ({ n: m.n, t: f.type, p: (MV[i] || 12) + f.stage * 2, acc: i === 1 ? .82 : undefined, fx: m.fx })) };
+  const base = key === "tool" ? f : GIFTS[key] ? { ...f, moves: f.moves.map((m) => ({ ...m, t: f.type })) } : { ...f, moves: f.moves.map((m, i) => ({ n: m.n, t: f.type, p: (MV[i] || 12) + f.stage * 2, acc: i === 1 ? .82 : undefined, fx: m.fx })) };
   const max = st.max, hp = clamp(hpGet(key) ?? max, 0, max);
   return { ...base, key, lvl: lvlOf(key), max, hp, atk: st.atk, def: st.def, am: 1, dm: 1, ox: 0, oy: 0, a: 1, fl: 0, sc: 1 };
 }
-const alive = (except) => party().filter((k) => k !== except && (hpGet(k) ?? 1) > 0 && !(k !== "tool" && !FOES[k]));
+const alive = (except) => party().filter((k) => k !== except && (hpGet(k) ?? 1) > 0 && !(k !== "tool" && !FOES[k] && !GIFTS[k]));
 async function choosePartner(force, current) {
-  const ks = party().filter((k) => k === "tool" || FOES[k]);
+  const ks = party().filter((k) => k === "tool" || FOES[k] || GIFTS[k]);
   const opts = ks.map((k) => { const m = member(k); return { html: `<img class="pm" src="${monImg(m.art)}" alt=""><b>${esc(m.name)}</b><i>Lv ${m.lvl} · ${k === current ? "OUT NOW" : m.hp <= 0 ? "TIRED" : `${Math.ceil(m.hp)}/${m.max}`}</i>` }; });
   for (;;) {
     const c = await ui.choose(opts, { cls: "party", cols: 2, cancel: !force });
@@ -647,7 +678,7 @@ async function fight(def, slug, trId) {
     else { au.sfx("faint"); await tween(500, (k) => { foe.oy = k * 40; foe.a = 1 - k; }); await ui.line(`${foe.name} is ${tr ? "dealt with" : "beaten"}.`); }
     au.music(null); au.chip.fanfare();
     const lvBefore = {}, nmBefore = {}; for (const k of used) { lvBefore[k] = lvlOf(k); nmBefore[k] = formFor(k).name; }
-    const up = (n = 1) => { S.lvl = Math.min(CAP, S.lvl + n); used.forEach((k) => { if (k !== "tool") S.plv[k] = Math.min(CAP, (S.plv[k] || S.lvl) + n); }); };
+    const up = (n = 1) => { S.lvl = Math.min(CAP, S.lvl + n); used.forEach((k) => { if (k !== "tool" && !(S.inf || {})[k]) S.plv[k] = Math.min(CAP, (S.plv[k] || S.lvl) + n); }); };
     // money: clients pay a fee, wild things drop a bit of change
     const fee = Math.round((tr ? (again ? 1 + L * .15 : 2 + L * .35) * (tr.final ? 3 : boss ? 2 : 1) : slug ? 1 + L * .15 : .5 + L * .1) * 10) / 10;
     if (tr) {
@@ -797,7 +828,7 @@ function drawQte(now) {
 function tween(ms, fn) { return new Promise((res) => { const s = performance.now(); const step = (n) => { const k = clamp((n - s) / ms, 0, 1); fn(k); if (k < 1) requestAnimationFrame(step); else res(); }; requestAnimationFrame(step); }); }
 function bars() {
   if (!bt) return;
-  const set = (el, m, mine) => { const k = clamp(m.hp / m.max, 0, 1); el.innerHTML = `<div class="nm"><b>${esc(m.name)}</b><span>Lv ${m.lvl}</span></div><div class="hp"><i style="width:${(k * 100).toFixed(1)}%;background:${k > .5 ? "#5fc98a" : k > .22 ? "#ffc857" : "#f0546a"}"></i></div>${mine ? `<div class="n">${Math.ceil(m.hp)} / ${m.max}</div>` : `<div class="n ty">${m.type === "NONE" ? "" : m.type}</div>`}`; };
+  const set = (el, m, mine) => { const k = clamp(m.hp / m.max, 0, 1); el.innerHTML = `<div class="nm"><b>${esc(m.name)}</b><span>Lv ${m.lvl >= 999 ? "∞" : m.lvl}</span></div><div class="hp"><i style="width:${(k * 100).toFixed(1)}%;background:${k > .5 ? "#5fc98a" : k > .22 ? "#ffc857" : "#f0546a"}"></i></div>${mine ? `<div class="n">${Math.ceil(m.hp)} / ${m.max}</div>` : `<div class="n ty">${m.type === "NONE" ? "" : m.type}</div>`}`; };
   set($("sfoe"), bt.foe, false); set($("sme"), bt.me, true);
 }
 
@@ -827,7 +858,8 @@ function folio() {
   const el = $("folio"), m = formFor("tool");
   el.innerHTML = `<div class="sheet"><div class="fh"><h2>FOLIO</h2><span>${S.won.length} of ${PROJECTS.length} beaten</span><button type="button" id="fclose">Close</button></div>
     <div class="grid">${PROJECTS.map((p, i) => { const got = S.won.includes(p.slug), f = FOES[p.slug]; return `<button type="button" class="slot${got ? " got" : ""}" data-s="${p.slug}" ${got ? "" : "disabled"}><img src="${monImg(got ? formFor(p.slug).art : f.art)}" alt=""><b>${got ? esc(formFor(p.slug).name) : "? ? ?"}</b><i>${got ? `Lv ${lvlOf(p.slug)} · ${esc(p.client)}` : esc(f.zone)}</i></button>`; }).join("")}</div>
-    <p class="with"><img src="${monImg(m.art)}" alt=""><span>With you: <b>${m.name}</b>, level ${S.lvl}.</span></p></div>`;
+    ${(S.gifts || []).length ? `<div class="grid">${S.gifts.map((k) => { const g = member(k); return `<div class="slot got"><img src="${monImg(g.art)}" alt=""><b>${esc(g.name)}</b><i>Lv ${g.lvl >= 999 ? "∞" : g.lvl} · A GIFT</i></div>`; }).join("")}</div>` : ""}
+    <p class="with"><img src="${monImg(m.art)}" alt=""><span>With you: <b>${m.name}</b>, level ${lvlOf("tool") >= 999 ? "∞" : S.lvl}.</span></p></div>`;
   el.hidden = false;
   $("fclose").addEventListener("click", closeFolio);
   el.querySelectorAll(".slot.got").forEach((b) => b.addEventListener("click", async () => { closeFolio(); await script(() => card(b.dataset.s)); }));
