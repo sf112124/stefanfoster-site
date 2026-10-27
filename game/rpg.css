@@ -1,9 +1,11 @@
+/* Pixelify's 5 reads as an S, so numbers and £ come from Tiny5, which sits right beside it */
+@font-face{font-family:"PF Digits";src:url(fonts/tiny5-digits.woff2) format("woff2");unicode-range:U+0030-0039,U+00A3;font-display:swap}
 /* Foster Valley: the frame round the game, and all the words. The picture itself is drawn on the canvas at 320 by 180
    and blown up in whole pixels; everything here is sized in --u, one of those big pixels. */
 :root{--ink:#2b1f3b;--paper:#fff8ec;--pink:#ff9dbb;--violet:#b79cff;--peach:#ffb38a;--mint:#a9dcbc;--u:4px}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{background:radial-gradient(90% 70% at 20% 10%,#ffe6d2 0,transparent 60%),radial-gradient(80% 70% at 85% 90%,#e2d6ff 0,transparent 60%),#f4f3ef;color:var(--ink);font-family:"Pixelify Sans","Courier New",monospace;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+body{background:radial-gradient(90% 70% at 20% 10%,#ffe6d2 0,transparent 60%),radial-gradient(80% 70% at 85% 90%,#e2d6ff 0,transparent 60%),#f4f3ef;color:var(--ink);font-family:"PF Digits","Pixelify Sans","Courier New",monospace;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:manipulation}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 a{color:inherit}
