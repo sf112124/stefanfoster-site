@@ -1198,7 +1198,7 @@ async function start(fresh) {
   if (S.starter) place(maps.world, 35, 37, "down"); else place(maps.house, 3, 4, "right");
   au.music("world");
   await fadeTo(0, 300);
-  if (!S.flags.look || !S.name) await script(() => welcome(!S.starter && !S.won.length));
+  if (!S.flags.look || !S.name) await script(async () => { await wardrobe(true); S.flags.look = 1; save(); });
   if (!S.flags.intro) { await sleep(350); P.dir = "right"; script(() => stefan()); }
   // come back on a new day and your day rate has landed
   else if (S.paid !== today()) { S.paid = today(); S.cash = (S.cash || 0) + 500; save(); await sleep(400); au.sfx("win"); await script(async () => { await ui.say(["Ping! Your day rate just landed.", `+£500. You've got ${money(S.cash)}.`]); }); }
