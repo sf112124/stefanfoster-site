@@ -154,6 +154,17 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     gumtree: ["#14cf75", "#8fe03a", "#14cf75", "#8fe03a", "#19c6d6"],
     _: ["#ff7a1a", "#ffb21c", "#ff7a1a", "#ffb21c", "#ff4f8b"] };
   for (const k in PALS) PALS[k] = PALS[k].map((c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255));
+  // moving between projects, each colour turns round the colour wheel (OKLCH) rather than straight through grey
+  const lin = (c) => (c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4), gam = (c) => (c <= .0031308 ? 12.92 * c : 1.055 * Math.max(0, c) ** (1 / 2.4) - .055);
+  const toLch = ([r, g, b]) => { r = lin(r); g = lin(g); b = lin(b);
+    const l = Math.cbrt(.4122214708 * r + .5363325363 * g + .0514459929 * b), m = Math.cbrt(.2119034982 * r + .6806995451 * g + .1073969566 * b), s2 = Math.cbrt(.0883024619 * r + .2817188376 * g + .6299787005 * b);
+    const L = .2104542553 * l + .793617785 * m - .0040720468 * s2, A = 1.9779984951 * l - 2.428592205 * m + .4505937099 * s2, B = .0259040371 * l + .7827717662 * m - .808675766 * s2;
+    return [L, Math.hypot(A, B), Math.atan2(B, A)]; };
+  const toRgb = ([L, C, h]) => { const A = C * Math.cos(h), B = C * Math.sin(h);
+    const l = (L + .3963377774 * A + .2158037573 * B) ** 3, m = (L - .1055613458 * A - .0638541728 * B) ** 3, s2 = (L - .0894841775 * A - 1.291485548 * B) ** 3;
+    return [4.0767416621 * l - 3.3077115913 * m + .2309699292 * s2, -1.2684380046 * l + 2.6097574011 * m - .3413193965 * s2, -.0041960863 * l - .7034186147 * m + 1.707614701 * s2].map((c) => Math.min(1, Math.max(0, gam(c)))); };
+  const PLCH = {}; for (const k in PALS) PLCH[k] = PALS[k].map(toLch);
+  const palL = PLCH._.map((c) => c.slice());
   let heat = 0; const pal = PALS._.flat(), hmP = [0, 0], hmS = [0, 0], hmV = [0, 0], prevP = [0, 0]; let fluidOn = 0, wasOn = 0, leaveT = 0, DR = 3800; const XS = [0, 0]; const lastP = [.5, .5];
   mount.addEventListener("pointermove", (e) => { const r = mount.getBoundingClientRect(); hmP[0] = 2 * (e.clientX - r.left) / r.width - 1; hmP[1] = 1 - 2 * (e.clientY - r.top) / r.height; });
   mount.addEventListener("pointermove", (e) => { const a = e.target.closest && e.target.closest(".tun-list a"); if (!a || e.target !== a) { mouseY = null; return; } const r = mount.getBoundingClientRect(); mouseY = 1 - 2 * (e.clientY - r.top) / r.height - .05; mouseX = 2 * (e.clientX - r.left) / r.width - 1; });
@@ -248,7 +259,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1fv(U.G, gs); gl.uniform1f(U.mx, mxS); gl.uniform1f(U.SP, SP);
     // the colour flood: fades in on the hovered project's palette, eases between palettes, follows the pointer softly
     const ht = PAINT && hrow >= 0 && fk > .5 ? 1 : 0, pk = 1 - Math.pow(.03, rdt); heat += (ht - heat) * (1 - Math.pow(ht ? .08 : .02, rdt));
-    if (hrow >= 0) { const tgt = (PALS[LIST[hrow].slug] || PALS._).flat(); for (let j = 0; j < 15; j++) pal[j] += (tgt[j] - pal[j]) * pk; }
+    if (hrow >= 0) { const tgt = PLCH[LIST[hrow].slug] || PLCH._; palL.forEach((c, j) => { const t2 = tgt[j]; c[0] += (t2[0] - c[0]) * pk; c[1] += (t2[1] - c[1]) * pk; let dh = t2[2] - c[2]; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); c[2] += dh * pk; const rgb = toRgb(c); pal[j * 3] = rgb[0]; pal[j * 3 + 1] = rgb[1]; pal[j * 3 + 2] = rgb[2]; }); }
     // a loose spring: flick the mouse and the colour swings after it, overshoots and settles
     for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h2 = Math.min(.008, rdt / n); for (let j = 0; j < 2; j++) { hmV[j] += ((hmP[j] - hmS[j]) * 34 - hmV[j] * 5.2) * h2; hmS[j] += hmV[j] * h2; } }
     gl.uniform1f(U.hc, 0); gl.uniform1f(U.tm, now / 1000); gl.uniform2f(U.hm, hmS[0], hmS[1]); gl.uniform2f(U.hv, Math.max(-1.5, Math.min(1.5, hmV[0] * .25)), Math.max(-1.5, Math.min(1.5, hmV[1] * .25))); 
