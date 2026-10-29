@@ -301,7 +301,7 @@ addEventListener("keydown", (e) => { if (lb.hidden) return; if (e.key === "Escap
 
 // ---------- the thing in the hole, and the ship ----------
 const crawler = new Crawler({
-  holes: [$("#hole")], pads: [$("#pad")], reduce,
+  holes: [$("#hole")], pads: [$("#pad")], eats: [$("#eat")], reduce,
   sfx: (k, a, b) => sound.critter(k, a, b),
   sel: ".nm .t,.nm .k,.pj-t .c,.gh h2,.tile,.tile figcaption,.nav a,.brand,.fcols a,.fcols span,.lead2",
   letter: ".pj-t .c",

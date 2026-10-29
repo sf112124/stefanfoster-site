@@ -1,3 +1,4 @@
+import { Creature } from "./creature.js";
 // The thing in the hole. Let it out and it stalks your cursor on nine legs, lines you up and fires. It always misses you,
 // and the page takes the hit: letters are blown loose and fall, pieces are knocked across the grid, pictures are shot
 // full of holes until they hang off and drop. All the damage is done to the page itself. Stop moving and it pounces: it
@@ -7,7 +8,7 @@
 // When both are back where they belong, everything is put right.
 const SEL = ".node,.wi .wt i,.ph h1 .ch,.aname i,.tile,.chip,.links>a,.links>.snd,.links>.nite,.bot>span:not(.bar),.lead,.alead,.gsec h2,.gsec p,.cli,.agrid dd,.agrid dt,.tile figcaption,.nx,.wi .wn,.akick";
 const LETTER = ".wi .wt i,.ph h1 .ch,.aname i";
-const SAFE = ".hole,.pad", MENU = ".hole,.pad,.snd,.nite";
+const SAFE = ".hole,.pad,.eatb", MENU = ".hole,.pad,.snd,.nite,.eatb";
 const HP = 60, HULL = 6, RED = "#ff2d4a";
 const WOUND = [8, 3, 7, 2];            // the legs that give out first as it's hurt
 const KEYS = { ArrowLeft: "l", a: "l", A: "l", ArrowRight: "r", d: "r", D: "r", ArrowUp: "u", w: "u", W: "u", ArrowDown: "d", s: "d", S: "d", " ": "f" };
@@ -50,12 +51,13 @@ function type(g, txt, x, y, size, col, align = "center") {
 }
 
 export class Crawler {
-  constructor({ holes, holeEl, pads = [], padEl, sfx, nodeHit, nodeReset, anchors, reduce = false, sel = SEL, letter = LETTER, loose = ",.node,.tile figcaption,.wi .wn", gentle = false }) {
+  constructor({ holes, holeEl, pads = [], eats = [], padEl, sfx, nodeHit, nodeReset, anchors, reduce = false, sel = SEL, letter = LETTER, loose = ",.node,.tile figcaption,.wi .wn", gentle = false }) {
     Object.assign(this, { holes, holeEl, pads, padEl, sfx: sfx || (() => {}), nodeHit, nodeReset, anchors, reduce, SEL: sel, LETTER: letter, LOOSE: loose, gentle });
     this.on = false; this.state = "home"; this.saved = new Map(); this.dmg = new Map();
     this.bolts = []; this.sparks = []; this.fall = []; this.rage = 0; this.hp = HP; this.sc = 1;
     this.ship = { on: false, alive: false, x: 0, y: 0, vx: 0, vy: 0, a: 0, spin: 0, hull: HULL, safe: 0, trail: [] };
-    this.keys = {};
+    this.keys = {}; this.E = { on: false }; this.eats = eats;
+    eats.forEach((b) => b.addEventListener("click", () => { b.blur(); this.E.on ? this.stopEating() : this.devour(); }));
     this.m = { x: innerWidth / 2, y: innerHeight / 2, vx: 0, vy: 0, t: 0, moved: performance.now() };
     addEventListener("pointermove", (e) => {
       const now = performance.now(), dt = Math.max(8, now - this.m.t), dx = e.clientX - this.m.x, dy = e.clientY - this.m.y, d = Math.hypot(dx, dy);
@@ -65,10 +67,10 @@ export class Crawler {
     });
     holes.forEach((h) => h.addEventListener("click", () => { h.blur(); this.on ? this.recall() : this.release(); }));
     pads.forEach((b) => b.addEventListener("click", () => { b.blur(); this.ship.on ? this.dock() : this.launch(); }));
-    addEventListener("keydown", (e) => { if (e.key === "Escape") { if (this.on) this.recall(); if (this.ship.on) this.dock(); } });
+    addEventListener("keydown", (e) => { if (e.key === "Escape") { if (this.on) this.recall(); if (this.ship.on) this.dock(); if (this.E.on) this.stopEating(); } });
     // flying: WASD (or the arrows) and the space bar are yours while the ship is out
     const key = (down) => (e) => {
-      const k = KEYS[e.key]; if (!k || !this.ship.on || e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = KEYS[e.key]; if (!k || !(this.ship.on || this.E.on) || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.target.closest?.("input,textarea,[contenteditable]") || document.getElementById("lb")?.hidden === false) return;
       e.preventDefault(); e.stopPropagation(); this.keys[k] = down;
       if (down) { if (k === "f") this.ship.fired = true; else this.ship.drove = true; }
@@ -78,6 +80,7 @@ export class Crawler {
     // while it has your cursor nothing you click lands; and a press right on it picks it up
     // flying: holding the mouse down fires, and nothing on the page takes the click (the menu buttons still do)
     addEventListener("pointerdown", (e) => {
+      if (this.E.on && !e.target.closest?.(MENU)) { e.stopPropagation(); e.preventDefault(); this.E.dash = performance.now(); return; }
       if (this.ship.on && e.button === 0 && !e.target.closest?.(MENU)) { e.stopPropagation(); e.preventDefault(); this.firing = !this.ship.docking; return; }
       if (!this.on) return;
       if (this.state === "carry") { e.stopPropagation(); e.preventDefault(); return; }
@@ -88,13 +91,14 @@ export class Crawler {
       }
     }, true);
     addEventListener("pointerup", () => { this.firing = false; if (this.state === "held") this.letGo(); if (this.swallow) setTimeout(() => (this.swallow = false), 60); }, true);
-    ["mousedown", "click"].forEach((t) => addEventListener(t, (e) => { if (this.state === "carry" || this.state === "held" || (t === "click" && this.swallow) || (this.ship.on && !e.target.closest?.(MENU))) { e.stopPropagation(); e.preventDefault(); if (t === "click") this.swallow = false; } }, true));
+    ["mousedown", "click"].forEach((t) => addEventListener(t, (e) => { if (this.state === "carry" || this.state === "held" || (t === "click" && this.swallow) || ((this.ship.on || this.E.on) && !e.target.closest?.(MENU))) { e.stopPropagation(); e.preventDefault(); if (t === "click") this.swallow = false; } }, true));
   }
   // the page moved under it (a scroll, a new page): it's carried along, off the screen if need be, then runs to catch up
   shift(dx, dy) {
+    if (this.E.on) { this.E.x += dx; this.E.y += dy; this.E.body.shift(dx, dy); }
     if (!this.on || !this.p || ["back", "dying"].includes(this.state)) return;
     const mv = (q) => { q[0] += dx; q[1] += dy; };
-    this.p.x += dx; this.p.y += dy; this.tail?.forEach(mv);
+    this.p.x += dx; this.p.y += dy; this.tail?.forEach(mv); this.body?.shift(dx, dy);
     [...(this.legs || []), ...(this.feel || [])].forEach((l) => { l.fx += dx; l.fy += dy; l.sx += dx; l.sy += dy; l.tx += dx; l.ty += dy; l.j.forEach(mv); });
     this.bolts.forEach((b) => { if (b.by === "it") { b.x += dx; b.y += dy; } });
     if (this.state === "carry" || this.state === "held") return;
@@ -122,7 +126,7 @@ export class Crawler {
     this.on = true; this.state = "out"; this.grow = 0; this.rage = 0; this.meter = 0; this.hp = HP; this.hurtAt = 0;
     const up = h.y > innerHeight / 2 ? -1 : 1;                 // it climbs out towards the middle of the page, wherever its hole is
     this.p = { x: h.x, y: h.y }; this.v = { x: -200, y: 260 * up }; this.head = up * Math.PI / 2; this.orbit = Math.random() * 6;
-    this.legs = LEGS.map(chain); this.feel = FEEL.map(chain); this.tail = Array.from({ length: 6 }, () => [h.x, h.y]);
+    this.legs = LEGS.map(chain); this.feel = FEEL.map(chain); this.tail = Array.from({ length: 6 }, () => [h.x, h.y]); this.body = new Creature(h.x, h.y, this.head, 4, { gap: 19 });
     [...this.legs, ...this.feel].forEach((l) => { l.fx = l.sx = l.tx = h.x; l.fy = l.sy = l.ty = h.y; l.j.forEach((q) => { q[0] = h.x; q[1] = h.y; }); });
     this.aim = 0; this.cool = 1.2; this.pcool = 2.5; this.pts = []; this.ptsAt = 0; this.m.moved = performance.now();
     this.label("CALL IT BACK"); document.documentElement.classList.add("crawling");
@@ -143,7 +147,7 @@ export class Crawler {
     this.settle();
   }
   // the page mends once nothing is left out to break it
-  settle() { if (!this.on && !this.ship.on) this.restore(); }
+  settle() { if (!this.on && !this.ship.on && !this.E.on) this.restore(); }
   // you put it down: thrown if you were moving, straight home if you dropped it in its hole
   letGo() {
     document.documentElement.classList.remove("holding");
@@ -300,6 +304,7 @@ export class Crawler {
       Object.keys(s).forEach((k) => { if (k !== "transition") el.style[k] = s[k]; });
       setTimeout(() => { el.style.transition = s.transition ?? ""; }, 750);
     });
+    this.saved.forEach((_, el) => { el._eaten = false; });
     this.saved.clear(); this.dmg.clear(); this.fall = []; this.nodeReset?.();
   }
   // ---- catching you ----
@@ -320,7 +325,7 @@ export class Crawler {
     const g = this.g, W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
     if (this.cv.width !== Math.round(W * dpr) || this.cv.height !== Math.round(H * dpr)) { this.cv.width = Math.round(W * dpr); this.cv.height = Math.round(H * dpr); }
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-    if (!this.on && !this.ship.on) { this.running = false; return; }
+    if (!this.on && !this.ship.on && !this.E.on) { this.running = false; return; }
     const dt = clamp((now - this.t) / 1000, 0, .05); this.t = now;
     const cs = getComputedStyle(document.documentElement), ink = cs.getPropertyValue("--ink").trim() || "#0d0d0e", bg = cs.getPropertyValue("--bg").trim() || "#f4f3ef";
     const F = { now, dt, g, W, H, ink, bg, cols: this.colors() };
@@ -337,6 +342,7 @@ export class Crawler {
       }
       f.el.style.transform = `translate(${f.x.toFixed(1)}px,${f.y.toFixed(1)}px) rotate(${f.r.toFixed(f.away ? 1 : 0)}deg) scale(${f.s.toFixed(2)})`;
     });
+    if (this.E.on) this.feast(F);
     if (this.on) this.animal(F);
     if (this.ship.on) this.fly(F);
     this.shots(F);
@@ -401,59 +407,13 @@ export class Crawler {
     if (now - this.ptsAt > 450) { this.ptsAt = now; try { this.pts = this.anchors?.() || []; } catch (e) { this.pts = []; } }
     const moving = this.legs.filter((l) => l.st < 1).length, R = 10 * sc;
     const mouthX = p.x + ch * 30 * sc, mouthY = p.y + sh * 30 * sc;
-    // a tail of beads that trails along behind it
-    let lx = p.x - ch * R, ly = p.y - sh * R;
-    this.tail.forEach((q, i) => { const gap = (9 - i) * sc, dx = q[0] - lx, dy = q[1] - ly + (held ? 3 : 0), d = Math.hypot(dx, dy) || 1; q[0] = lx + dx / d * gap; q[1] = ly + dy / d * gap; g.strokeStyle = ink; g.lineWidth = 1.2; g.beginPath(); g.moveTo(lx, ly); g.lineTo(q[0], q[1]); g.stroke(); g.fillStyle = i % 2 ? bg : ink; g.beginPath(); g.arc(q[0], q[1], Math.max(1.2, (4.2 - i * .55) * sc), 0, 7); g.fill(); g.stroke(); lx = q[0]; ly = q[1]; });
-    // legs. Hurt, they give out one at a time and trail; beaten, only the front pair still pull
-    const gone = dying ? 9 : Math.min(WOUND.length, Math.floor((1 - hpk) * (WOUND.length + 1)));
-    this.legs.forEach((l, i) => {
-      const a = this.head + l.a, hx = p.x + Math.cos(a) * R, hy = p.y + Math.sin(a) * R, reach = l.tot * .7 * sc, side = Math.sign(l.a) || 1;
-      const rx = hx + Math.cos(a) * reach + v.x * .1, ry = hy + Math.sin(a) * reach + v.y * .1;
-      const holding = carry && i % 4 === 0, limp = !held && (dying ? i !== 0 && i !== 4 : WOUND.indexOf(i) > -1 && WOUND.indexOf(i) < gone);
-      if (holding) { l.fx = mouthX - sh * side * 5; l.fy = mouthY + ch * side * 5; l.st = 1; }
-      else if (held) { const w = now / 110 + i * 1.7; l.fx += (hx + Math.cos(a) * 10 - clamp(m.vx, -900, 900) * .05 + Math.sin(w) * 9 - l.fx) * .25; l.fy += (hy + l.tot * .8 * sc + Math.cos(w * 1.3) * 7 - Math.abs(clamp(m.vx, -900, 900)) * .02 - l.fy) * .25; l.st = 1; }
-      else if (limp) { const k = Math.min(1, dt * 2.6); l.fx += (hx - ch * l.tot * .8 * sc + Math.cos(a) * 9 - l.fx) * k; l.fy += (hy - sh * l.tot * .8 * sc + Math.sin(a) * 9 - l.fy) * k; l.st = 1; l.grip = false; }
-      else if (stun) { const w = now / 70 + i; l.fx += (hx + Math.cos(a) * l.tot * .32 * sc + Math.cos(w) * 8 - l.fx) * .3; l.fy += (hy + Math.sin(a) * l.tot * .32 * sc + Math.sin(w * 1.3) * 8 - l.fy) * .3; l.st = 1; }
-      else if (l.st >= 1) {
-        const off = Math.hypot(l.fx - rx, l.fy - ry), far = Math.hypot(l.fx - hx, l.fy - hy);
-        const nb = this.legs[(i + 1) % 9].st < 1 || this.legs[(i + 8) % 9].st < 1;
-        if ((off > 26 * sc + 6 && !nb && moving < 4) || far > l.tot * .96 * sc) {
-          let bx = rx, by = ry, bd = 30;
-          for (const q of this.pts) { const d = Math.hypot(q[0] - rx, q[1] - ry); if (d < bd) { bd = d; bx = q[0]; by = q[1]; } }
-          l.sx = l.fx; l.sy = l.fy; l.tx = bx; l.ty = by; l.st = 0; l.grip = bd < 30;
-        }
-      } else {
-        l.st = Math.min(1, l.st + dt * (dying ? 4.5 : 7 + speed * .014));
-        const e = l.st * l.st * (3 - 2 * l.st); l.fx = l.sx + (l.tx - l.sx) * e; l.fy = l.sy + (l.ty - l.sy) * e;
-        if (l.st >= 1 && speed > 60 && Math.random() < .5) this.sfx("step", l.fx / W, Math.min(1, speed / 700));
-      }
-      solve(l, hx, hy, l.fx, l.fy, sc, held || limp ? 0 : side, limp ? 0 : l.st < 1 ? Math.sin(l.st * Math.PI) * 6 : held ? -3 : 1.5);
-      const j = l.j, n = j.length - 1;
-      g.strokeStyle = ink; g.lineWidth = 1.3; g.beginPath(); j.forEach((q, k) => (k ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]))); g.stroke();
-      // every joint is a little open ring; the foot a bigger one, forked on two of the legs
-      for (let k = 1; k < n; k++) { g.fillStyle = bg; g.beginPath(); g.arc(j[k][0], j[k][1], 2.3, 0, 7); g.fill(); g.stroke(); }
-      const fa = Math.atan2(j[n][1] - j[n - 1][1], j[n][0] - j[n - 1][0]);
-      if (l.fork) { g.beginPath(); [-.6, .6].forEach((o) => { g.moveTo(j[n][0], j[n][1]); g.lineTo(j[n][0] + Math.cos(fa + o) * 9 * sc, j[n][1] + Math.sin(fa + o) * 9 * sc); }); g.stroke(); }
-      g.fillStyle = l.st >= 1 && l.grip && !held && !stun ? cols[i % 3] : ink; g.beginPath(); g.arc(j[n][0], j[n][1], 2.8, 0, 7); g.fill();
-    });
-    // two thin feelers that reach for you
-    this.feel.forEach((l, i) => {
-      const a = this.head + l.a, hx = p.x + Math.cos(a) * R, hy = p.y + Math.sin(a) * R, w = now / 260 + i * 2.1, far = Math.min(l.tot * .9 * sc, Math.max(18, dT - 6));
-      const tx2 = held ? hx + Math.sin(w * 2) * 12 : dying ? hx + Math.cos(a) * l.tot * .5 * sc : hx + Math.cos(a + Math.sin(w) * .5) * far, ty2 = held ? hy + l.tot * .8 * sc : dying ? hy + Math.sin(a) * l.tot * .5 * sc : hy + Math.sin(a + Math.sin(w) * .5) * far;
-      l.fx += (tx2 - l.fx) * .2; l.fy += (ty2 - l.fy) * .2;
-      solve(l, hx, hy, l.fx, l.fy, sc, i ? -1 : 1, dying ? 0 : Math.sin(w * 1.7) * 2);
-      const j = l.j, n = j.length - 1; g.strokeStyle = ink; g.lineWidth = 1; g.beginPath(); j.forEach((q, k) => (k ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]))); g.stroke();
-      g.fillStyle = bg; g.beginPath(); g.arc(j[n][0], j[n][1], 2.6, 0, 7); g.fill(); g.stroke();
-    });
-    // body: a ring with one lens floating in it, and a smaller ring budding off its side. It flashes when you land one.
-    const bob = Math.sin(now / 90) * Math.min(1.6, speed * .006), shake = dying ? rnd(-.9, .9) : this.rage > 1 ? rnd(-1, 1) * (this.rage - 1) : 0;
-    const bx0 = p.x + shake, by0 = p.y + bob + shake, hot = this.aim > 0 || pounce || carry || this.rage > 1.2, ow = now - this.hurtAt < 110;
-    g.strokeStyle = ink; g.lineWidth = 1.8; g.fillStyle = ow ? RED : bg; g.beginPath(); g.arc(bx0, by0, R, 0, 7); g.fill(); g.stroke();
-    g.fillStyle = bg; const ba = this.head + 2.2 + Math.sin(now / 500) * .3; g.lineWidth = 1.3; g.beginPath(); g.arc(bx0 + Math.cos(ba) * (R + 4 * sc), by0 + Math.sin(ba) * (R + 4 * sc), Math.max(.4, 3.6 * sc + Math.sin(now / 300) * .6 * sc), 0, 7); g.fill(); g.stroke();
-    const look = held ? 0 : 3.4 * sc, ex = bx0 + ch * look, ey = by0 + sh * look;
-    if (stun) { g.lineWidth = 1.3; g.beginPath(); g.moveTo(bx0 - 3, by0 - 3); g.lineTo(bx0 + 3, by0 + 3); g.moveTo(bx0 + 3, by0 - 3); g.lineTo(bx0 - 3, by0 + 3); g.stroke(); }
-    else if (dying) { g.lineWidth = 1.6; g.beginPath(); g.moveTo(bx0 - sh * 4.5 * sc, by0 + ch * 4.5 * sc); g.lineTo(bx0 + sh * 4.5 * sc, by0 - ch * 4.5 * sc); g.stroke(); }
-    else { g.fillStyle = hot ? RED : ink; g.beginPath(); g.arc(ex, ey, (held ? 5 : 3.3) * sc + (this.aim > 0 ? this.aim * 1.4 : 0), 0, 7); g.fill(); if (held) { g.fillStyle = bg; g.beginPath(); g.arc(ex + 1.5, ey - 1.5, 1.4, 0, 7); g.fill(); } }
+    // the body: a head pulling a chain of plates, every plate on its own pair of legs
+    const B = this.body; B.size = Math.max(.05, sc * .95);
+    const shake = dying ? rnd(-.9, .9) : this.rage > 1 ? rnd(-1, 1) * (this.rage - 1) : 0, wob = stun ? Math.sin(now / 60) * .5 : held ? Math.sin(now / 90) * .3 : 0;
+    B.update(dt, p.x + shake, p.y + shake, this.head + wob, held ? 0 : speed);
+    const hot = this.aim > 0 || pounce || carry || this.rage > 1.2 || now - this.hurtAt < 110;
+    B.draw(g, { ink, bg, cols, hot, eye: stun ? .5 : held ? 1.6 : 1, mouth: carry || pounce ? 1 : 0 });
+    const ex = p.x + ch * 6 * sc, ey = p.y + sh * 6 * sc;
     // your cursor, in its grip
     if (carry) {
       const wob = Math.sin(now / 45) * .25;
@@ -577,9 +537,68 @@ export class Crawler {
     });
     if (!this.on || this.state === "dying") this.bolts = this.bolts.filter((b) => b.by === "ship");
   }
+  // ---- devour: you are the creature. Run about the page eating it; everything you eat grows you a plate and two legs ----
+  devour() {
+    if (this.E.on) return;
+    this.ensure();
+    const W = innerWidth, H = innerHeight, x = W / 2, y = H * .62;
+    this.E = { on: true, x, y, vx: 0, vy: -60, a: -Math.PI / 2, body: new Creature(x, y, -Math.PI / 2, 2, { gap: 19 }), n: 0, born: performance.now(), mouth: 0, chewAt: 0, scanAt: 0, dash: 0 };
+    this.eats.forEach((b) => { b.classList.add("open"); b.querySelector("span").textContent = "STOP EATING"; });
+    document.documentElement.classList.add("devouring"); this.sfx("out");
+  }
+  stopEating() {
+    if (!this.E.on) return;
+    this.E.on = false; this.keys = {};
+    this.eats.forEach((b) => { b.classList.remove("open"); b.querySelector("span").textContent = "DEVOUR"; });
+    document.documentElement.classList.remove("devouring"); window.__tunEat?.reset(); this.sfx("back"); this.settle();
+  }
+  feast({ now, dt, g, W, H, ink, bg, cols }) {
+    const E = this.E, m = this.m, k = this.keys, B = E.body;
+    // steer: the keys if you're using them, otherwise it chases your pointer. Click for a lunge.
+    const kx = (k.r ? 1 : 0) - (k.l ? 1 : 0), ky = (k.d ? 1 : 0) - (k.u ? 1 : 0), keyed = kx || ky;
+    const top = 330 + Math.min(260, E.n * 9) + (now - E.dash < 260 ? 520 : 0);
+    let wx = 0, wy = 0;
+    if (keyed) { const d = Math.hypot(kx, ky); wx = kx / d * top; wy = ky / d * top; }
+    else { const dx = m.x - E.x, dy = m.y - E.y, d = Math.hypot(dx, dy); if (d > 26) { const sp = Math.min(top, d * 3.4); wx = dx / d * sp; wy = dy / d * sp; } }
+    const grip = Math.min(1, dt * 5); E.vx += (wx - E.vx) * grip; E.vy += (wy - E.vy) * grip;
+    E.x = clamp(E.x + E.vx * dt, 16, W - 16); E.y = clamp(E.y + E.vy * dt, 16, H - 16);
+    const speed = Math.hypot(E.vx, E.vy);
+    if (speed > 25) { let da = Math.atan2(E.vy, E.vx) - E.a; da = Math.atan2(Math.sin(da), Math.cos(da)); E.a += da * Math.min(1, dt * 8); }
+    B.size = 1.25 + Math.min(.45, E.n * .015);
+    B.update(dt, E.x, E.y, E.a, speed);
+    E.mouth = Math.max(0, E.mouth - dt * 4);
+    B.draw(g, { ink, bg, cols, hot: now - E.chewAt < 180, mouth: Math.max(E.mouth, .25 + Math.sin(now / 140) * .25) });
+    // eat whatever is under the mouth
+    if (now - E.scanAt > 50) {
+      E.scanAt = now;
+      const ca = Math.cos(E.a), sa = Math.sin(E.a), r = 15 * B.size;
+      for (const o of [0, -1, 1]) {
+        const x = E.x + ca * r - sa * o * 8, y = E.y + sa * r + ca * o * 8, el = document.elementFromPoint(x, y);
+        if (!el || el.closest(SAFE) || el.closest(".corner")) continue;
+        const t = el.closest(this.SEL + ",.tun-list a"); if (t && !t._eaten) { this.gulp(t, x, y, cols); break; }
+      }
+    }
+  }
+  gulp(el, x, y, cols) {
+    const E = this.E, r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    el._eaten = true; E.n++; E.mouth = 1; E.chewAt = performance.now();
+    if (el.matches(".tun-list a")) window.__tunEat?.eat(+el.dataset.i);
+    this.set(el, "transition", "transform .4s cubic-bezier(.55,0,.8,.2),opacity .4s");
+    this.set(el, "transform", `translate(${(x - cx).toFixed(0)}px,${(y - cy).toFixed(0)}px) scale(0) rotate(${(Math.random() * 60 - 30).toFixed(0)}deg)`);
+    this.set(el, "opacity", "0"); this.set(el, "pointerEvents", "none");
+    const add = el.matches(".tun-list a,.tile,h2,.lead2") ? 2 : 1;
+    for (let i = 0; i < add; i++) E.body.add();
+    this.burst(x, y, 12, cols, 120, 380); this.sfx("catch", x / innerWidth);
+  }
   // ---- what you need to read ----
   hud({ now, g, W, H, ink, bg }) {
     const S = this.ship;
+    if (this.E.on) {
+      const E = this.E, cx = W / 2, cy = H - 64, intro = now - E.born < 6000;
+      plate(g, cx, cy, intro ? 560 : 380, 44, bg, ink);
+      type(g, intro ? "MOUSE OR W A S D  MOVE      CLICK  LUNGE      EAT EVERYTHING" : `EATEN ${E.n}      PLATES ${E.body.length}      LEGS ${E.body.length * 2}`, cx, cy + 1, 12, ink);
+      return;
+    }
     if (this.on && this.state === "carry") {
       const k = clamp(this.meter / 1500, 0, 1), cx = W / 2, cy = H - 118;
       plate(g, cx, cy, 400, 84, bg, RED);

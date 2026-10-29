@@ -12,7 +12,7 @@ in vec2 v; out vec4 o;
 uniform sampler2D T; uniform vec2 R; uniform float off, N, rowH, texW, texH, S0, B, C, hov, fly, flt, S1, C1, hrow;
 // screen y (-1..1) to a position in the stack, and how many screen pixels one texel takes there
 // in the list, only the line under the pointer grows (G per line), swelling over its own spot without nudging the others
-uniform float G[16], mx, SP, hc, tm; uniform vec2 hm, hv; uniform vec3 P0, P1, P2, PB; uniform sampler2D D; uniform float FL, EX, BT; uniform vec2 XS;
+uniform float G[16], EA[16], mx, SP, hc, tm; uniform vec2 hm, hv; uniform vec3 P0, P1, P2, PB; uniform sampler2D D; uniform float FL, EX, BT; uniform vec2 XS;
 float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float nz(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(hsh(i), hsh(i + vec2(1, 0)), f.x), mix(hsh(i + vec2(0, 1)), hsh(i + vec2(1, 1)), f.x), f.y); }
 float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 3; i++) { v += a * nz(p); p = p * 2.03 + vec2(1.7, 9.2); a *= .5; } return v; }
@@ -33,6 +33,7 @@ vec4 sampleAt(vec2 q){
   // explicit detail level: the stack wraps round, and letting the GPU guess at the seam drew a grey line
   float fy = .5 + (fract(rr) - .5) * spf, inRow = step(0., fy) * step(fy, 1.);
   vec4 c = grown > .004 ? vec4(0.) : textureLod(T, vec2((texW * .5 + xpx / s) / texW, (row * rowH + clamp(fy, 0., 1.) * rowH) / texH), max(0., log2(1. / s)) + e * 2.5) * inList * dim * inRow;
+  c *= 1. - EA[int(clamp(row, 0., 15.))] * flt;   // eaten by the creature
   if (flt < .5) return c;
   // the hovered line grows in place, drawn over its neighbours, with a soft magnifier that follows the pointer along the word
   for (int k = -1; k <= 1; k++) {
@@ -47,7 +48,7 @@ vec4 sampleAt(vec2 q){
     float xe = xpx - A * d * bb, sh = S1 * (1. + gh);
     float dm = 1. - mix(.62, .32, hc) * (hrow < -.5 || abs(h - hrow) < .5 ? 0. : 1.);
     float fm = .5 + (fract(rm) - .5) * SP; if (fm < 0. || fm > 1.) continue;
-    c = max(c, tex((texW * .5 + xe / sh) / texW, h, fm, sh * m / (1. + gh)) * dm);
+    c = max(c, tex((texW * .5 + xe / sh) / texW, h, fm, sh * m / (1. + gh)) * dm * (1. - EA[int(h)]));
   }
   return c;
 }
@@ -114,7 +115,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "G", "mx", "SP", "hc", "tm", "hm", "hv", "P0", "P1", "P2", "PB", "D", "FL", "T", "EX", "BT", "XS"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
+  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "G", "mx", "SP", "hc", "tm", "hm", "hv", "P0", "P1", "P2", "PB", "D", "FL", "T", "EX", "BT", "XS", "EA"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
   draw(); document.fonts.ready.then(draw);
 
   // the label beside the line in the middle: who it was for, what it is, and a little moving picture in brackets
@@ -136,7 +137,9 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const sw = document.createElement("button"); sw.type = "button"; sw.className = "tun-sw mono"; sw.innerHTML = `<i></i><span>LIST</span>`; mount.appendChild(sw);
   // the list's own hit areas, numbers and clients, laid over the flat names
   const lst = document.createElement("div"); lst.className = "tun-list"; lst.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-i="${i}"><span class="n mono">${String(i + 1).padStart(2, "0")}</span><span class="c">${esc(p.client)}</span></a>`).join(""); mount.appendChild(lst);
-  let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null, mouseX = 0, mxS = 0; const gs = new Float32Array(16), gv = new Float32Array(16);
+  let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null, mouseX = 0, mxS = 0; const gs = new Float32Array(16), gv = new Float32Array(16), ea = new Float32Array(16), eaT = new Float32Array(16);
+  // the creature can eat a line of the list: it shrinks away, and comes back when the creature goes home
+  window.__tunEat = { eat: (i) => { eaT[i] = 1; }, reset: () => eaT.fill(0) };
   mount.classList.add("is-list"); sw.querySelector("span").textContent = "TUNNEL";
   // each project's colours, from pale edge to hot core
   const hx = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255), PAL = (a, b, c) => [...hx(a), ...hx(b), ...hx(c)];
@@ -256,7 +259,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     // a slightly underdamped spring per line, so it swells past and settles; the magnifier trails the pointer like liquid
     for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h = Math.min(.008, rdt / n); for (let i = 0; i < N; i++) { gv[i] += ((((i === hrow ? GA : 0) - gs[i]) * 340) - gv[i] * 19) * h; gs[i] += gv[i] * h; } }
     mxS += (mouseX - mxS) * (1 - Math.pow(.003, rdt));
-    gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); gl.uniform1fv(U.G, gs); gl.uniform1f(U.mx, mxS); gl.uniform1f(U.SP, SP);
+    gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); for (let i = 0; i < 16; i++) ea[i] += (eaT[i] - ea[i]) * Math.min(1, rdt * (eaT[i] ? 7 : 3)); gl.uniform1fv(U.G, gs); gl.uniform1fv(U.EA, ea); gl.uniform1f(U.mx, mxS); gl.uniform1f(U.SP, SP);
     // the colour flood: fades in on the hovered project's palette, eases between palettes, follows the pointer softly
     const ht = PAINT && hrow >= 0 && fk > .5 ? 1 : 0, pk = 1 - Math.pow(.03, rdt); heat += (ht - heat) * (1 - Math.pow(ht ? .08 : .02, rdt));
     if (hrow >= 0) { const tgt = PLCH[LIST[hrow].slug] || PLCH._; palL.forEach((c, j) => { const t2 = tgt[j]; c[0] += (t2[0] - c[0]) * pk; c[1] += (t2[1] - c[1]) * pk; let dh = t2[2] - c[2]; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); c[2] += dh * pk; const rgb = toRgb(c); pal[j * 3] = rgb[0]; pal[j * 3 + 1] = rgb[1]; pal[j * 3 + 2] = rgb[2]; }); }
