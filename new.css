@@ -529,3 +529,7 @@ body[data-tunnel] .top{mix-blend-mode:normal;z-index:1000}
 body[data-tunnel] .brand{position:relative;z-index:1001}
 /* over the colour flood the little numbers and clients turn white too */
 .tun-list.hot .n,.tun-list.hot .c{color:rgba(255,255,255,.9)!important;transition:color .4s}
+/* devour: the names become real letters you can eat one by one */
+.tun-list .t{position:absolute;left:50%;top:50%;translate:-50% -45%;font:600 calc(var(--row) * var(--fsr,.6))/1 Geist,sans-serif;letter-spacing:-.045em;white-space:nowrap;color:var(--ink);opacity:0;pointer-events:none}
+html.devouring .tun-list .t{opacity:1;pointer-events:auto}
+.gone-ch{display:inline-block;transition:transform .35s cubic-bezier(.55,0,.8,.2),opacity .35s}

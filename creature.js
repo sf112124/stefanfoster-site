@@ -121,3 +121,51 @@ export class Creature {
     }
   }
 }
+
+// ---- prey: little bugs that wander the page and run from the creature ----
+const KINDS = {
+  ant: { pts: 1, r: 4, wander: 55, flee: 140, fear: 120, turn: 2.2, legs: 3, col: 0 },
+  beetle: { pts: 3, r: 6, wander: 75, flee: 210, fear: 150, turn: 1.6, legs: 3, col: 1 },
+  fly: { pts: 5, r: 4.5, wander: 170, flee: 330, fear: 190, turn: 6, wings: 1, col: 2 },
+  moth: { pts: 15, r: 6.5, wander: 210, flee: 420, fear: 240, turn: 4, wings: 1, gold: 1, col: 3 },
+};
+export class Bug {
+  constructor(W, H, kind) {
+    this.kind = kind; this.k = KINDS[kind]; this.t = Math.random() * 9; this.born = 0;
+    const e = Math.floor(Math.random() * 4), m = 20;
+    this.x = e === 0 ? -m : e === 1 ? W + m : Math.random() * W; this.y = e === 2 ? -m : e === 3 ? H + m : Math.random() * H;
+    this.a = Math.atan2(H / 2 - this.y, W / 2 - this.x) + (Math.random() - .5); this.v = this.k.wander; this.life = kind === "moth" ? 9 : 40;
+  }
+  update(dt, W, H, hx, hy) {
+    const k = this.k; this.t += dt; this.life -= dt; this.born = Math.min(1, this.born + dt * 3);
+    const dx = this.x - hx, dy = this.y - hy, d = Math.hypot(dx, dy);
+    let want = this.a + Math.sin(this.t * (k.wings ? 7 : 1.3) + this.x * .01) * k.turn * dt * 3;
+    let sp = k.wander;
+    if (d < k.fear) { const away = Math.atan2(dy, dx); let da = Math.atan2(Math.sin(away - this.a), Math.cos(away - this.a)); want = this.a + da * Math.min(1, dt * k.turn * 1.6); sp = k.flee * (1 - d / k.fear * .4); this.scared = 1; } else this.scared = 0;
+    // keep to the page, unless its time is up and it's leaving
+    const pad = 30, leaving = this.life < 0;
+    if (!leaving) { if (this.x < pad) want += .12; if (this.x > W - pad) want += .12; if (this.y < pad) want += .12; if (this.y > H - pad) want += .12; if (this.x < pad || this.x > W - pad || this.y < pad || this.y > H - pad) { const c = Math.atan2(H / 2 - this.y, W / 2 - this.x); want += Math.atan2(Math.sin(c - want), Math.cos(c - want)) * Math.min(1, dt * 4); } }
+    this.a = want; this.v += (sp - this.v) * Math.min(1, dt * 4);
+    this.x += Math.cos(this.a) * this.v * dt; this.y += Math.sin(this.a) * this.v * dt;
+    return !(leaving && (this.x < -40 || this.y < -40 || this.x > W + 40 || this.y > H + 40));
+  }
+  draw(g, { ink, bg, cols }) {
+    const k = this.k, r = k.r * this.born, t = this.t, col = k.gold ? "#ffb21c" : cols[k.col % cols.length];
+    g.save(); g.translate(this.x, this.y); g.rotate(this.a); g.lineCap = "round";
+    if (k.wings) {
+      const f = Math.abs(Math.sin(t * 40)) * .8 + .2; g.strokeStyle = ink; g.lineWidth = 1; g.fillStyle = bg; g.globalAlpha = .9;
+      [-1, 1].forEach((s) => { g.beginPath(); g.ellipse(-r * .3, s * r * 1.1 * f, r * 1.2, r * .55 * f + .5, s * .5, 0, Math.PI * 2); g.fill(); g.stroke(); });
+      g.globalAlpha = 1;
+    } else {
+      g.strokeStyle = ink; g.lineWidth = 1;
+      for (let i = 0; i < k.legs; i++) [-1, 1].forEach((s) => { const sw = Math.sin(t * 18 + i * 2 + (s > 0 ? Math.PI : 0)) * 3; const x0 = (i - 1) * r * .7; g.beginPath(); g.moveTo(x0, 0); g.lineTo(x0 + sw, s * r * 1.5); g.lineTo(x0 + sw + 2, s * r * 2); g.stroke(); });
+    }
+    g.fillStyle = col; g.strokeStyle = ink; g.lineWidth = 1.2;
+    g.beginPath(); g.ellipse(0, 0, r, r * .7, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = ink; g.beginPath(); g.arc(r * .95, 0, r * .42, 0, Math.PI * 2); g.fill();
+    if (this.scared) { g.strokeStyle = ink; g.lineWidth = 1; g.beginPath(); g.moveTo(-r * 1.6, -r); g.lineTo(-r * 2.6, -r * 1.3); g.moveTo(-r * 1.6, r); g.lineTo(-r * 2.6, r * 1.3); g.stroke(); }
+    if (k.gold) { g.globalAlpha = .35 + Math.sin(t * 6) * .2; g.strokeStyle = "#ffb21c"; g.beginPath(); g.arc(0, 0, r * 2.4, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1; }
+    g.restore();
+  }
+}
+export const pickKind = () => { const r = Math.random(); return r < .07 ? "moth" : r < .35 ? "fly" : r < .62 ? "beetle" : "ant"; };

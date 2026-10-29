@@ -103,7 +103,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     x.font = `600 ${fs}px Geist, sans-serif`; try { x.letterSpacing = `${(-fs * .045).toFixed(1)}px`; } catch (e) {}
     x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "middle";
     names.forEach((n, i) => x.fillText(n, texW / 2, i * rowH + rowH * .55));
-    T.widest = Math.max(...names.map((n) => x.measureText(n).width)); T.w = names.map((n) => x.measureText(n).width);
+    T.widest = Math.max(...names.map((n) => x.measureText(n).width)); T.fsr = fs / rowH; T.w = names.map((n) => x.measureText(n).width);
     gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tc); gl.generateMipmap(gl.TEXTURE_2D);
   };
   const T = { widest: texW * .8 };
@@ -136,10 +136,10 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   // the switch: pull everything flat into a plain list, and back
   const sw = document.createElement("button"); sw.type = "button"; sw.className = "tun-sw mono"; sw.innerHTML = `<i></i><span>LIST</span>`; mount.appendChild(sw);
   // the list's own hit areas, numbers and clients, laid over the flat names
-  const lst = document.createElement("div"); lst.className = "tun-list"; lst.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-i="${i}"><span class="n mono">${String(i + 1).padStart(2, "0")}</span><span class="c">${esc(p.client)}</span></a>`).join(""); mount.appendChild(lst);
+  const lst = document.createElement("div"); lst.className = "tun-list"; lst.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-i="${i}"><span class="n mono">${String(i + 1).padStart(2, "0")}</span><span class="c">${esc(p.client)}</span><span class="t">${esc(p.title)}</span></a>`).join(""); mount.appendChild(lst);
   let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null, mouseX = 0, mxS = 0; const gs = new Float32Array(16), gv = new Float32Array(16), ea = new Float32Array(16), eaT = new Float32Array(16);
   // the creature can eat a line of the list: it shrinks away, and comes back when the creature goes home
-  window.__tunEat = { eat: (i) => { eaT[i] = 1; }, reset: () => eaT.fill(0) };
+  window.__tunEat = { eat: (i) => { eaT[i] = 1; }, reset: () => eaT.fill(0), hideAll: () => { eaT.fill(1); hrow = -1; } };
   mount.classList.add("is-list"); sw.querySelector("span").textContent = "TUNNEL";
   // each project's colours, from pale edge to hot core
   const hx = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255), PAL = (a, b, c) => [...hx(a), ...hx(b), ...hx(c)];
@@ -176,7 +176,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   sw.addEventListener("pointerdown", (e) => e.stopPropagation()); sw.addEventListener("click", () => setFlat(!flatT));
   lst.addEventListener("pointerdown", (e) => e.stopPropagation());
   lst.querySelectorAll("a").forEach((a) => {
-    a.addEventListener("pointerenter", () => (hrow = +a.dataset.i)); a.addEventListener("pointerleave", () => (hrow = -1));
+    a.addEventListener("pointerenter", () => { if (!document.documentElement.classList.contains("devouring")) hrow = +a.dataset.i; }); a.addEventListener("pointerleave", () => (hrow = -1));
     // picking from the list: it folds back into the tunnel on that name, then flies in
     a.addEventListener("click", (e) => { e.preventDefault(); const i = +a.dataset.i; off = target = i + .5; vel = 0; hrow = -1; onOpen(LIST[i]); });
   });
@@ -225,6 +225,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   // where each name lands on screen in the list (straight stack; the hovered one just grows in place)
   const placeList = (S1, C1) => {
     const dpr = Math.min(1.5, devicePixelRatio || 1), Hc = H(), yOf = (r) => .05 + (N * .5 - r) / C1;
+    lst.style.setProperty("--fsr", (T.fsr || .5).toFixed(4));
     lst.querySelectorAll("a").forEach((a, i) => {
       const top = (1 - yOf(i)) / 2 * Hc, bot = (1 - yOf(i + 1)) / 2 * Hc;
       const base = (T.w ? T.w[i] : T.widest) * S1 / dpr / 2, half = base * (1 + Math.max(0, gs[i]));

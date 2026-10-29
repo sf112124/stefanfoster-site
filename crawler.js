@@ -1,4 +1,4 @@
-import { Creature } from "./creature.js";
+import { Creature, Bug, pickKind } from "./creature.js";
 // The thing in the hole. Let it out and it stalks your cursor on nine legs, lines you up and fires. It always misses you,
 // and the page takes the hit: letters are blown loose and fall, pieces are knocked across the grid, pictures are shot
 // full of holes until they hang off and drop. All the damage is done to the page itself. Stop moving and it pounces: it
@@ -537,26 +537,37 @@ export class Crawler {
     });
     if (!this.on || this.state === "dying") this.bolts = this.bolts.filter((b) => b.by === "ship");
   }
-  // ---- devour: you are the creature. Run about the page eating it; everything you eat grows you a plate and two legs ----
+  // ---- devour: you are the creature. Hunt the bugs, eat the page letter by letter, and don't go hungry ----
   devour() {
     if (this.E.on) return;
     this.ensure();
     const W = innerWidth, H = innerHeight, x = W / 2, y = H * .62;
-    this.E = { on: true, x, y, vx: 0, vy: -60, a: -Math.PI / 2, body: new Creature(x, y, -Math.PI / 2, 2, { gap: 19 }), n: 0, born: performance.now(), mouth: 0, chewAt: 0, scanAt: 0, dash: 0 };
+    let best = 0; try { best = +localStorage.getItem("devour-best") || 0; } catch (e) {}
+    this.E = { on: true, x, y, vx: 0, vy: -60, a: -Math.PI / 2, body: new Creature(x, y, -Math.PI / 2, 3, { gap: 19 }), n: 0, score: 0, best, born: performance.now(), mouth: 0, chewAt: 0, scanAt: 0, dash: 0,
+      hunger: 1, starveAt: 0, bugs: [], spawnAt: 0, pops: [], chars: [], letters: 0, combo: 0, comboAt: 0, over: 0 };
     this.eats.forEach((b) => { b.classList.add("open"); b.querySelector("span").textContent = "STOP EATING"; });
-    document.documentElement.classList.add("devouring"); this.sfx("out");
+    document.documentElement.classList.add("devouring"); window.__tunEat?.hideAll(); this.sfx("out");
   }
   stopEating() {
     if (!this.E.on) return;
-    this.E.on = false; this.keys = {};
+    const E = this.E; E.on = false; this.keys = {};
+    // every letter goes back where it was
+    E.chars.forEach((sp) => { const p = sp.parentNode; if (!p) return; p.replaceChild(document.createTextNode(sp.textContent), sp); p.normalize(); });
     this.eats.forEach((b) => { b.classList.remove("open"); b.querySelector("span").textContent = "DEVOUR"; });
     document.documentElement.classList.remove("devouring"); window.__tunEat?.reset(); this.sfx("back"); this.settle();
   }
+  score(n, x, y, cols) {
+    const E = this.E, now = performance.now();
+    E.combo = now - E.comboAt < 1600 ? Math.min(8, E.combo + 1) : 1; E.comboAt = now;
+    const got = n * E.combo; E.score += got; E.pops.push({ x, y, t: now, txt: `+${got}${E.combo > 1 ? " ×" + E.combo : ""}`, c: pick(cols) });
+    if (E.score > E.best) { E.best = E.score; try { localStorage.setItem("devour-best", E.best); } catch (e) {} }
+  }
   feast({ now, dt, g, W, H, ink, bg, cols }) {
     const E = this.E, m = this.m, k = this.keys, B = E.body;
+    if (E.over) { if (now - E.over > 3800) this.stopEating(); }
     // steer: the keys if you're using them, otherwise it chases your pointer. Click for a lunge.
     const kx = (k.r ? 1 : 0) - (k.l ? 1 : 0), ky = (k.d ? 1 : 0) - (k.u ? 1 : 0), keyed = kx || ky;
-    const top = 330 + Math.min(260, E.n * 9) + (now - E.dash < 260 ? 520 : 0);
+    const top = (E.over ? 0 : 1) * (300 + Math.min(240, B.length * 7) + (now - E.dash < 260 ? 560 : 0));
     let wx = 0, wy = 0;
     if (keyed) { const d = Math.hypot(kx, ky); wx = kx / d * top; wy = ky / d * top; }
     else { const dx = m.x - E.x, dy = m.y - E.y, d = Math.hypot(dx, dy); if (d > 26) { const sp = Math.min(top, d * 3.4); wx = dx / d * sp; wy = dy / d * sp; } }
@@ -564,30 +575,71 @@ export class Crawler {
     E.x = clamp(E.x + E.vx * dt, 16, W - 16); E.y = clamp(E.y + E.vy * dt, 16, H - 16);
     const speed = Math.hypot(E.vx, E.vy);
     if (speed > 25) { let da = Math.atan2(E.vy, E.vx) - E.a; da = Math.atan2(Math.sin(da), Math.cos(da)); E.a += da * Math.min(1, dt * 8); }
-    B.size = 1.25 + Math.min(.45, E.n * .015);
-    B.update(dt, E.x, E.y, E.a, speed);
-    E.mouth = Math.max(0, E.mouth - dt * 4);
-    B.draw(g, { ink, bg, cols, hot: now - E.chewAt < 180, mouth: Math.max(E.mouth, .25 + Math.sin(now / 140) * .25) });
-    // eat whatever is under the mouth
-    if (now - E.scanAt > 50) {
-      E.scanAt = now;
-      const ca = Math.cos(E.a), sa = Math.sin(E.a), r = 15 * B.size;
-      for (const o of [0, -1, 1]) {
-        const x = E.x + ca * r - sa * o * 8, y = E.y + sa * r + ca * o * 8, el = document.elementFromPoint(x, y);
-        if (!el || el.closest(SAFE) || el.closest(".corner")) continue;
-        const t = el.closest(this.SEL + ",.tun-list a"); if (t && !t._eaten) { this.gulp(t, x, y, cols); break; }
+    B.size = 1.2 + Math.min(.4, B.length * .012);
+    const ca = Math.cos(E.a), sa = Math.sin(E.a), mx = E.x + ca * 16 * B.size, my = E.y + sa * 16 * B.size;
+    // hunger: it empties all the time, faster the longer you are. Empty, you start losing plates.
+    if (!E.over) {
+      E.hunger = Math.max(0, E.hunger - dt * (.035 + B.length * .0025));
+      if (E.hunger <= 0 && now - E.starveAt > 900) {
+        E.starveAt = now; const q = B.segs.pop(); if (q) this.burst(q.x, q.y, 10, cols, 80, 260); this.sfx("hit", E.x / W);
+        if (B.length < 1) { E.over = now; this.sfx("back"); }
       }
     }
+    // bugs come in from the edges
+    if (!E.over && now - E.spawnAt > 1100 && E.bugs.length < 4 + Math.min(5, Math.floor(E.score / 60))) { E.spawnAt = now; E.bugs.push(new Bug(W, H, pickKind())); }
+    E.bugs = E.bugs.filter((b) => {
+      if (!b.update(dt, W, H, mx, my)) return false;
+      if (!E.over && Math.hypot(b.x - mx, b.y - my) < 13 * B.size + b.k.r) {
+        E.mouth = 1; E.chewAt = now; E.hunger = Math.min(1, E.hunger + .14 + b.k.pts * .02); this.score(b.k.pts * 5, b.x, b.y, cols);
+        const grow = b.k.pts >= 15 ? 3 : b.k.pts >= 3 ? 2 : 1; for (let i = 0; i < grow; i++) B.add();
+        this.burst(b.x, b.y, 14, b.k.gold ? ["#ffb21c", "#ffd76a"] : cols, 120, 420); this.sfx("catch", b.x / W); return false;
+      }
+      b.draw(g, { ink, bg, cols }); return true;
+    });
+    B.update(dt, E.x, E.y, E.a, speed);
+    E.mouth = Math.max(0, E.mouth - dt * 4);
+    B.draw(g, { ink, bg, cols, hot: now - E.chewAt < 180 || E.hunger < .2, mouth: Math.max(E.mouth, .25 + Math.sin(now / 140) * .25) });
+    // and the page itself, a letter at a time
+    if (!E.over && now - E.scanAt > 45) {
+      E.scanAt = now;
+      for (const o of [0, -1, 1]) { const x = mx - sa * o * 7, y = my + ca * o * 7; if (this.bite(x, y, cols)) break; }
+    }
+    // little scores floating up from what you ate
+    E.pops = E.pops.filter((q) => { const k2 = (now - q.t) / 900; if (k2 >= 1) return false; g.globalAlpha = 1 - k2; type(g, q.txt, q.x, q.y - k2 * 30, 11, q.c); g.globalAlpha = 1; return true; });
+  }
+  // eat the single letter under (x, y); things that aren't text go whole
+  bite(x, y, cols) {
+    const el = document.elementFromPoint(x, y);
+    if (!el || el.closest(SAFE) || el.closest(".corner") || el.closest(".gone-ch") || el.tagName === "CANVAS") return false;
+    let node = null, off = 0;
+    if (document.caretPositionFromPoint) { const c = document.caretPositionFromPoint(x, y); if (c) { node = c.offsetNode; off = c.offset; } }
+    else if (document.caretRangeFromPoint) { const r = document.caretRangeFromPoint(x, y); if (r) { node = r.startContainer; off = r.startOffset; } }
+    if (node && node.nodeType === 3 && node.parentElement && !node.parentElement.closest(".gone-ch," + SAFE + ",.corner")) {
+      for (const i of [off, off - 1]) {
+        if (i < 0 || i >= node.data.length || /\s/.test(node.data[i])) continue;
+        const rg = document.createRange(); rg.setStart(node, i); rg.setEnd(node, i + 1); const b = rg.getBoundingClientRect();
+        if (x < b.left - 3 || x > b.right + 3 || y < b.top - 3 || y > b.bottom + 3) continue;
+        const ch = node.splitText(i); ch.splitText(1); const sp = document.createElement("span"); sp.className = "gone-ch"; ch.parentNode.replaceChild(sp, ch); sp.appendChild(ch);
+        this.E.chars.push(sp);
+        const cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+        requestAnimationFrame(() => { sp.style.transform = `translate(${(x - cx).toFixed(0)}px,${(y - cy).toFixed(0)}px) scale(0) rotate(${(Math.random() * 90 - 45).toFixed(0)}deg)`; sp.style.opacity = "0"; });
+        const E = this.E; E.mouth = Math.max(E.mouth, .7); E.chewAt = performance.now(); E.hunger = Math.min(1, E.hunger + .035); E.letters++;
+        this.score(1, cx, cy, cols); if (E.letters % 3 === 0) E.body.add();
+        this.burst(cx, cy, 4, cols, 60, 200); if (Math.random() < .5) this.sfx("step", cx / innerWidth, .6);
+        return true;
+      }
+    }
+    // pictures and tiles go in one gulp
+    const t = el.closest(".tile,.brand,img,video"); if (t && !t._eaten && !t.closest(".corner")) { this.gulp(t, x, y, cols); return true; }
+    return false;
   }
   gulp(el, x, y, cols) {
     const E = this.E, r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    el._eaten = true; E.n++; E.mouth = 1; E.chewAt = performance.now();
-    if (el.matches(".tun-list a")) window.__tunEat?.eat(+el.dataset.i);
+    el._eaten = true; E.mouth = 1; E.chewAt = performance.now(); E.hunger = Math.min(1, E.hunger + .2);
     this.set(el, "transition", "transform .4s cubic-bezier(.55,0,.8,.2),opacity .4s");
     this.set(el, "transform", `translate(${(x - cx).toFixed(0)}px,${(y - cy).toFixed(0)}px) scale(0) rotate(${(Math.random() * 60 - 30).toFixed(0)}deg)`);
     this.set(el, "opacity", "0"); this.set(el, "pointerEvents", "none");
-    const add = el.matches(".tun-list a,.tile,h2,.lead2") ? 2 : 1;
-    for (let i = 0; i < add; i++) E.body.add();
+    E.body.add(); E.body.add(); this.score(10, cx, cy, cols);
     this.burst(x, y, 12, cols, 120, 380); this.sfx("catch", x / innerWidth);
   }
   // ---- what you need to read ----
@@ -595,8 +647,19 @@ export class Crawler {
     const S = this.ship;
     if (this.E.on) {
       const E = this.E, cx = W / 2, cy = H - 64, intro = now - E.born < 6000;
-      plate(g, cx, cy, intro ? 560 : 380, 44, bg, ink);
-      type(g, intro ? "MOUSE OR W A S D  MOVE      CLICK  LUNGE      EAT EVERYTHING" : `EATEN ${E.n}      PLATES ${E.body.length}      LEGS ${E.body.length * 2}`, cx, cy + 1, 12, ink);
+      if (E.over) {
+        plate(g, cx, H / 2, 420, 110, bg, RED);
+        type(g, "STARVED", cx, H / 2 - 30, 12, RED); type(g, `SCORE ${E.score}`, cx, H / 2 + 2, 26, ink); type(g, `BEST ${E.best}`, cx, H / 2 + 34, 11, ink);
+        return;
+      }
+      plate(g, cx, cy, intro ? 600 : 520, 44, bg, ink);
+      if (intro) { type(g, "MOUSE OR W A S D  MOVE     CLICK  LUNGE     EAT BUGS AND LETTERS", cx, cy + 1, 12, ink); return; }
+      type(g, `SCORE ${E.score}`, cx - 236, cy + 1, 12, ink, "left");
+      type(g, `BEST ${E.best}`, cx - 120, cy + 1, 11, ink, "left");
+      type(g, `LEGS ${E.body.length * 2}`, cx - 30, cy + 1, 11, ink, "left");
+      type(g, "HUNGER", cx + 58, cy + 1, 11, E.hunger < .25 ? RED : ink, "left");
+      g.strokeStyle = ink; g.lineWidth = 1; g.strokeRect(cx + 124, cy - 4, 110, 8); g.fillStyle = E.hunger < .25 ? RED : "#00b894"; g.fillRect(cx + 124, cy - 4, 110 * E.hunger, 8);
+      if (E.combo > 1 && now - E.comboAt < 1600) type(g, `×${E.combo}`, cx + 248, cy + 1, 12, RED, "left");
       return;
     }
     if (this.on && this.state === "carry") {
