@@ -124,10 +124,10 @@ export class Creature {
 
 // ---- prey: little bugs that wander the page and run from the creature ----
 const KINDS = {
-  ant: { pts: 1, r: 4, wander: 55, flee: 140, fear: 120, turn: 2.2, legs: 3, col: 0 },
-  beetle: { pts: 3, r: 6, wander: 75, flee: 210, fear: 150, turn: 1.6, legs: 3, col: 1 },
-  fly: { pts: 5, r: 4.5, wander: 170, flee: 330, fear: 190, turn: 6, wings: 1, col: 2 },
-  moth: { pts: 15, r: 6.5, wander: 210, flee: 420, fear: 240, turn: 4, wings: 1, gold: 1, col: 3 },
+  ant: { pts: 1, r: 4.5, wander: 45, flee: 80, fear: 80, turn: 2.2, legs: 3, col: 0 },
+  beetle: { pts: 3, r: 6.5, wander: 60, flee: 120, fear: 100, turn: 1.6, legs: 3, col: 1 },
+  fly: { pts: 5, r: 5, wander: 110, flee: 190, fear: 120, turn: 6, wings: 1, col: 2 },
+  moth: { pts: 15, r: 7, wander: 150, flee: 260, fear: 150, turn: 4, wings: 1, gold: 1, col: 3 },
 };
 export class Bug {
   constructor(W, H, kind) {
@@ -141,7 +141,7 @@ export class Bug {
     const dx = this.x - hx, dy = this.y - hy, d = Math.hypot(dx, dy);
     let want = this.a + Math.sin(this.t * (k.wings ? 7 : 1.3) + this.x * .01) * k.turn * dt * 3;
     let sp = k.wander;
-    if (d < k.fear) { const away = Math.atan2(dy, dx); let da = Math.atan2(Math.sin(away - this.a), Math.cos(away - this.a)); want = this.a + da * Math.min(1, dt * k.turn * 1.6); sp = k.flee * (1 - d / k.fear * .4); this.scared = 1; } else this.scared = 0;
+    if (d < k.fear) { const away = Math.atan2(dy, dx); let da = Math.atan2(Math.sin(away - this.a), Math.cos(away - this.a)); want = this.a + da * Math.min(1, dt * k.turn * 1.6); this.tired = Math.min(1, (this.tired || 0) + dt / 2.5); sp = k.flee * (1 - d / k.fear * .4) * (1 - this.tired * .55); this.scared = 1; } else { this.scared = 0; this.tired = Math.max(0, (this.tired || 0) - dt / 4); }
     // keep to the page, unless its time is up and it's leaving
     const pad = 30, leaving = this.life < 0;
     if (!leaving) { if (this.x < pad) want += .12; if (this.x > W - pad) want += .12; if (this.y < pad) want += .12; if (this.y > H - pad) want += .12; if (this.x < pad || this.x > W - pad || this.y < pad || this.y > H - pad) { const c = Math.atan2(H / 2 - this.y, W / 2 - this.x); want += Math.atan2(Math.sin(c - want), Math.cos(c - want)) * Math.min(1, dt * 4); } }

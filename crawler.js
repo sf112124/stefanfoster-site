@@ -567,7 +567,7 @@ export class Crawler {
     if (E.over) { if (now - E.over > 3800) this.stopEating(); }
     // steer: the keys if you're using them, otherwise it chases your pointer. Click for a lunge.
     const kx = (k.r ? 1 : 0) - (k.l ? 1 : 0), ky = (k.d ? 1 : 0) - (k.u ? 1 : 0), keyed = kx || ky;
-    const top = (E.over ? 0 : 1) * (300 + Math.min(240, B.length * 7) + (now - E.dash < 260 ? 560 : 0));
+    const top = (E.over ? 0 : 1) * (360 + Math.min(240, B.length * 7) + (now - E.dash < 260 ? 560 : 0));
     let wx = 0, wy = 0;
     if (keyed) { const d = Math.hypot(kx, ky); wx = kx / d * top; wy = ky / d * top; }
     else { const dx = m.x - E.x, dy = m.y - E.y, d = Math.hypot(dx, dy); if (d > 26) { const sp = Math.min(top, d * 3.4); wx = dx / d * sp; wy = dy / d * sp; } }
@@ -589,7 +589,7 @@ export class Crawler {
     if (!E.over && now - E.spawnAt > 1100 && E.bugs.length < 4 + Math.min(5, Math.floor(E.score / 60))) { E.spawnAt = now; E.bugs.push(new Bug(W, H, pickKind())); }
     E.bugs = E.bugs.filter((b) => {
       if (!b.update(dt, W, H, mx, my)) return false;
-      if (!E.over && Math.hypot(b.x - mx, b.y - my) < 13 * B.size + b.k.r) {
+      if (!E.over && Math.hypot(b.x - mx, b.y - my) < 22 * B.size + b.k.r * 1.5) {
         E.mouth = 1; E.chewAt = now; E.hunger = Math.min(1, E.hunger + .14 + b.k.pts * .02); this.score(b.k.pts * 5, b.x, b.y, cols);
         const grow = b.k.pts >= 15 ? 3 : b.k.pts >= 3 ? 2 : 1; for (let i = 0; i < grow; i++) B.add();
         this.burst(b.x, b.y, 14, b.k.gold ? ["#ffb21c", "#ffd76a"] : cols, 120, 420); this.sfx("catch", b.x / W); return false;
