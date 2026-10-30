@@ -145,35 +145,58 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   // the switch: pull everything flat into a plain list, and back
   const sw = document.createElement("button"); sw.type = "button"; sw.className = "tun-sw mono"; sw.innerHTML = `<i></i><span>LIST</span>`; mount.appendChild(sw);
   // the list's own hit areas, numbers and clients, laid over the flat names
-  // hover a name and a little moving picture from that project floats beside your pointer
+  // hover a name and a little moving picture from that project appears beside the line, left or right. It hangs on a
+  // spring: flick the mouse and it swings, then settles. It is never allowed over any of the type.
   const thumb = document.createElement("div"); thumb.className = "tun-thumb"; thumb.setAttribute("aria-hidden", "true"); mount.appendChild(thumb);
-  const STILLS = { "coca-cola": ["media/coca-cola/hover-1.jpg", "media/coca-cola/hover-2.jpg", "media/coca-cola/hover-1.jpg"], gumtree: ["media/gumtree/hover-2.jpg", "media/gumtree/hover-1.jpg", "media/gumtree/no-salespeople.jpg"] };
-  let thumbI = -1; const tp = { x: 0, y: 0, tx: 0, ty: 0, v: 0 };
+  const STILLS = { "coca-cola": ["media/coca-cola/hover-1.jpg", "media/coca-cola/hover-2.jpg"], gumtree: ["media/gumtree/hover-2.jpg", "media/gumtree/hover-1.jpg", "media/gumtree/no-salespeople.jpg"] };
+  const layers = []; let thumbI = -1; const pm = { x: 0, y: 0, vx: 0, vy: 0, t: 0 };
+  mount.addEventListener("pointermove", (e) => { const now = performance.now(), dt = Math.max(8, now - pm.t) / 1000; pm.vx = (e.clientX - pm.x) / dt; pm.vy = (e.clientY - pm.y) / dt; pm.x = e.clientX; pm.y = e.clientY; pm.t = now; });
+  const textBand = (top, bot) => {   // the leftmost and rightmost ink of every line that shares this height
+    let L = Infinity, Rr = -Infinity;
+    for (const a of lst.children) { const r = a.getBoundingClientRect(); if (r.bottom < top || r.top > bot) continue; const n = a.querySelector(".n").getBoundingClientRect(), c = a.querySelector(".c").getBoundingClientRect(); L = Math.min(L, n.left, r.left); Rr = Math.max(Rr, c.right || r.right, r.right); }
+    return [L, Rr];
+  };
   const haunt = (i) => {
     if (i === thumbI) return; thumbI = i;
-    thumb.querySelectorAll(".tt").forEach((l) => { l.classList.remove("on"); setTimeout(() => l.remove(), 450); });
-    const p = LIST[i]; if (i < 0) tp.v = 0; if (i < 0 || !p || document.documentElement.classList.contains("devouring")) return;
-    const l = document.createElement("div"); l.className = "tt";
-    if (STILLS[p.slug]) { l.classList.add("stills"); l.innerHTML = STILLS[p.slug].map((u) => `<img src="${u}" alt="">`).join(""); }
-    else if (p.cover) { l.innerHTML = media(p.cover); if (p.cover.ar) l.style.aspectRatio = p.cover.ar; }
+    layers.forEach((l) => { if (!l.dying) { l.dying = true; l.el.classList.remove("on"); setTimeout(() => { l.el.remove(); layers.splice(layers.indexOf(l), 1); }, 400); } });
+    const p = LIST[i]; if (i < 0 || !p || document.documentElement.classList.contains("devouring")) return;
+    const el = document.createElement("div"); el.className = "tt";
+    if (STILLS[p.slug]) { el.classList.add("stills"); el.innerHTML = STILLS[p.slug].map((u) => `<img src="${u}" alt="">`).join(""); el.style.setProperty("--n", STILLS[p.slug].length); }
+    else if (p.cover) { el.innerHTML = media(p.cover); if (p.cover.ar) el.style.aspectRatio = p.cover.ar; }
     else return;
-    thumb.appendChild(l);
-    const v = l.querySelector("video"); if (v) { v.src = v.dataset.src; v.play().catch(() => {}); }
-    requestAnimationFrame(() => requestAnimationFrame(() => l.classList.add("on")));
+    thumb.appendChild(el);
+    const v = el.querySelector("video"); if (v) { v.src = v.dataset.src; v.play().catch(() => {}); }
+    const L = { el, i, side: i % 2 ? -1 : 1, x: null, y: 0, vx: 0, vy: 0, rot: 0, dying: false };
+    layers.push(L); place(L, true);
+    requestAnimationFrame(() => el.classList.add("on"));
   };
-  // it sits just past the end of the hovered line (or before its number if there's no room), never over the name
-  const floatThumb = () => {
+  const place = (L, snap) => {
+    const a = lst.children[L.i]; if (!a) return;
+    const mr = mount.getBoundingClientRect(), ar = a.getBoundingClientRect(), tw = L.el.offsetWidth, th = L.el.offsetHeight || tw * .6;
+    const ty = ar.top + ar.height / 2 - th / 2, [lo, hi] = textBand(ty - 6, ty + th + 6), gap = 26;
+    let side = L.side; if (side > 0 && hi + gap + tw > mr.right - 12) side = -1; if (side < 0 && lo - gap - tw < mr.left + 12) side = 1;
+    L.tx = (side > 0 ? hi + gap : lo - gap - tw) - mr.left; L.ty = ty - mr.top; L.lo = lo - mr.left; L.hi = hi - mr.left; L.side2 = side; L.tw = tw;
+    if (snap || L.x == null) { L.x = L.tx + side * 18; L.y = L.ty; }
+  };
+  let lastF = performance.now();
+  const floatThumb = (now) => {
     requestAnimationFrame(floatThumb);
-    if (thumbI < 0) return;
-    const a = lst.children[thumbI]; if (!a) return;
-    const mr = mount.getBoundingClientRect(), c = a.querySelector(".c").getBoundingClientRect(), n = a.querySelector(".n").getBoundingClientRect(), ar = a.getBoundingClientRect(), tw = thumb.offsetWidth, th = thumb.firstElementChild ? thumb.firstElementChild.offsetHeight : tw * .62;
-    const right = Math.max(c.right, ar.right) - mr.left + 28, left = n.left - mr.left - 28 - tw;
-    tp.tx = right + tw < mr.width - 16 ? right : Math.max(16, left); tp.ty = ar.top - mr.top + ar.height / 2 - th / 2;
-    if (!tp.v) { tp.x = tp.tx; tp.y = tp.ty; tp.v = 1; }
-    tp.x += (tp.tx - tp.x) * .18; tp.y += (tp.ty - tp.y) * .18;
-    thumb.style.transform = `translate3d(${tp.x.toFixed(1)}px,${tp.y.toFixed(1)}px,0)`;
+    const dt = Math.min(.05, (now - lastF) / 1000); lastF = now; if (!dt) return;
+    const kick = Math.hypot(pm.vx, pm.vy) > 0 ? 1 : 0;
+    layers.forEach((L) => {
+      if (!L.dying) place(L, false);
+      if (L.tx == null) return;
+      // a spring to its spot, nudged by how fast the pointer is moving
+      L.vx += ((L.tx - L.x) * 140 - L.vx * 15 + pm.vx * .9 * kick) * dt; L.vy += ((L.ty - L.y) * 140 - L.vy * 15 + pm.vy * .9 * kick) * dt;
+      L.x += L.vx * dt; L.y += L.vy * dt;
+      // never over the type
+      if (L.side2 > 0) L.x = Math.max(L.x, L.hi + 14); else L.x = Math.min(L.x, L.lo - 14 - L.tw);
+      L.rot += ((Math.max(-6, Math.min(6, L.vx * .012)) ) - L.rot) * Math.min(1, dt * 10);
+      L.el.style.transform = `translate3d(${L.x.toFixed(1)}px,${L.y.toFixed(1)}px,0) rotate(${L.rot.toFixed(2)}deg)`;
+    });
+    pm.vx *= Math.pow(.001, dt); pm.vy *= Math.pow(.001, dt);
   };
-  floatThumb();
+  requestAnimationFrame(floatThumb);
   const lst = document.createElement("div"); lst.className = "tun-list"; lst.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-i="${i}"><span class="n mono">${String(i + 1).padStart(2, "0")}</span><span class="c">${esc(p.client)}</span><span class="t">${esc(p.title)}</span></a>`).join(""); mount.appendChild(lst);
   let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null, mouseX = 0, mxS = 0; const wt = new Float32Array(16).fill(.5); let ph = 0, pa = 0;
   const gs = new Float32Array(16), gv = new Float32Array(16), ea = new Float32Array(16), eaT = new Float32Array(16);
