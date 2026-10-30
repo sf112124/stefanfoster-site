@@ -411,7 +411,7 @@ export class Crawler {
     // the body: a head pulling a chain of plates, every plate on its own pair of legs
     const B = this.body; B.size = Math.max(.05, sc * 1.25);
     const shake = dying ? rnd(-.9, .9) : this.rage > 1 ? rnd(-1, 1) * (this.rage - 1) : 0, wob = stun ? Math.sin(now / 60) * .5 : held ? Math.sin(now / 90) * .3 : 0;
-    B.update(dt, p.x + shake, p.y + shake, this.head + wob, held ? 0 : speed); this.voice(B, W, speed);
+    B.update(dt, p.x + shake, p.y + shake, this.head + wob, held ? 0 : speed); this.voice(B, W, speed, true);
     const hot = this.aim > 0 || pounce || carry || this.rage > 1.2 || now - this.hurtAt < 110;
     B.draw(g, { ink, bg, cols, hot, eye: stun ? .5 : held ? 1.6 : 1, mouth: carry || pounce ? 1 : 0 });
     const ex = p.x + ch * 6 * sc, ey = p.y + sh * 6 * sc;
@@ -539,11 +539,11 @@ export class Crawler {
     if (!this.on || this.state === "dying") this.bolts = this.bolts.filter((b) => b.by === "ship");
   }
   // every footfall ticks, and touching a plate or a leg makes it ring
-  voice(B, W, speed) {
+  voice(B, W, speed, spider) {
     const ev = B.events.splice(0);
-    if (speed > 15) for (const e of ev.slice(0, 2)) this.sfx("leg", e.x / W, (e.n - e.i) + (e.side > 0 ? 2 : 0));
+    if (speed > 15) for (const e of ev.slice(0, 2)) this.sfx(spider ? "sleg" : "leg", e.x / W, (e.n - e.i) + (e.side > 0 ? 2 : 0));
     const hit = B.touch(this.m.x, this.m.y);
-    if (hit) this.sfx(hit.kind === "plate" ? "touch" : "pluck", this.m.x / W, hit.q.i + (hit.l && hit.l.side > 0 ? 3 : 0));
+    if (hit) this.sfx(hit.kind === "plate" ? (spider ? "stouch" : "touch") : (spider ? "spluck" : "pluck"), this.m.x / W, hit.q.i + (hit.l && hit.l.side > 0 ? 3 : 0));
   }
   // ---- devour: you are the creature. Hunt the bugs, eat the page letter by letter, and don't go hungry ----
   devour() {

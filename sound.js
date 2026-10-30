@@ -216,16 +216,49 @@ export class Sound {
         this.vox(f * 3, f * 2.6, .03, .008, pan, { type: "triangle", wet: .3 });
         break;
       }
-      case "touch": { // you touched a plate: a soft FM bell
-        const f = note(Math.round(b), 330);
-        this.vox(f, f * .995, .9, .05, pan, { type: "sine", fm: f * 1.4, rate: f * 3.01, wet: .75 });
-        this.vox(f * 2, f * 2, .45, .015, pan, { type: "triangle", at: .02, wet: .8 });
+      // ----- DEVOUR: cute, round, toy-like. Each plate is a little mallet note with a bubbly "bloop" in it -----
+      case "touch": {
+        if (!gate("touch", 70)) return;
+        const sc = [0, 2, 4, 7, 9], k = ((Math.round(b) % 10) + 10) % 10, f = 392 * Math.pow(2, (Math.floor(k / 5) * 12 + sc[k % 5]) / 12);
+        this.vox(f * .7, f * 1.18, .11, .05, pan, { type: "sine", mid: f * 1.3, wet: .35 });                    // the bloop: a bubble rising
+        this.vox(f * 2, f * 2, .55, .045, pan, { type: "sine", at: .03, wet: .7 });                               // the mallet tone
+        this.vox(f * 8.02, f * 8, .09, .012, pan, { type: "sine", at: .03, wet: .5 });                            // its bright strike
+        this.vox(f * 3, f * 3.01, .8, .012, -pan, { type: "triangle", at: .12, wet: .9, a: .05 });               // a soft echo answering from the other side
         break;
       }
-      case "pluck": { // you brushed a leg: a plucked wire
-        const f = note(Math.round(b), 165);
-        this.vox(f * 2.01, f * 2, .32, .04, pan, { type: "sawtooth", bp: f * 5, q: 12, wet: .5 });
-        this.vox(f, f, .5, .02, pan, { type: "sine", wet: .6 });
+      case "pluck": { // a leg: a kalimba tine and a tiny squeak
+        if (!gate("pluck", 60)) return;
+        const sc = [0, 2, 4, 7, 9], k = ((Math.round(b) % 10) + 10) % 10, f = 523 * Math.pow(2, (Math.floor(k / 5) * 12 + sc[k % 5]) / 12);
+        this.vox(f, f * .998, .6, .04, pan, { type: "sine", wet: .6 });
+        this.vox(f * 5.43, f * 5.4, .07, .015, pan, { type: "sine", wet: .4 });
+        this.vox(f * 2.4, f * 3.4, .06, .012, pan, { type: "triangle", at: .025, wet: .3 });
+        break;
+      }
+      // ----- DO NOT OPEN: the spider. Dissonant, glassy and wrong, but lush: beating seconds, a bowed-glass whine, a sub you feel -----
+      case "sleg": { // feet: dry chitin, two clicks close together, sometimes a low pulse under them
+        if (!gate("sleg", 34)) return;
+        const f = r(2800, 5200);
+        this.nz(f, 14, .018, .02, pan, { wet: .1 }); this.nz(f * r(.7, .9), 12, .014, .012, pan, { at: r(.012, .022), wet: .1 });
+        if (Math.random() < .12) this.vox(62, 48, .25, .03, pan, { type: "sine", wet: .3 });
+        break;
+      }
+      case "stouch": { // its body: a sour cluster that blooms in, a glass harmonic that bends, and a heartbeat thud
+        if (!gate("stouch", 120)) return;
+        const sc = [0, 1, 5, 6, 10], k = ((Math.round(b) % 10) + 10) % 10, f = 146.8 * Math.pow(2, (Math.floor(k / 5) * 12 + sc[k % 5]) / 12);
+        this.vox(f, f * .97, 1.3, .04, pan, { type: "sawtooth", bp: f * 3, q: 6, a: .07, fm: 4, rate: 5.5, wet: .85 });
+        this.vox(f * 1.06, f * 1.02, 1.3, .035, -pan, { type: "sawtooth", bp: f * 3.2, q: 6, a: .09, wet: .85 });     // a minor second, beating against it
+        this.vox(f * 1.414, f * 1.4, 1.1, .02, pan, { type: "sine", a: .1, wet: .9 });                                 // the tritone
+        this.vox(f * 7.1, f * 6.6, .9, .012, pan, { type: "sine", at: .05, a: .15, fm: f * .05, rate: 7, wet: .95 }); // bowed glass, sagging
+        this.vox(70, 38, .4, .12, 0, { type: "sine", wet: .2 });                                                          // the thud
+        this.nz(5200, 2, .25, .015, pan, { at: .02, to: 1400, wet: .7 });                                                // a dry hiss
+        break;
+      }
+      case "spluck": { // a leg: a wire under tension, twanging and sliding down, with a scrape of nail on it
+        if (!gate("spluck", 90)) return;
+        const sc = [0, 1, 5, 6, 10], k = ((Math.round(b) % 10) + 10) % 10, f = 220 * Math.pow(2, (Math.floor(k / 5) * 12 + sc[k % 5]) / 12);
+        this.vox(f * 2.2, f * 1.6, .7, .04, pan, { type: "sawtooth", bp: f * 4, q: 14, fm: f * .4, rate: f * 1.41, wet: .7 });
+        this.vox(f * 1.03, f * .78, .9, .025, -pan, { type: "triangle", wet: .8 });
+        this.nz(r(3000, 6000), 6, .12, .02, pan, { to: 900, wet: .5 });
         break;
       }
       case "out": // it climbs out: a low gulp, then a ladder of clicks rising
