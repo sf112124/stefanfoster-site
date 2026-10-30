@@ -152,6 +152,8 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   // spring: flick the mouse and it swings, then settles. It is never allowed over any of the type.
   const thumb = document.createElement("div"); thumb.className = "tun-thumb"; thumb.setAttribute("aria-hidden", "true"); mount.appendChild(thumb);
   const STILLS = { "coca-cola": ["media/coca-cola/hover-1.jpg", "media/coca-cola/hover-2.jpg"], gumtree: ["media/gumtree/hover-2.jpg", "media/gumtree/hover-1.jpg", "media/gumtree/no-salespeople.jpg"] };
+  // sides: portrait and landscape each alternate left/right among themselves, so neither shape gathers on one side
+  const SIDE = (() => { const nx = { t: 1, w: -1 }; return LIST.map((p) => { const ar = p.cover && p.cover.ar ? String(p.cover.ar).split("/").map(Number) : [16, 9], g = ar[0] / ar[1] < 1 ? "t" : "w", s2 = nx[g]; nx[g] = -s2; return s2; }); })();
   const layers = []; let thumbI = -1; const pm = { x: 0, y: 0, vx: 0, vy: 0, t: 0 };
   mount.addEventListener("pointermove", (e) => { const now = performance.now(), dt = Math.max(8, now - pm.t) / 1000; pm.vx = (e.clientX - pm.x) / dt; pm.vy = (e.clientY - pm.y) / dt; pm.x = e.clientX; pm.y = e.clientY; pm.t = now; });
   const textBand = (top, bot) => {   // the leftmost and rightmost ink of every line that shares this height
@@ -169,7 +171,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     else return;
     thumb.appendChild(el);
     const v = el.querySelector("video"); if (v) { v.src = v.dataset.src; v.play().catch(() => {}); }
-    const L = { el, i, side: i % 2 ? -1 : 1, x: null, y: 0, vx: 0, vy: 0, rot: 0, dying: false };
+    const L = { el, i, side: SIDE[i] || 1, x: null, y: 0, vx: 0, vy: 0, rot: 0, dying: false };
     layers.push(L); place(L, true);
     requestAnimationFrame(() => el.classList.add("on"));
   };
