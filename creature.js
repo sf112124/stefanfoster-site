@@ -74,7 +74,7 @@ export class Creature {
   }
   // shift everything (the page scrolled under it)
   shift(dx, dy) { this.segs.forEach((q) => { q.x += dx; q.y += dy; q.legs.forEach((l) => { l.fx += dx; l.fy += dy; l.sx += dx; l.sy += dy; l.tx += dx; l.ty += dy; l.j.forEach((p) => { p[0] += dx; p[1] += dy; }); }); }); }
-  draw(g, { ink, bg, cols, hot = false, eye = 1, mouth = 0 }) {
+  draw(g, { ink, bg, cols, hot = false, eye = 1, mouth = 0, sleepy = 0 }) {
     const s = this.segs, sc = this.size, t = this.t;
     g.lineCap = "round"; g.lineJoin = "round";
     // legs first, under the plates
@@ -104,7 +104,8 @@ export class Creature {
         // corner brackets, two eyes, and a mouth that opens to eat
         const b = 5, x0 = w / 2 + 3, y0 = h / 2 + 3; g.lineWidth = 1.5; g.strokeStyle = hot ? "#ff2d4a" : ink;
         [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sy]) => { g.beginPath(); g.moveTo(sx * x0 - sx * b, sy * y0); g.lineTo(sx * x0, sy * y0); g.lineTo(sx * x0, sy * y0 - sy * b); g.stroke(); });
-        g.fillStyle = hot ? "#ff2d4a" : ink; [-1, 1].forEach((sd) => { g.beginPath(); g.arc(w * .18, sd * h * .22, 2.6 * sc * eye, 0, TAU); g.fill(); });
+        if (sleepy) { g.strokeStyle = ink; g.lineWidth = 1.4; [-1, 1].forEach((sd) => { g.beginPath(); g.arc(w * .18, sd * h * .22, 2.6 * sc, -.3 * Math.PI + Math.PI / 2, .3 * Math.PI + Math.PI / 2); g.stroke(); }); }
+        else { g.fillStyle = hot ? "#ff2d4a" : ink; [-1, 1].forEach((sd) => { g.beginPath(); g.arc(w * .18, sd * h * .22, 2.6 * sc * eye, 0, TAU); g.fill(); }); }
         g.fillStyle = col; g.fillRect(-w * .38, -h * .3, w * .3, h * .6);
         if (mouth > 0) { g.fillStyle = ink; g.beginPath(); g.moveTo(w / 2, -h * .25 * mouth); g.lineTo(w / 2 + 7 * mouth, 0); g.lineTo(w / 2, h * .25 * mouth); g.fill(); }
       } else {

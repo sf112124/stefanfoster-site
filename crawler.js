@@ -545,7 +545,7 @@ export class Crawler {
     const W = innerWidth, H = innerHeight, x = W / 2, y = H * .62;
     let best = 0; try { best = +localStorage.getItem("devour-best") || 0; } catch (e) {}
     this.E = { on: true, x, y, vx: 0, vy: -60, a: -Math.PI / 2, body: new Creature(x, y, -Math.PI / 2, 3, { gap: 19 }), n: 0, score: 0, best, born: performance.now(), mouth: 0, chewAt: 0, scanAt: 0, dash: 0,
-      hunger: 1, starveAt: 0, bugs: [], spawnAt: 0, pops: [], chars: [], letters: 0, combo: 0, comboAt: 0, over: 0 };
+      food: 0, bugs: [], spawnAt: 0, pops: [], chars: [], letters: 0, combo: 0, comboAt: 0, over: 0 };
     this.eats.forEach((b) => { b.classList.add("open"); b.querySelector("span").textContent = "STOP EATING"; });
     document.documentElement.classList.add("devouring"); window.__tunEat?.hideAll(); this.sfx("out");
   }
@@ -557,6 +557,7 @@ export class Crawler {
     this.eats.forEach((b) => { b.classList.remove("open"); b.querySelector("span").textContent = "DEVOUR"; });
     document.documentElement.classList.remove("devouring"); window.__tunEat?.reset(); this.sfx("back"); this.settle();
   }
+  feed(v) { const E = this.E; E.food += v; while (E.food >= 1) { E.food -= 1; E.body.add(); } }
   score(n, x, y, cols) {
     const E = this.E, now = performance.now();
     E.combo = now - E.comboAt < 1600 ? Math.min(8, E.combo + 1) : 1; E.comboAt = now;
@@ -567,18 +568,18 @@ export class Crawler {
     const E = this.E, m = this.m, k = this.keys, B = E.body;
     // steer: the keys if you're using them, otherwise it chases your pointer. Click for a lunge.
     const kx = (k.r ? 1 : 0) - (k.l ? 1 : 0), ky = (k.d ? 1 : 0) - (k.u ? 1 : 0), keyed = kx || ky;
-    const top = E.over ? 260 : 360 + Math.min(240, B.length * 7) + (now - E.dash < 260 ? 560 : 0);
+    const top = E.over ? 110 : 240 + Math.min(140, B.length * 4) + (now - E.dash < 260 ? 420 : 0);
     let wx = 0, wy = 0;
     // so full it waddles home to its hole and curls up to sleep
-    if (E.over) { const h = this.holePos(), dx = h.x - E.x, dy = h.y - E.y, d = Math.hypot(dx, dy); if (d > 6) { const sp = Math.min(top, d * 2.5); wx = dx / d * sp; wy = dy / d * sp; } if (d < 40) { E.nap = (E.nap || 0) + dt; } }
+    if (E.over) { if (now - E.over > 1600) { const h = this.holePos(), dx = h.x - E.x, dy = h.y - E.y, d = Math.hypot(dx, dy); if (d > 6) { const sp = Math.min(top, d * 2.5); wx = dx / d * sp; wy = dy / d * sp; } if (d < 40) { E.nap = (E.nap || 0) + dt; } } }
     else if (keyed) { const d = Math.hypot(kx, ky); wx = kx / d * top; wy = ky / d * top; }
-    else { const dx = m.x - E.x, dy = m.y - E.y, d = Math.hypot(dx, dy); if (d > 26) { const sp = Math.min(top, d * 3.4); wx = dx / d * sp; wy = dy / d * sp; } }
-    const grip = Math.min(1, dt * 5); E.vx += (wx - E.vx) * grip; E.vy += (wy - E.vy) * grip;
+    else { const dx = m.x - E.x, dy = m.y - E.y, d = Math.hypot(dx, dy); if (d > 26) { const sp = Math.min(top, d * 2.4); wx = dx / d * sp; wy = dy / d * sp; } }
+    const grip = Math.min(1, dt * 3.5); E.vx += (wx - E.vx) * grip; E.vy += (wy - E.vy) * grip;
     E.x = clamp(E.x + E.vx * dt, 16, W - 16); E.y = clamp(E.y + E.vy * dt, 16, H - 16);
     const speed = Math.hypot(E.vx, E.vy);
     if (speed > 25) { let da = Math.atan2(E.vy, E.vx) - E.a; da = Math.atan2(Math.sin(da), Math.cos(da)); E.a += da * Math.min(1, dt * 8); }
-    B.size = (1.2 + Math.min(.4, B.length * .012)) * (E.nap ? Math.max(0, 1 - E.nap / 1.6) : 1);
-    if (E.nap > 1.7) { this.stopEating(); return; }
+    B.size = (1.2 + Math.min(.4, B.length * .012)) * (E.nap ? Math.max(0, 1 - Math.max(0, E.nap - .8) / 1.6) : 1);
+    if (E.nap > 2.6) { this.stopEating(); return; }
     const ca = Math.cos(E.a), sa = Math.sin(E.a), mx = E.x + ca * 16 * B.size, my = E.y + sa * 16 * B.size;
     // fed enough and it's enormous: time for a nap
     if (!E.over && B.length >= FULL) { E.over = now; this.sfx("back"); }
@@ -587,15 +588,15 @@ export class Crawler {
     E.bugs = E.bugs.filter((b) => {
       if (!b.update(dt, W, H, mx, my)) return false;
       if (!E.over && Math.hypot(b.x - mx, b.y - my) < 22 * B.size + b.k.r * 1.5) {
-        E.mouth = 1; E.chewAt = now; this.score(b.k.pts * 5, b.x, b.y, cols);
-        const grow = b.k.pts >= 15 ? 3 : b.k.pts >= 3 ? 2 : 1; for (let i = 0; i < grow; i++) B.add();
+        E.mouth = 1; E.chewAt = now; this.score(b.k.pts * 10, b.x, b.y, cols);
+        this.feed(b.k.pts >= 15 ? 2 : b.k.pts >= 3 ? 1 : .5);
         this.burst(b.x, b.y, 14, b.k.gold ? ["#ffb21c", "#ffd76a"] : cols, 120, 420); this.sfx("catch", b.x / W); return false;
       }
       b.draw(g, { ink, bg, cols }); return true;
     });
     B.update(dt, E.x, E.y, E.a, speed);
     E.mouth = Math.max(0, E.mouth - dt * 4);
-    B.draw(g, { ink, bg, cols, hot: now - E.chewAt < 180, mouth: Math.max(E.mouth, .25 + Math.sin(now / 140) * .25) });
+    B.draw(g, { ink, bg, cols, hot: now - E.chewAt < 180 && !E.over, sleepy: E.over ? 1 : 0, mouth: E.over ? Math.max(0, Math.sin((now - E.over) / 900)) * (now - E.over < 2800 ? 1.4 : .3) : Math.max(E.mouth, .25 + Math.sin(now / 140) * .25) });
     // and the page itself, a letter at a time
     if (!E.over && now - E.scanAt > 45) {
       E.scanAt = now;
@@ -621,7 +622,7 @@ export class Crawler {
         const cx = b.left + b.width / 2, cy = b.top + b.height / 2;
         requestAnimationFrame(() => { sp.style.transform = `translate(${(x - cx).toFixed(0)}px,${(y - cy).toFixed(0)}px) scale(0) rotate(${(Math.random() * 90 - 45).toFixed(0)}deg)`; sp.style.opacity = "0"; });
         const E = this.E; E.mouth = Math.max(E.mouth, .7); E.chewAt = performance.now(); E.letters++;
-        this.score(1, cx, cy, cols); if (E.letters % 3 === 0) E.body.add();
+        this.score(1, cx, cy, cols); this.feed(1 / 3);
         this.burst(cx, cy, 4, cols, 60, 200); if (Math.random() < .5) this.sfx("step", cx / innerWidth, .6);
         return true;
       }
@@ -636,7 +637,7 @@ export class Crawler {
     this.set(el, "transition", "transform .4s cubic-bezier(.55,0,.8,.2),opacity .4s");
     this.set(el, "transform", `translate(${(x - cx).toFixed(0)}px,${(y - cy).toFixed(0)}px) scale(0) rotate(${(Math.random() * 60 - 30).toFixed(0)}deg)`);
     this.set(el, "opacity", "0"); this.set(el, "pointerEvents", "none");
-    E.body.add(); E.body.add(); this.score(10, cx, cy, cols);
+    this.feed(1); this.score(10, cx, cy, cols);
     this.burst(x, y, 12, cols, 120, 380); this.sfx("catch", x / innerWidth);
   }
   // ---- what you need to read ----
@@ -645,9 +646,9 @@ export class Crawler {
     if (this.E.on) {
       const E = this.E, cx = W / 2, cy = H - 64, intro = now - E.born < 6000;
       if (E.over) {
-        plate(g, cx, cy, 520, 44, bg, ink);
-        type(g, `SO FULL. NAP TIME  Z z z      SCORE ${E.score}      BEST ${E.best}`, cx, cy + 1, 12, ink);
-        if (!E.nap) { const z = (now / 600) % 1; g.globalAlpha = 1 - z; type(g, "z", E.x + 18, E.y - 20 - z * 26, 12 + z * 8, ink); g.globalAlpha = 1; }
+        plate(g, cx, cy, 660, 44, bg, ink);
+        type(g, `SO FULL... SO SLEEPY... OFF HOME FOR A NAP      SCORE ${E.score}      BEST ${E.best}`, cx, cy + 1, 12, ink);
+        for (let i = 0; i < 3; i++) { const z = ((now / 900) + i / 3) % 1; g.globalAlpha = Math.sin(z * Math.PI); type(g, "Z", E.x + 16 + z * 22 + Math.sin(z * 6) * 4, E.y - 18 - z * 46, 11 + z * 14, ink); } g.globalAlpha = 1;
         return;
       }
       plate(g, cx, cy, intro ? 600 : 520, 44, bg, ink);
