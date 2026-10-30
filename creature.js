@@ -30,8 +30,9 @@ export class Creature {
     const seg = { x, y, a, i: n, w: head ? 13 : 15 + hash(seed) * 6, h: head ? 11 : 10 + hash(seed + 1) * 5, seed, born: quiet ? -1 : 0, lit: 0, legs: [],
       cells: Array.from({ length: 6 }, (_, k) => hash(seed * 3 + k)), kind: Math.floor(hash(seed + 7) * 3) };
     if (!head) for (const side of [-1, 1]) {
-      const bones = 3 + (hash(seed + side) > .55 ? 1 : 0), base = 15 + hash(seed + side * 2) * 7;
-      const L = Array.from({ length: bones }, (_, k) => base * [1, 1.15, .9, .7][k] * (.85 + hash(seed + k * 5 + side) * .3));
+      // long, spindly, four-boned legs like the reference: a short coxa, two long middle bones, a fine tip
+      const bones = 4, base = 22 + hash(seed + side * 2) * 10;
+      const L = Array.from({ length: bones }, (_, k) => base * [.55, 1.25, 1.1, .8][k] * (.85 + hash(seed + k * 5 + side) * .3));
       seg.legs.push({ side, L, reach: L.reduce((p, q) => p + q, 0), j: Array.from({ length: bones + 1 }, () => [x, y]), fx: x, fy: y, sx: x, sy: y, tx: x, ty: y, st: 1, lit: 0, wig: 0 });
     }
     this.segs.push(seg); if (!quiet) this.pulse = 1;
@@ -57,7 +58,7 @@ export class Creature {
       const rx = q.x - sa * l.side * q.h * .4 * sc, ry = q.y + ca * l.side * q.h * .4 * sc;
       // spider splay: front legs reach forward, back legs reach back
       const f = N > 2 ? (i - 1) / (N - 2) : .5, splay = lerp(.75, -.85, f), dirA = q.a + l.side * (Math.PI / 2 - splay);
-      const out = l.reach * .78 * sc * grow, fwd = speed > 20 ? 10 * sc : 0;
+      const out = l.reach * .68 * sc * grow, fwd = speed > 20 ? 10 * sc : 0;
       const restX = rx + Math.cos(dirA) * out + ca * fwd, restY = ry + Math.sin(dirA) * out + sa * fwd;
       // flung somewhere new (a page change, a leap): legs that are left hopelessly behind just come with it, no stretching
       if (Math.hypot(l.fx - rx, l.fy - ry) > l.reach * 1.5 * sc || (l.st < 1 && Math.hypot(l.tx - rx, l.ty - ry) > l.reach * 1.1 * sc)) {
@@ -77,7 +78,7 @@ export class Creature {
       }
       // knees arch outward and up, higher while the leg is in the air
       const lift = l.st < 1 ? Math.sin(l.st * Math.PI) : 0, wig = Math.sin(this.t * 38) * l.wig * 6 * sc;
-      const ox = Math.cos(dirA) * (8 + lift * 8) * sc - sa * wig, oy = Math.sin(dirA) * (8 + lift * 8) * sc - (4 + lift * 10) * sc + ca * wig;
+      const ox = Math.cos(dirA) * (14 + lift * 8) * sc - sa * wig, oy = Math.sin(dirA) * (14 + lift * 8) * sc - (4 + lift * 10) * sc + ca * wig;
       fabrik(l.j, l.L.map((v) => v * sc * Math.max(.15, grow)), rx, ry, l.fx, l.fy, ox, oy);
     }));
   }
@@ -116,10 +117,10 @@ export class Creature {
     // the legs: one clean line through the joints, a dot at each, a bigger one for the foot
     s.forEach((q) => q.legs.forEach((l) => {
       const j = l.j, n = j.length - 1, lit = l.lit > .05;
-      g.strokeStyle = lit ? P.joint : P.leg; g.lineWidth = 1.5 + (lit ? .8 : 0);
+      g.strokeStyle = lit ? P.joint : P.leg; g.lineWidth = 1.15 + (lit ? .7 : 0);
       g.beginPath(); j.forEach((p, m) => (m ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.stroke();
-      g.fillStyle = P.joint; for (let m = 1; m < n; m++) { g.beginPath(); g.arc(j[m][0], j[m][1], 1.9, 0, Math.PI * 2); g.fill(); }
-      g.beginPath(); g.arc(j[n][0], j[n][1], 2.7, 0, Math.PI * 2); g.fill();
+      g.fillStyle = P.joint; for (let m = 1; m < n; m++) { g.beginPath(); g.arc(j[m][0], j[m][1], 1.6, 0, Math.PI * 2); g.fill(); }
+      g.beginPath(); g.arc(j[n][0], j[n][1], 2.4, 0, Math.PI * 2); g.fill();
     }));
     // the body, tail first so the head sits on top
     for (let i = N - 1; i >= 0; i--) {
