@@ -170,7 +170,7 @@ export class Crawler {
     this.sfx("launch");
   }
   dock() { const S = this.ship; if (!S.on || S.docking) return; S.docking = true; this.keys = {}; if (!S.alive) { const h = this.padPos(); S.x = h.x; S.y = h.y; } this.sfx("dock"); }
-  parked() { this.ship.on = false; this.ship.alive = false; this.padLabel("LAUNCH"); document.documentElement.classList.remove("flying"); this.bolts = this.bolts.filter((b) => b.by !== "ship"); this.settle(); }
+  parked() { this.ship.on = false; this.ship.alive = false; this.padLabel("FIGHT"); document.documentElement.classList.remove("flying"); this.bolts = this.bolts.filter((b) => b.by !== "ship"); this.settle(); }
   burst(x, y, n, c, lo = 140, hi = 520) { const now = performance.now(); for (let k = 0; k < n; k++) { const a = rnd(0, 6.28), s = rnd(lo, hi); this.sparks.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, t: now, c: Array.isArray(c) ? pick(c) : c }); } }
   shipHit(ux, uy) {
     const S = this.ship, now = performance.now();
