@@ -304,7 +304,7 @@ html.crawling .row .tt,html.flying .row .tt,html.crawling .row .c2,html.flying .
 .work{padding-top:0}
 .top{mix-blend-mode:multiply;color:var(--ink);align-items:center}
 .brand video{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-.brand canvas{width:64px;display:block}
+.brand canvas{width:64px;display:block;transform-origin:30% 50%;will-change:transform}
 @media (hover:none){ .nm .t{font-variation-settings:"wght" 700} }
 
 /* contact pop-out */

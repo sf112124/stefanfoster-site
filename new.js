@@ -350,11 +350,16 @@ function tilt() {
       for (let i = 0; i < p.length; i += 4) { const m = Math.min(p[i], p[i + 1], p[i + 2]); if (m > 200) p[i + 3] = Math.max(0, 255 - (m - 200) * 4.7); }
       g.putImageData(d, 0, 0);
     }
-    rate += (want - rate) * (want > rate ? .035 : .02); if (Math.abs(v.playbackRate - rate) > .005) v.playbackRate = Math.max(.1, rate);
+    // hover: it snaps straight to flat-out, then winds down slowly when you leave
+    rate += (want - rate) * (want > rate ? .5 : .03); const pr = Math.min(16, Math.max(.1, rate)); if (Math.abs(v.playbackRate - pr) > .02) v.playbackRate = pr;
+    // and it swells on a bouncy spring, shuddering while it's flat out
+    sv += ((want > 1 ? 1.6 : 1) - sc) * .18; sv *= .72; sc += sv;
+    const wild = Math.max(0, (rate - 2) / 14), jx = (Math.random() - .5) * 2.4 * wild, jy = (Math.random() - .5) * 2.4 * wild, jr = (Math.random() - .5) * 6 * wild;
+    c.style.transform = sc === 1 && !wild ? "" : `translate(${jx.toFixed(2)}px,${jy.toFixed(2)}px) rotate(${jr.toFixed(2)}deg) scale(${sc.toFixed(4)})`;
     requestAnimationFrame(draw);
   };
-  let rate = 1, want = 1; const brand = c.closest(".brand");
-  brand.addEventListener("mouseenter", () => (want = 4)); brand.addEventListener("mouseleave", () => (want = 1));
+  let rate = 1, want = 1, sc = 1, sv = 0; const brand = c.closest(".brand");
+  brand.addEventListener("mouseenter", () => (want = 16)); brand.addEventListener("mouseleave", () => (want = 1));
   v.play().catch(() => {}); draw(); }
 // the capsule in the corner opens into the game
 { const b = $("#pball"); b?.addEventListener("click", () => { b.classList.add("go"); sound.tick?.(.9, .04); setTimeout(() => { const f = document.createElement("div"); f.className = "flash"; document.body.appendChild(f); }, 220); setTimeout(() => (location.href = "rpg"), 620); }); }
