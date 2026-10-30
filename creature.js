@@ -59,6 +59,10 @@ export class Creature {
       const f = N > 2 ? (i - 1) / (N - 2) : .5, splay = lerp(.75, -.85, f), dirA = q.a + l.side * (Math.PI / 2 - splay);
       const out = l.reach * .78 * sc * grow, fwd = speed > 20 ? 10 * sc : 0;
       const restX = rx + Math.cos(dirA) * out + ca * fwd, restY = ry + Math.sin(dirA) * out + sa * fwd;
+      // flung somewhere new (a page change, a leap): legs that are left hopelessly behind just come with it, no stretching
+      if (Math.hypot(l.fx - rx, l.fy - ry) > l.reach * 1.5 * sc || (l.st < 1 && Math.hypot(l.tx - rx, l.ty - ry) > l.reach * 1.1 * sc)) {
+        const dx = restX - l.fx, dy = restY - l.fy; l.fx = l.sx = l.tx = restX; l.fy = l.sy = l.ty = restY; l.st = 1; l.j.forEach((q) => { q[0] += dx; q[1] += dy; });
+      }
       if (l.st >= 1) {
         const off = Math.hypot(l.fx - restX, l.fy - restY), far = Math.hypot(l.fx - rx, l.fy - ry);
         const key = i * 2 + (l.side > 0 ? 1 : 0), busy = stepping.has(key - 2) || stepping.has(key + 2) || stepping.has(key ^ 1);

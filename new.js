@@ -303,8 +303,16 @@ addEventListener("keydown", (e) => { if (lb.hidden) return; if (e.key === "Escap
 const crawler = new Crawler({
   holes: [$("#hole")], pads: [$("#pad")], eats: [$("#eat")], reduce,
   sfx: (k, a, b) => sound.critter(k, a, b),
-  sel: ".nm .t,.nm .k,.pj-t .c,.gh h2,.tile,.tile figcaption,.nav a,.brand,.fcols a,.fcols span,.lead2",
-  letter: ".pj-t .c",
+  sel: ".nm .t,.nm .k,.pj-t .c,.gh h2,.tile,.tile figcaption,.nav a,.brand,.fcols a,.fcols span,.lead2,.tun-list .torn .tl,.tun-list a",
+  letter: ".pj-t .c,.tun-list .tl",
+  // the index is drawn in WebGL: the first hit on a name swaps it for real letters it can knock about
+  tear: (el) => {
+    if (!el.matches(".tun-list a")) return false;
+    if (!el.classList.contains("torn")) { const t = el.querySelector(".t"); if (t) { t.dataset.txt = t.textContent; t.innerHTML = [...t.textContent].map((ch) => `<span class="tl">${ch === " " ? "&nbsp;" : ch.replace(/[<>&]/g, "")}</span>`).join(""); }
+      el.classList.add("torn"); window.__tunEat?.eat(+el.dataset.i); }
+    return true;
+  },
+  nodeReset: () => { $$(".tun-list a.torn").forEach((a) => { const t = a.querySelector(".t"); if (t && t.dataset.txt != null) t.textContent = t.dataset.txt; a.classList.remove("torn"); }); window.__tunEat?.reset(); },
   loose: ",.tile figcaption,.nm .k",
   gentle: true,
   anchors: () => {

@@ -563,3 +563,6 @@ html.devouring .tun-thumb,:not(.is-list)>.tun-thumb{display:none}
 .ct-g a i{font-family:var(--sans);font-style:normal;font-size:.85em;color:var(--acc)}
 .ct-card .ct-g a:hover{color:var(--acc)}
 @media (max-width:820px){ .ct-card .ct-g{grid-template-columns:1fr} }
+.tun-list a.torn .t{opacity:1;pointer-events:auto}
+.tun-list .tl{display:inline-block}
+.tun-list:hover a.torn:not(:hover) .t{color:#a3a29d;transition:color .3s}

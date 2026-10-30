@@ -52,8 +52,8 @@ function type(g, txt, x, y, size, col, align = "center") {
 }
 
 export class Crawler {
-  constructor({ holes, holeEl, pads = [], eats = [], padEl, sfx, nodeHit, nodeReset, anchors, reduce = false, sel = SEL, letter = LETTER, loose = ",.node,.tile figcaption,.wi .wn", gentle = false }) {
-    Object.assign(this, { holes, holeEl, pads, padEl, sfx: sfx || (() => {}), nodeHit, nodeReset, anchors, reduce, SEL: sel, LETTER: letter, LOOSE: loose, gentle });
+  constructor({ holes, holeEl, pads = [], eats = [], padEl, sfx, nodeHit, nodeReset, anchors, tear, reduce = false, sel = SEL, letter = LETTER, loose = ",.node,.tile figcaption,.wi .wn", gentle = false }) {
+    Object.assign(this, { holes, holeEl, pads, padEl, sfx: sfx || (() => {}), nodeHit, nodeReset, anchors, tear, reduce, SEL: sel, LETTER: letter, LOOSE: loose, gentle });
     this.on = false; this.state = "home"; this.saved = new Map(); this.dmg = new Map();
     this.bolts = []; this.sparks = []; this.fall = []; this.rage = 0; this.hp = HP; this.sc = 1;
     this.ship = { on: false, alive: false, x: 0, y: 0, vx: 0, vy: 0, a: 0, spin: 0, hull: HULL, safe: 0, trail: [] };
@@ -237,6 +237,7 @@ export class Crawler {
   mutate(el, dx, dy, power = 1, x = 0, y = 0) {
     const c = pick(this.colors()), bounce = "transform .3s cubic-bezier(.2,1.8,.4,1),background-color .2s,color .2s,filter .3s,outline-color .2s,letter-spacing .3s";
     if (el.matches(".node")) { this.nodeHit?.(el, dx, dy, c, power); return c; }
+    if (this.tear && this.tear(el, dx, dy)) return c;
     if (el.matches(".tile,.cm")) { this.shootTile(el, dx, dy, power, x, y); return c; }
     if (el.matches(this.LETTER)) {
       if (this.fall.some((f) => f.el === el)) return c;
