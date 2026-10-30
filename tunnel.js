@@ -12,7 +12,7 @@ in vec2 v; out vec4 o;
 uniform sampler2D T; uniform vec2 R; uniform float off, N, rowH, texW, texH, S0, B, C, hov, fly, flt, S1, C1, hrow;
 // screen y (-1..1) to a position in the stack, and how many screen pixels one texel takes there
 // in the list, only the line under the pointer grows (G per line), swelling over its own spot without nudging the others
-uniform float G[16], EA[16], WT[16], OF[16], TS, PH, PA, mx, SP, hc, tm; uniform vec2 hm, hv; uniform vec3 P0, P1, P2, PB; uniform sampler2D D; uniform float FL, EX, BT; uniform vec2 XS;
+uniform float G[16], EA[16], WT[16], OF[16], TS, PH, PA, HW, mx, SP, hc, tm; uniform vec2 hm, hv; uniform vec3 P0, P1, P2, PB; uniform sampler2D D; uniform float FL, EX, BT; uniform vec2 XS;
 float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float nz(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(hsh(i), hsh(i + vec2(1, 0)), f.x), mix(hsh(i + vec2(0, 1)), hsh(i + vec2(1, 1)), f.x), f.y); }
 float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 3; i++) { v += a * nz(p); p = p * 2.03 + vec2(1.7, 9.2); a *= .5; } return v; }
@@ -41,7 +41,7 @@ vec4 sampleAt(vec2 q){
   float r = mix(rt, rl, flt), s = mix(st, S1, flt) * stretch;
   float rr = mod(r, N), row = floor(rr);
   float inList = 1. - clamp(flt * 1.8, 0., 1.) * (1. - step(0., r) * step(r, N));
-  float dim = 1. - flt * mix(.62, .32, hc) * (hrow < -.5 || abs(row - hrow) < .5 ? 0. : 1.);
+  float dim = 1. - flt * HW * mix(.62, .32, hc) * (hrow < -.5 || abs(row - hrow) < .5 ? 0. : 1.);
   float grown = flt > .5 && row >= 0. && row < N ? G[int(row)] : 0.;
   // explicit detail level: the stack wraps round, and letting the GPU guess at the seam drew a grey line
   float fy = .5 + (fract(rr) - .5) * spf, inRow = step(0., fy) * step(fy, 1.);
@@ -59,7 +59,7 @@ vec4 sampleAt(vec2 q){
     float rm = h + .5 + (rl - h - .5) / m;
     if (floor(rm) != h) continue;
     float xe = xpx - A * d * bb, sh = S1 * (1. + gh);
-    float dm = 1. - mix(.62, .32, hc) * (hrow < -.5 || abs(h - hrow) < .5 ? 0. : 1.);
+    float dm = 1. - HW * mix(.62, .32, hc) * (hrow < -.5 || abs(h - hrow) < .5 ? 0. : 1.);
     float fm = .5 + (fract(rm) - .5) * SP; if (fm < 0. || fm > 1.) continue;
     c = max(c, tex((texW * .5 + xe / sh) / texW, h, fm, sh * m / (1. + gh)) * dm * (1. - EA[int(h)]));
   }
@@ -127,7 +127,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "G", "mx", "SP", "hc", "tm", "hm", "hv", "P0", "P1", "P2", "PB", "D", "FL", "T", "EX", "BT", "XS", "EA", "WT", "OF", "TS", "PH", "PA"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
+  const U = {}; ["R", "off", "N", "rowH", "texW", "texH", "S0", "B", "C", "hov", "fly", "flt", "S1", "C1", "hrow", "G", "mx", "SP", "hc", "tm", "hm", "hv", "P0", "P1", "P2", "PB", "D", "FL", "T", "EX", "BT", "XS", "EA", "WT", "OF", "TS", "PH", "PA", "HW"].forEach((k) => (U[k] = gl.getUniformLocation(pr, k)));
   draw(); document.fonts.ready.then(draw);
 
   // the label beside the line in the middle: who it was for, what it is, and a little moving picture in brackets
@@ -201,7 +201,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   };
   requestAnimationFrame(floatThumb);
   const lst = document.createElement("div"); lst.className = "tun-list"; lst.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-i="${i}"><span class="n mono">${String(i + 1).padStart(2, "0")}</span><span class="c">${esc(p.client)}</span><span class="t">${esc(p.title)}</span></a>`).join(""); mount.appendChild(lst);
-  let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null, mouseX = 0, mxS = 0; const wt = new Float32Array(16).fill(.5), ofs = new Float32Array(16); let ph = 0, pa = 0;
+  let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null, mouseX = 0, mxS = 0; const wt = new Float32Array(16).fill(.5), ofs = new Float32Array(16); let ph = 0, pa = 0, hw = 0, wgt = 0, ptX = 0, ptY = 0, ptIn = false;
   const gs = new Float32Array(16), gv = new Float32Array(16), ea = new Float32Array(16), eaT = new Float32Array(16);
   // the creature can eat a line of the list: it shrinks away, and comes back when the creature goes home
   window.__tunEat = { eat: (i) => { eaT[i] = 1; }, reset: () => eaT.fill(0), hideAll: () => { eaT.fill(1); hrow = -1; } };
@@ -236,12 +236,14 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   let heat = 0; const pal = PALS._.flat(), hmP = [0, 0], hmS = [0, 0], hmV = [0, 0], prevP = [0, 0]; let fluidOn = 0, wasOn = 0, leaveT = 0, DR = 3800; const XS = [0, 0]; const lastP = [.5, .5];
   mount.addEventListener("pointermove", (e) => { const r = mount.getBoundingClientRect(); hmP[0] = 2 * (e.clientX - r.left) / r.width - 1; hmP[1] = 1 - 2 * (e.clientY - r.top) / r.height; });
   mount.addEventListener("pointermove", (e) => { const a = e.target.closest && e.target.closest(".tun-list a"); if (!a || e.target !== a) { mouseY = null; return; } const r = mount.getBoundingClientRect(); mouseY = 1 - 2 * (e.clientY - r.top) / r.height - .05; mouseX = 2 * (e.clientX - r.left) / r.width - 1; });
-  mount.addEventListener("pointerleave", () => (mouseY = null));
+  mount.addEventListener("pointerleave", () => { mouseY = null; ptIn = false; });
+  // hover is read straight from where the pointer sits in the stack, so the gaps between names are a smooth fade, not a dead zone
+  mount.addEventListener("pointermove", (e) => { if (e.pointerType !== "mouse") return; const r = cv.getBoundingClientRect(); ptX = e.clientX - r.left - r.width / 2; ptY = e.clientY - r.top; ptIn = true; });
   const setFlat = (on) => { flatT = on ? 1 : 0; mount.classList.toggle("is-list", on); sw.querySelector("span").textContent = on ? "TUNNEL" : "LIST"; poke(); };
   sw.addEventListener("pointerdown", (e) => e.stopPropagation()); sw.addEventListener("click", () => setFlat(!flatT));
   lst.addEventListener("pointerdown", (e) => e.stopPropagation());
   lst.querySelectorAll("a").forEach((a) => {
-    a.addEventListener("pointerenter", () => { if (!document.documentElement.classList.contains("devouring")) { hrow = +a.dataset.i; haunt(hrow); } }); a.addEventListener("pointerleave", () => { hrow = -1; setTimeout(() => { if (hrow < 0) haunt(-1); }, 120); });
+    
     // picking from the list: it folds back into the tunnel on that name, then flies in
     a.addEventListener("click", (e) => { e.preventDefault(); const i = +a.dataset.i; off = target = i + .5; vel = 0; hrow = -1; onOpen(LIST[i]); });
   });
@@ -322,14 +324,21 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     const SP = 1.6, S1 = Math.min((h * .64) / (N * rowH * SP), (w * (mob ? .66 : .3)) / T.widest), C1 = (h * .5) / (rowH * S1 * SP);
     // the lens drifts after the pointer and relaxes away when it leaves
     const GA = mob ? .05 : .08;
+    { let nh = -1; wgt = 0;
+      if (ptIn && fk > .5 && !document.documentElement.classList.contains("devouring")) {
+        const rr = N * .5 - (1 - 2 * ptY / H() - .05) * C1;
+        if (rr >= 0 && rr < N) { const i0 = Math.floor(rr), dp = Math.min(1.5, devicePixelRatio || 1), half = (T.w ? T.w[i0] : T.widest) * S1 / dp / 2 * (1 + Math.max(0, gs[i0])) + 28;
+          if (Math.abs(ptX) < half) { nh = i0; const x = Math.min(1, (1 - 2 * Math.abs(rr - i0 - .5)) / .6); wgt = x * x * (3 - 2 * x); } } }
+      if (nh !== hrow) { hrow = nh; if (nh >= 0) haunt(nh); else setTimeout(() => { if (hrow < 0) haunt(-1); }, 120); } }
     // a slightly underdamped spring per line, so it swells past and settles; the magnifier trails the pointer like liquid
-    for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h = Math.min(.008, rdt / n); for (let i = 0; i < N; i++) { gv[i] += ((((i === hrow ? GA : 0) - gs[i]) * 340) - gv[i] * 19) * h; gs[i] += gv[i] * h; } }
+    for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h = Math.min(.008, rdt / n); for (let i = 0; i < N; i++) { gv[i] += ((((i === hrow ? GA * wgt : 0) - gs[i]) * 340) - gv[i] * 19) * h; gs[i] += gv[i] * h; } }
     mxS += (mouseX - mxS) * (1 - Math.pow(.003, rdt));
     { const on = fk > .5 && hrow >= 0, k = 1 - Math.pow(.004, rdt);
       for (let i = 0; i < 16; i++) { const tg = .5; wt[i] += (tg - wt[i]) * k; if (Math.abs(tg - wt[i]) < .02) wt[i] = tg; }
-      if (on) ph = pa < .02 ? hrow + .5 : ph + (hrow + .5 - ph) * k; pa += ((on ? .28 : 0) - pa) * k; }
-    for (let i = 0; i < N; i++) { const d = i + .5 - ph, ad = Math.abs(d); ofs[i] = ad < .5 ? 0 : pa * Math.sign(d) * 1.6 / (ad + .6); }
-    gl.uniform1fv(U.OF, ofs); gl.uniform1fv(U.WT, wt); gl.uniform1f(U.TS, TS); gl.uniform1f(U.PH, ph); gl.uniform1f(U.PA, pa);
+      // each line eases toward where it should be, so crossing from one name to the next is one continuous motion
+      const ko = 1 - Math.pow(.0008, rdt); hw += ((on ? wgt : 0) - hw) * ko; if (on) ph = hrow + .5; pa = 0;
+      for (let i = 0; i < N; i++) { const d = i - hrow, ad = Math.abs(d), t = !on || ad < .5 ? 0 : .28 * wgt * Math.sign(d) * 1.6 / (ad + .6); ofs[i] += (t - ofs[i]) * ko; pa = Math.max(pa, Math.abs(ofs[i])); } }
+    gl.uniform1fv(U.OF, ofs); gl.uniform1fv(U.WT, wt); gl.uniform1f(U.TS, TS); gl.uniform1f(U.PH, ph); gl.uniform1f(U.PA, pa); gl.uniform1f(U.HW, hw);
     gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); for (let i = 0; i < 16; i++) ea[i] += (eaT[i] - ea[i]) * Math.min(1, rdt * (eaT[i] ? 7 : 3)); gl.uniform1fv(U.G, gs); gl.uniform1fv(U.EA, ea); gl.uniform1f(U.mx, mxS); gl.uniform1f(U.SP, SP);
     // the colour flood: fades in on the hovered project's palette, eases between palettes, follows the pointer softly
     const ht = PAINT && hrow >= 0 && fk > .5 ? 1 : 0, pk = 1 - Math.pow(.03, rdt); heat += (ht - heat) * (1 - Math.pow(ht ? .08 : .02, rdt));
