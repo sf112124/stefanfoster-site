@@ -1,4 +1,4 @@
-import { Creature, Bug, pickKind } from "./creature.js";
+import { Creature, Spider, Bug, pickKind } from "./creature.js";
 // The thing in the hole. Let it out and it stalks your cursor on nine legs, lines you up and fires. It always misses you,
 // and the page takes the hit: letters are blown loose and fall, pieces are knocked across the grid, pictures are shot
 // full of holes until they hang off and drop. All the damage is done to the page itself. Stop moving and it pounces: it
@@ -127,7 +127,7 @@ export class Crawler {
     this.on = true; this.state = "out"; this.grow = 0; this.rage = 0; this.meter = 0; this.hp = HP; this.hurtAt = 0;
     const up = h.y > innerHeight / 2 ? -1 : 1;                 // it climbs out towards the middle of the page, wherever its hole is
     this.p = { x: h.x, y: h.y }; this.v = { x: -200, y: 260 * up }; this.head = up * Math.PI / 2; this.orbit = Math.random() * 6;
-    this.legs = LEGS.map(chain); this.feel = FEEL.map(chain); this.tail = Array.from({ length: 6 }, () => [h.x, h.y]); this.body = new Creature(h.x, h.y, this.head, 5, { gap: 15 });
+    this.legs = LEGS.map(chain); this.feel = FEEL.map(chain); this.tail = Array.from({ length: 6 }, () => [h.x, h.y]); this.body = new Spider(h.x, h.y, this.head);
     [...this.legs, ...this.feel].forEach((l) => { l.fx = l.sx = l.tx = h.x; l.fy = l.sy = l.ty = h.y; l.j.forEach((q) => { q[0] = h.x; q[1] = h.y; }); });
     this.aim = 0; this.cool = 1.2; this.pcool = 2.5; this.pts = []; this.ptsAt = 0; this.m.moved = performance.now();
     this.label("CALL IT BACK"); document.documentElement.classList.add("crawling");
@@ -409,7 +409,7 @@ export class Crawler {
     const moving = this.legs.filter((l) => l.st < 1).length, R = 10 * sc;
     const mouthX = p.x + ch * 30 * sc, mouthY = p.y + sh * 30 * sc;
     // the body: a head pulling a chain of plates, every plate on its own pair of legs
-    const B = this.body; B.size = Math.max(.05, sc * .95);
+    const B = this.body; B.size = Math.max(.05, sc * 1.25);
     const shake = dying ? rnd(-.9, .9) : this.rage > 1 ? rnd(-1, 1) * (this.rage - 1) : 0, wob = stun ? Math.sin(now / 60) * .5 : held ? Math.sin(now / 90) * .3 : 0;
     B.update(dt, p.x + shake, p.y + shake, this.head + wob, held ? 0 : speed); this.voice(B, W, speed);
     const hot = this.aim > 0 || pounce || carry || this.rage > 1.2 || now - this.hurtAt < 110;
@@ -551,7 +551,7 @@ export class Crawler {
     this.ensure();
     const W = innerWidth, H = innerHeight, x = W / 2, y = H * .62;
     let best = 0; try { best = +localStorage.getItem("devour-best") || 0; } catch (e) {}
-    this.E = { on: true, x, y, vx: 0, vy: -60, a: -Math.PI / 2, body: new Creature(x, y, -Math.PI / 2, 3, { gap: 15 }), n: 0, score: 0, best, born: performance.now(), mouth: 0, chewAt: 0, scanAt: 0, dash: 0,
+    this.E = { on: true, x, y, vx: 0, vy: -60, a: -Math.PI / 2, body: new Creature(x, y, -Math.PI / 2, 3, { gap: 16 }), n: 0, score: 0, best, born: performance.now(), mouth: 0, chewAt: 0, scanAt: 0, dash: 0,
       food: 0, bugs: [], spawnAt: 0, pops: [], chars: [], letters: 0, combo: 0, comboAt: 0, over: 0 };
     this.eats.forEach((b) => { b.classList.add("open"); b.querySelector("span").textContent = "STOP EATING"; });
     document.documentElement.classList.add("devouring"); window.__tunEat?.hideAll(); this.sfx("out");
@@ -585,7 +585,7 @@ export class Crawler {
     E.x = clamp(E.x + E.vx * dt, 16, W - 16); E.y = clamp(E.y + E.vy * dt, 16, H - 16);
     const speed = Math.hypot(E.vx, E.vy);
     if (speed > 25) { let da = Math.atan2(E.vy, E.vx) - E.a; da = Math.atan2(Math.sin(da), Math.cos(da)); E.a += da * Math.min(1, dt * 8); }
-    B.size = (1.2 + Math.min(.4, B.length * .012)) * (E.nap ? Math.max(0, 1 - Math.max(0, E.nap - .8) / 1.6) : 1);
+    B.size = (1.7 + Math.min(.5, B.length * .014)) * (E.nap ? Math.max(0, 1 - Math.max(0, E.nap - .8) / 1.6) : 1);
     if (E.nap > 2.6) { this.stopEating(); return; }
     const ca = Math.cos(E.a), sa = Math.sin(E.a), mx = E.x + ca * 16 * B.size, my = E.y + sa * 16 * B.size;
     // fed enough and it's enormous: time for a nap
