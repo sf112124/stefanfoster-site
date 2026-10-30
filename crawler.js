@@ -332,7 +332,10 @@ export class Crawler {
     const cs = getComputedStyle(document.documentElement), ink = cs.getPropertyValue("--ink").trim() || "#0d0d0e", bg = cs.getPropertyValue("--bg").trim() || "#f4f3ef";
     // feeding: the page goes dark and everything on this layer turns to glowing wireframe
     const glow = this.E.on;
-    const F = { now, dt, g, W, H, ink: glow ? "#d8fff6" : ink, bg: glow ? "#0e0f13" : bg, cols: glow ? ["#2dffc8", "#ff3fe0", "#ffe23d", "#3fa8ff"] : this.colors() };
+    const P = glow ? this.E.P : null;
+    const F = { now, dt, g, W, H, ink: glow ? P.joint : ink, bg: glow ? "#000" : bg, cols: glow ? [P.joint, P.cellA || P.rib || P.plate, P.leg, P.cellB || P.plate] : this.colors() };
+    // the reference's ground: a faint square grid
+    if (glow) { g.strokeStyle = "rgba(255,255,255,.05)"; g.lineWidth = 1; g.beginPath(); for (let x = (W / 2) % 110; x < W; x += 110) { g.moveTo(Math.round(x) + .5, 0); g.lineTo(Math.round(x) + .5, H); } for (let y = (H / 2) % 110; y < H; y += 110) { g.moveTo(0, Math.round(y) + .5); g.lineTo(W, Math.round(y) + .5); } g.stroke(); }
     g.lineCap = "round"; g.lineJoin = "round";
     // whatever has been blown loose is falling
     this.fall.forEach((f) => {
@@ -362,8 +365,8 @@ export class Crawler {
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "lighter"; g.imageSmoothingEnabled = true;
     this.bl.forEach((L, n) => { const w = Math.ceil(W / L.k), h = Math.ceil(H / L.k); if (L.c.width !== w || L.c.height !== h) { L.c.width = w; L.c.height = h; }
       L.g.clearRect(0, 0, w, h); L.g.imageSmoothingEnabled = true; L.g.drawImage(n ? this.bl[0].c : cv, 0, 0, w, h); });
-    g.globalAlpha = .85; g.drawImage(this.bl[0].c, 0, 0, cv.width, cv.height);
-    g.globalAlpha = .7; g.drawImage(this.bl[1].c, 0, 0, cv.width, cv.height);
+    g.globalAlpha = .35; g.drawImage(this.bl[0].c, 0, 0, cv.width, cv.height);
+    g.globalAlpha = .3; g.drawImage(this.bl[1].c, 0, 0, cv.width, cv.height);
     g.restore();
   }
   // ---- the animal ----
@@ -566,7 +569,14 @@ export class Crawler {
     this.ensure();
     const W = innerWidth, H = innerHeight, x = W / 2, y = H * .62;
     let best = 0; try { best = +localStorage.getItem("devour-best") || 0; } catch (e) {}
-    this.E = { on: true, x, y, vx: 0, vy: -60, a: -Math.PI / 2, body: new Creature(x, y, -Math.PI / 2, 3, { gap: 16 }), n: 0, score: 0, best, born: performance.now(), mouth: 0, chewAt: 0, scanAt: 0, dash: 0,
+    // one of the reference's colourways, a different one each time you feed
+    const PALS = [
+      { style: "cells", leg: "#5b4ff0", joint: "#ff3a24", box: "#6e1410", ring: "#24246e", seg: "#3d40b4", cellA: "#ff5b1f", cellB: "#ff2f86", cellC: "#1d1b5c", cellLine: "#f2b57a", head: "#e9e4ff", headLine: "#8f88ff", eye: "#241e66" },
+      { style: "plates", leg: "#d2a677", joint: "#e6e0ff", box: "#3a3a4a", chev: "#9a2020", plate: "#ff3d6c", plateFill: "#3c0716", rib: "#ffb347", head: "#ff3d6c", headLine: "#ffb347", eye: "#ffe6ee" },
+      { style: "bar", leg: "#36cf86", joint: "#f3f048", box: "#55555f", chev: "#a5a5b0", plate: "#d7d3e6", plateFill: "#e3dc6e", head: "#efeaff", headLine: "#d7d3e6", eye: "#2a2a44" },
+    ];
+    this.npal = ((this.npal ?? Math.floor(Math.random() * PALS.length)) + 1) % PALS.length;
+    this.E = { on: true, P: PALS[this.npal], x, y, vx: 0, vy: -60, a: -Math.PI / 2, body: new Creature(x, y, -Math.PI / 2, 3, { gap: 16 }), n: 0, score: 0, best, born: performance.now(), mouth: 0, chewAt: 0, scanAt: 0, dash: 0,
       food: 0, bugs: [], spawnAt: 0, pops: [], chars: [], letters: 0, combo: 0, comboAt: 0, over: 0 };
     this.eats.forEach((b) => { b.classList.add("open"); b.querySelector("span").textContent = "I'M FULL"; });
     document.documentElement.classList.add("devouring"); window.__tunEat?.hideAll(); this.sfx("out");
@@ -618,7 +628,7 @@ export class Crawler {
     });
     B.update(dt, E.x, E.y, E.a, speed); this.voice(B, W, speed);
     E.mouth = Math.max(0, E.mouth - dt * 4);
-    B.draw(g, { ink, bg, cols, hot: now - E.chewAt < 180 && !E.over, sleepy: E.over ? 1 : 0, mouth: E.over ? Math.max(0, Math.sin((now - E.over) / 900)) * (now - E.over < 2800 ? 1.4 : .3) : Math.max(E.mouth, .25 + Math.sin(now / 140) * .25) });
+    B.neon(g, E.P, { hot: now - E.chewAt < 180 && !E.over, sleepy: E.over ? 1 : 0, mouth: E.over ? Math.max(0, Math.sin((now - E.over) / 900)) * (now - E.over < 2800 ? 1.4 : .3) : Math.max(E.mouth, .25 + Math.sin(now / 140) * .25) });
     // and the page itself, a letter at a time
     if (!E.over && now - E.scanAt > 45) {
       E.scanAt = now;

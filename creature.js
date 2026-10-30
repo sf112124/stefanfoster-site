@@ -98,6 +98,67 @@ export class Creature {
     if (hit.l) { hit.l.lit = 1; if (fresh) hit.l.wig = 1; } else hit.q.lit = 1;
     return fresh ? hit : null;
   }
+  // the debug-view look from the reference: black ground, hairline legs in one colour with dots of another at every joint,
+  // faint target boxes and corner brackets round the feet, and plates built from little coloured cells
+  neon(g, P, { hot = false, mouth = 0, sleepy = 0 } = {}) {
+    const s = this.segs, sc = this.size, t = this.t, N = s.length;
+    g.lineCap = "round"; g.lineJoin = "round";
+    const sq = (x, y, r, a) => { g.save(); g.translate(x, y); g.rotate(a); g.strokeRect(-r, -r, r * 2, r * 2); g.restore(); };
+    // ghost furniture first: rings at the hips, boxes and brackets round the feet
+    s.forEach((q, i) => q.legs.forEach((l) => {
+      const j = l.j, n = j.length - 1, fx = j[n][0], fy = j[n][1], a = Math.atan2(fy - j[n - 1][1], fx - j[n - 1][0]);
+      g.lineWidth = 1; g.strokeStyle = P.box; g.globalAlpha = .55; sq(fx, fy, 6.5 * sc, a + .4);
+      if (P.ring) { g.strokeStyle = P.ring; g.globalAlpha = .4; g.beginPath(); g.arc(j[1][0], j[1][1], 6 * sc, 0, Math.PI * 2); g.stroke(); }
+      if (P.chev) { g.strokeStyle = P.chev; g.globalAlpha = .6; const r = 9 * sc, c = 3 * sc;
+        [[1, 1], [-1, -1]].forEach(([u, v]) => { const x = fx + u * r, y = fy + v * r * .8; g.beginPath(); g.moveTo(x - u * c, y); g.lineTo(x, y); g.lineTo(x, y - v * c); g.stroke(); }); }
+      g.globalAlpha = 1;
+    }));
+    // the legs: one clean line through the joints, a dot at each, a bigger one for the foot
+    s.forEach((q) => q.legs.forEach((l) => {
+      const j = l.j, n = j.length - 1, lit = l.lit > .05;
+      g.strokeStyle = lit ? P.joint : P.leg; g.lineWidth = 1.5 + (lit ? .8 : 0);
+      g.beginPath(); j.forEach((p, m) => (m ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.stroke();
+      g.fillStyle = P.joint; for (let m = 1; m < n; m++) { g.beginPath(); g.arc(j[m][0], j[m][1], 1.9, 0, Math.PI * 2); g.fill(); }
+      g.beginPath(); g.arc(j[n][0], j[n][1], 2.7, 0, Math.PI * 2); g.fill();
+    }));
+    // the body, tail first so the head sits on top
+    for (let i = N - 1; i >= 0; i--) {
+      const q = s[i], head = i === 0, grow = q.born < 0 ? 1 : 1 - Math.pow(1 - q.born, 3), taper = head ? 1 : 1 - Math.min(.35, (i / N) * .4);
+      const w = q.w * sc * grow * taper, h = q.h * sc * grow * taper, lit = q.lit, pop = (head ? this.pulse * 2 : 0) + lit * 2;
+      if (w < .5) continue;
+      const W2 = w / 2 + pop, H2 = h / 2 + pop;
+      g.save(); g.translate(q.x, q.y); g.rotate(q.a);
+      if (head) {
+        g.fillStyle = P.head; g.globalAlpha = .9; g.fillRect(-W2, -H2, W2 * 2, H2 * 2); g.globalAlpha = 1;
+        g.strokeStyle = P.headLine || P.head; g.lineWidth = 1.2; g.strokeRect(-W2 - 2, -H2 - 2, W2 * 2 + 4, H2 * 2 + 4);
+        [-1, 1].forEach((sd) => { if (sleepy) { g.strokeStyle = P.eye; g.lineWidth = 1.2; g.beginPath(); g.moveTo(W2 * .3 - 2.5, sd * H2 * .45); g.lineTo(W2 * .3 + 2.5, sd * H2 * .45); g.stroke(); }
+          else { g.fillStyle = hot ? "#ff2d4a" : P.eye; g.beginPath(); g.arc(W2 * .3, sd * H2 * .45, 1.8 * sc, 0, Math.PI * 2); g.fill(); } });
+        g.strokeStyle = P.leg; g.lineWidth = 1.4;
+        [-1, 1].forEach((sd) => { const op = mouth * .6; g.beginPath(); g.moveTo(W2, sd * H2 * .5); g.lineTo(W2 + 5 * sc, sd * (H2 * .5 + op * 5 * sc)); g.lineTo(W2 + 8 * sc, sd * (1 + op * 2) * sc); g.stroke(); });
+      } else if (P.style === "cells") {
+        g.strokeStyle = P.seg; g.lineWidth = 1.2; g.globalAlpha = .9; g.strokeRect(-W2 - 2.5, -H2 - 2.5, W2 * 2 + 5, H2 * 2 + 5); g.globalAlpha = 1;
+        const cs = Math.min(W2, H2) * .86, gp = 1.6 * sc;
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([u, v], k) => { const cx = u * (cs / 2 + gp / 2), cy = v * (cs / 2 + gp / 2), x0 = cx - cs / 2, y0 = cy - cs / 2;
+          g.fillStyle = P.cellC; g.fillRect(x0, y0, cs, cs);
+          g.fillStyle = lit > .05 ? P.joint : P.cellA; g.fillRect(x0, y0, cs * .62, cs * .55);
+          g.fillStyle = P.cellB; g.fillRect(x0 + cs * .62, y0 + cs * .1, cs * .16, cs * .62);
+          g.strokeStyle = P.cellLine; g.lineWidth = 1.1; g.strokeRect(x0 + cs * .08, y0 + cs * .08, cs, cs); });
+      } else if (P.style === "plates") {
+        g.strokeStyle = P.rib; g.lineWidth = 2;
+        [-1, 1].forEach((sd) => { const y = sd * (H2 + 3.5); g.beginPath(); g.moveTo(-W2 * .7, y - sd * 3); g.lineTo(-W2 * .7, y); g.lineTo(W2 * .7, y); g.lineTo(W2 * .7, y - sd * 3); g.stroke(); });
+        g.fillStyle = lit > .05 ? P.rib : P.plateFill; g.fillRect(-W2, -H2, W2 * 2, H2 * 2);
+        g.strokeStyle = P.plate; g.lineWidth = 2; g.strokeRect(-W2, -H2, W2 * 2, H2 * 2);
+        g.lineWidth = 1; g.strokeRect(-W2 + 3.5, -H2 + 3.5, W2 * 2 - 7, H2 * 2 - 7);
+        g.beginPath(); g.moveTo(-W2 + 3.5, H2 * .25); g.lineTo(W2 - 3.5, H2 * .25); g.stroke();
+      } else {
+        g.fillStyle = lit > .05 ? P.joint : P.plateFill; g.globalAlpha = .85; g.fillRect(-W2 * .9, -H2 * .55, W2 * 1.8, H2 * 1.1); g.globalAlpha = 1;
+        g.strokeStyle = P.plate; g.lineWidth = 1.4; g.strokeRect(-W2 - 1, -H2 * .55 - 2, W2 * 2 + 2, H2 * 1.1 + 4);
+        g.fillStyle = P.eye; g.beginPath(); g.arc(0, 0, 1.6 * sc, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = P.box; g.globalAlpha = .5; g.lineWidth = 1; g.strokeRect(-W2 * 2, -H2 * 1.6, W2 * 4, H2 * 3.2); g.globalAlpha = 1;
+      }
+      g.restore();
+    }
+  }
   draw(g, { ink, bg, cols, hot = false, eye = 1, mouth = 0, sleepy = 0 }) {
     const s = this.segs, sc = this.size, t = this.t, N = s.length;
     g.lineCap = "round"; g.lineJoin = "round";
