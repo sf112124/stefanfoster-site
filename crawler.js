@@ -9,7 +9,7 @@ import { Creature, Spider, Bug, pickKind } from "./creature.js";
 const SEL = ".node,.wi .wt i,.ph h1 .ch,.aname i,.tile,.chip,.links>a,.links>.snd,.links>.nite,.bot>span:not(.bar),.lead,.alead,.gsec h2,.gsec p,.cli,.agrid dd,.agrid dt,.tile figcaption,.nx,.wi .wn,.akick";
 const LETTER = ".wi .wt i,.ph h1 .ch,.aname i";
 const SAFE = ".hole,.pad,.eatb", MENU = ".hole,.pad,.snd,.nite,.eatb";
-const FULL = 45;   // plates until it's had enough
+const FULL = 90;   // plates until it's had enough
 const HP = 60, HULL = 6, RED = "#ff2d4a";
 const WOUND = [8, 3, 7, 2];            // the legs that give out first as it's hurt
 const KEYS = { ArrowLeft: "l", a: "l", A: "l", ArrowRight: "r", d: "r", D: "r", ArrowUp: "u", w: "u", W: "u", ArrowDown: "d", s: "d", S: "d", " ": "f" };
@@ -575,13 +575,13 @@ export class Crawler {
     const E = this.E, m = this.m, k = this.keys, B = E.body;
     // steer: the keys if you're using them, otherwise it chases your pointer. Click for a lunge.
     const kx = (k.r ? 1 : 0) - (k.l ? 1 : 0), ky = (k.d ? 1 : 0) - (k.u ? 1 : 0), keyed = kx || ky;
-    const top = E.over ? 110 : 240 + Math.min(140, B.length * 4) + (now - E.dash < 260 ? 420 : 0);
+    const top = E.over ? 130 : 380 + Math.min(200, B.length * 3) + (now - E.dash < 260 ? 520 : 0);
     let wx = 0, wy = 0;
     // so full it waddles home to its hole and curls up to sleep
     if (E.over) { if (now - E.over > 1600) { const h = this.holePos(), dx = h.x - E.x, dy = h.y - E.y, d = Math.hypot(dx, dy); if (d > 6) { const sp = Math.min(top, d * 2.5); wx = dx / d * sp; wy = dy / d * sp; } if (d < 40) { E.nap = (E.nap || 0) + dt; } } }
     else if (keyed) { const d = Math.hypot(kx, ky); wx = kx / d * top; wy = ky / d * top; }
-    else { const dx = m.x - E.x, dy = m.y - E.y, d = Math.hypot(dx, dy); if (d > 26) { const sp = Math.min(top, d * 2.4); wx = dx / d * sp; wy = dy / d * sp; } }
-    const grip = Math.min(1, dt * 3.5); E.vx += (wx - E.vx) * grip; E.vy += (wy - E.vy) * grip;
+    else { const dx = m.x - E.x, dy = m.y - E.y, d = Math.hypot(dx, dy); if (d > 26) { const sp = Math.min(top, d * 3.2); wx = dx / d * sp; wy = dy / d * sp; } }
+    const grip = Math.min(1, dt * 5); E.vx += (wx - E.vx) * grip; E.vy += (wy - E.vy) * grip;
     E.x = clamp(E.x + E.vx * dt, 16, W - 16); E.y = clamp(E.y + E.vy * dt, 16, H - 16);
     const speed = Math.hypot(E.vx, E.vy);
     if (speed > 25) { let da = Math.atan2(E.vy, E.vx) - E.a; da = Math.atan2(Math.sin(da), Math.cos(da)); E.a += da * Math.min(1, dt * 8); }

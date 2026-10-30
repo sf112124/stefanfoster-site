@@ -220,7 +220,7 @@ export class Spider {
   update(dt, x, y, a, speed) {
     const sc = this.size; this.t += dt; this.x = x; this.y = y; this.a = a;
     const ab = this.ab, ca = Math.cos(a), sa = Math.sin(a), ax = x - ca * 15 * sc, ay = y - sa * 15 * sc;
-    ab.x += (ax - ab.x) * Math.min(1, dt * 14); ab.y += (ay - ab.y) * Math.min(1, dt * 14); ab.a = Math.atan2(y - ab.y, x - ab.x);
+    { const dx = ab.x - x, dy = ab.y - y, d = Math.hypot(dx, dy) || 1, L = 15 * sc; ab.x = x + dx / d * L; ab.y = y + dy / d * L; let aa = Math.atan2(y - ab.y, x - ab.x), da = ang(aa - a); if (Math.abs(da) > .5) { aa = a + Math.sign(da) * .5; ab.x = x - Math.cos(aa) * L; ab.y = y - Math.sin(aa) * L; } ab.a = aa; }
     this.head.lit = Math.max(0, this.head.lit - dt * 1.5); ab.lit = Math.max(0, ab.lit - dt * 1.5);
     // a spider's gait: alternating sets of four (front/back on one side with the middle two on the other)
     const set = (l) => (l.k + (l.side > 0 ? 1 : 0)) % 2, moving = [0, 0];
@@ -286,7 +286,9 @@ export class Spider {
     const ab = this.ab, al = ab.lit, ac = al > .05 ? cols[1] : red;
     g.save(); g.translate(ab.x, ab.y); g.rotate(ab.a);
     const aw = 15 * sc + al * 2, ah = 11.5 * sc + al * 2, br = 1 + Math.sin(t * 2.2) * .03;
-    g.fillStyle = ink; g.beginPath(); g.ellipse(-aw * .4, 0, aw * br, ah * br, 0, 0, TAU); g.fill();
+    // the waist: a narrow stalk joining it to the head
+    g.fillStyle = ink; g.beginPath(); g.ellipse(7 * sc, 0, 6 * sc, 3 * sc, 0, 0, TAU); g.fill();
+    g.beginPath(); g.ellipse(-aw * .4, 0, aw * br, ah * br, 0, 0, TAU); g.fill();
     g.strokeStyle = bg; g.lineWidth = .6; g.globalAlpha = .35;
     for (let r = 1; r < 5; r++) { g.beginPath(); g.ellipse(-aw * .4, 0, aw * r / 5, ah * r / 5, 0, Math.PI * .6, Math.PI * 1.4); g.stroke(); }
     g.globalAlpha = 1; g.fillStyle = ac;

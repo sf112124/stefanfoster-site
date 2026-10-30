@@ -34,7 +34,7 @@ vec4 sampleAt(vec2 q){
   // the list: a straight stack
   float rl = N * .5 - C1 * (q.y - .05), spf = mix(1., SP, flt);
   // the hovered name is a magnet the wrong way round: everything else is pushed away from it
-  rl -= PA * sign(rl - PH) * smoothstep(.5, 1.6, abs(rl - PH));
+  rl -= PA * sign(rl - PH) * smoothstep(.5, 1.3, abs(rl - PH)) * 1.9 / (abs(rl - PH) + .6);
   float r = mix(rt, rl, flt), s = mix(st, S1, flt) * stretch;
   float rr = mod(r, N), row = floor(rr);
   float inList = 1. - clamp(flt * 1.8, 0., 1.) * (1. - step(0., r) * step(r, N));
@@ -145,19 +145,35 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   // the switch: pull everything flat into a plain list, and back
   const sw = document.createElement("button"); sw.type = "button"; sw.className = "tun-sw mono"; sw.innerHTML = `<i></i><span>LIST</span>`; mount.appendChild(sw);
   // the list's own hit areas, numbers and clients, laid over the flat names
-  const ghost = document.createElement("div"); ghost.className = "tun-ghost"; ghost.setAttribute("aria-hidden", "true"); mount.appendChild(ghost);
-  let ghostI = -1;
+  // hover a name and a little moving picture from that project floats beside your pointer
+  const thumb = document.createElement("div"); thumb.className = "tun-thumb"; thumb.setAttribute("aria-hidden", "true"); mount.appendChild(thumb);
+  const STILLS = { "coca-cola": ["media/coca-cola/hover-1.jpg", "media/coca-cola/hover-2.jpg", "media/coca-cola/hover-1.jpg"], gumtree: ["media/gumtree/hover-2.jpg", "media/gumtree/hover-1.jpg", "media/gumtree/no-salespeople.jpg"] };
+  let thumbI = -1; const tp = { x: 0, y: 0, tx: 0, ty: 0, v: 0 };
   const haunt = (i) => {
-    if (i === ghostI) return; ghostI = i;
-    ghost.querySelectorAll(".gl").forEach((l) => { l.classList.remove("on"); setTimeout(() => l.remove(), 1400); });
-    const p = LIST[i]; if (i < 0 || !p || !p.cover || document.documentElement.classList.contains("devouring")) return;
-    const l = document.createElement("div"); l.className = "gl";
-    const side = Math.floor(Math.random() * 4), along = 20 + Math.random() * 60;
-    l.style.setProperty("--gx", `${side === 0 ? 4 : side === 1 ? 96 : along}%`); l.style.setProperty("--gy", `${side === 2 ? 6 : side === 3 ? 94 : along}%`);
-    l.innerHTML = media(p.cover); ghost.appendChild(l);
+    if (i === thumbI) return; thumbI = i;
+    thumb.querySelectorAll(".tt").forEach((l) => { l.classList.remove("on"); setTimeout(() => l.remove(), 450); });
+    const p = LIST[i]; if (i < 0) tp.v = 0; if (i < 0 || !p || document.documentElement.classList.contains("devouring")) return;
+    const l = document.createElement("div"); l.className = "tt";
+    if (STILLS[p.slug]) { l.classList.add("stills"); l.innerHTML = STILLS[p.slug].map((u) => `<img src="${u}" alt="">`).join(""); }
+    else if (p.cover) { l.innerHTML = media(p.cover); if (p.cover.ar) l.style.aspectRatio = p.cover.ar; }
+    else return;
+    thumb.appendChild(l);
     const v = l.querySelector("video"); if (v) { v.src = v.dataset.src; v.play().catch(() => {}); }
     requestAnimationFrame(() => requestAnimationFrame(() => l.classList.add("on")));
   };
+  // it sits just past the end of the hovered line (or before its number if there's no room), never over the name
+  const floatThumb = () => {
+    requestAnimationFrame(floatThumb);
+    if (thumbI < 0) return;
+    const a = lst.children[thumbI]; if (!a) return;
+    const mr = mount.getBoundingClientRect(), c = a.querySelector(".c").getBoundingClientRect(), n = a.querySelector(".n").getBoundingClientRect(), ar = a.getBoundingClientRect(), tw = thumb.offsetWidth, th = thumb.firstElementChild ? thumb.firstElementChild.offsetHeight : tw * .62;
+    const right = Math.max(c.right, ar.right) - mr.left + 28, left = n.left - mr.left - 28 - tw;
+    tp.tx = right + tw < mr.width - 16 ? right : Math.max(16, left); tp.ty = ar.top - mr.top + ar.height / 2 - th / 2;
+    if (!tp.v) { tp.x = tp.tx; tp.y = tp.ty; tp.v = 1; }
+    tp.x += (tp.tx - tp.x) * .18; tp.y += (tp.ty - tp.y) * .18;
+    thumb.style.transform = `translate3d(${tp.x.toFixed(1)}px,${tp.y.toFixed(1)}px,0)`;
+  };
+  floatThumb();
   const lst = document.createElement("div"); lst.className = "tun-list"; lst.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-i="${i}"><span class="n mono">${String(i + 1).padStart(2, "0")}</span><span class="c">${esc(p.client)}</span><span class="t">${esc(p.title)}</span></a>`).join(""); mount.appendChild(lst);
   let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null, mouseX = 0, mxS = 0; const wt = new Float32Array(16).fill(.5); let ph = 0, pa = 0;
   const gs = new Float32Array(16), gv = new Float32Array(16), ea = new Float32Array(16), eaT = new Float32Array(16);
@@ -250,7 +266,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     const dpr = Math.min(1.5, devicePixelRatio || 1), Hc = H(), yOf = (r) => .05 + (N * .5 - r) / C1;
     lst.style.setProperty("--fsr", (T.fsr || .5).toFixed(4));
     lst.querySelectorAll("a").forEach((a, i) => {
-      const D = (r) => r + pa * Math.sign(r - ph) * Math.min(1, Math.max(0, (Math.abs(r - ph) - .5) / 1.1)) ** 2 * (3 - 2 * Math.min(1, Math.max(0, (Math.abs(r - ph) - .5) / 1.1)));
+      const D = (r) => { const d = Math.abs(r - ph), u = Math.min(1, Math.max(0, (d - .5) / .8)); return r + pa * Math.sign(r - ph) * u * u * (3 - 2 * u) * 1.9 / (d + .6); };
       const top = (1 - yOf(D(i))) / 2 * Hc, bot = (1 - yOf(D(i + 1))) / 2 * Hc;
       const base = (T.w ? T.w[i] : T.widest) * S1 / dpr / 2, half = base * (1 + Math.max(0, gs[i]));
       a.style.top = `${top.toFixed(1)}px`; a.style.height = `${(bot - top).toFixed(1)}px`; a.style.setProperty("--half", `${half.toFixed(1)}px`); a.style.setProperty("--base", `${base.toFixed(1)}px`);
@@ -280,13 +296,13 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     if (opening && flatK < .12 && !going) { go(LIST[opening.i]); opening = null; }
     const SP = 1.6, S1 = Math.min((h * .64) / (N * rowH * SP), (w * (mob ? .66 : .3)) / T.widest), C1 = (h * .5) / (rowH * S1 * SP);
     // the lens drifts after the pointer and relaxes away when it leaves
-    const GA = mob ? .05 : .07;
+    const GA = mob ? .08 : .13;
     // a slightly underdamped spring per line, so it swells past and settles; the magnifier trails the pointer like liquid
     for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h = Math.min(.008, rdt / n); for (let i = 0; i < N; i++) { gv[i] += ((((i === hrow ? GA : 0) - gs[i]) * 340) - gv[i] * 19) * h; gs[i] += gv[i] * h; } }
     mxS += (mouseX - mxS) * (1 - Math.pow(.003, rdt));
     { const on = fk > .5 && hrow >= 0, k = 1 - Math.pow(.004, rdt);
-      for (let i = 0; i < 16; i++) { const tg = on ? (i === hrow ? 1 : 0) : .5; wt[i] += (tg - wt[i]) * k; if (Math.abs(tg - wt[i]) < .02) wt[i] = tg; }
-      if (on) ph = pa < .02 ? hrow + .5 : ph + (hrow + .5 - ph) * k; pa += ((on ? .42 : 0) - pa) * k; }
+      for (let i = 0; i < 16; i++) { const tg = .5; wt[i] += (tg - wt[i]) * k; if (Math.abs(tg - wt[i]) < .02) wt[i] = tg; }
+      if (on) ph = pa < .02 ? hrow + .5 : ph + (hrow + .5 - ph) * k; pa += ((on ? .3 : 0) - pa) * k; }
     gl.uniform1fv(U.WT, wt); gl.uniform1f(U.TS, TS); gl.uniform1f(U.PH, ph); gl.uniform1f(U.PA, pa);
     gl.uniform1f(U.flt, fk); gl.uniform1f(U.S1, S1); gl.uniform1f(U.C1, C1); gl.uniform1f(U.hrow, hrow); for (let i = 0; i < 16; i++) ea[i] += (eaT[i] - ea[i]) * Math.min(1, rdt * (eaT[i] ? 7 : 3)); gl.uniform1fv(U.G, gs); gl.uniform1fv(U.EA, ea); gl.uniform1f(U.mx, mxS); gl.uniform1f(U.SP, SP);
     // the colour flood: fades in on the hovered project's palette, eases between palettes, follows the pointer softly
