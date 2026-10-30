@@ -566,3 +566,17 @@ html.devouring .tun-thumb,:not(.is-list)>.tun-thumb{display:none}
 .tun-list a.torn .t{opacity:1;pointer-events:auto}
 .tun-list .tl{display:inline-block}
 .tun-list:hover a.torn:not(:hover) .t{color:#a3a29d;transition:color .3s}
+
+/* the toys: the spider and the ship are one game, so they sit together as a face-off; feeding is its own thing */
+.corner .duel{display:inline-flex;align-items:center;gap:12px;padding:6px 12px;margin:-6px -12px;border:1px solid var(--line);border-radius:40px}
+.corner .vs{font-family:var(--serif);font-style:italic;font-size:15px;letter-spacing:0;text-transform:lowercase;color:var(--mute);line-height:1}
+/* list / tunnel: both words, the one you're on in ink, sitting top centre */
+.tun-sw{position:fixed!important;left:50%;right:auto!important;top:24px;bottom:auto!important;translate:-50% 0;z-index:60!important}
+.tun-sw b{font-weight:400;color:var(--mute);transition:color .3s}
+.tun-sw:hover b{color:var(--ink)}
+.is-list .tun-sw b:first-child,:not(.is-list)>.tun-sw b:last-child{color:var(--ink)}
+.tun-sw i::after{translate:0 0}
+:not(.is-list)>.tun-sw i::after{translate:12px 0}
+.is-list .tun-sw i::after{translate:0 0}
+body.viewing .tun-sw{display:none}
+@media (max-width:700px){ .corner .toys span,.corner .toys button{white-space:nowrap} .corner .pball span{display:none} .corner .duel{gap:8px;padding:6px 10px;margin:-6px -10px} .corner .eatb svg{display:none} }

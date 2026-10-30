@@ -554,7 +554,7 @@ export class Crawler {
     let best = 0; try { best = +localStorage.getItem("devour-best") || 0; } catch (e) {}
     this.E = { on: true, x, y, vx: 0, vy: -60, a: -Math.PI / 2, body: new Creature(x, y, -Math.PI / 2, 3, { gap: 16 }), n: 0, score: 0, best, born: performance.now(), mouth: 0, chewAt: 0, scanAt: 0, dash: 0,
       food: 0, bugs: [], spawnAt: 0, pops: [], chars: [], letters: 0, combo: 0, comboAt: 0, over: 0 };
-    this.eats.forEach((b) => { b.classList.add("open"); b.querySelector("span").textContent = "STOP EATING"; });
+    this.eats.forEach((b) => { b.classList.add("open"); b.querySelector("span").textContent = "I'M FULL"; });
     document.documentElement.classList.add("devouring"); window.__tunEat?.hideAll(); this.sfx("out");
   }
   stopEating() {
@@ -562,7 +562,7 @@ export class Crawler {
     const E = this.E; E.on = false; this.keys = {};
     // every letter goes back where it was
     E.chars.forEach((sp) => { const p = sp.parentNode; if (!p) return; p.replaceChild(document.createTextNode(sp.textContent), sp); p.normalize(); });
-    this.eats.forEach((b) => { b.classList.remove("open"); b.querySelector("span").textContent = "DEVOUR"; });
+    this.eats.forEach((b) => { b.classList.remove("open"); b.querySelector("span").textContent = "FEED ME"; });
     document.documentElement.classList.remove("devouring"); window.__tunEat?.reset(); this.sfx("back"); this.settle();
   }
   feed(v) { const E = this.E; E.food += v; while (E.food >= 1) { E.food -= 1; E.body.add(); } }

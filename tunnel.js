@@ -146,7 +146,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   rail.innerHTML = LIST.map((p, i) => `<button type="button" data-i="${i}"><span class="rn">${esc(p.title)}</span><b>${String(i + 1).padStart(2, "0")}</b></button>`).join("");
   mount.appendChild(rail);
   // the switch: pull everything flat into a plain list, and back
-  const sw = document.createElement("button"); sw.type = "button"; sw.className = "tun-sw mono"; sw.innerHTML = `<i></i><span>LIST</span>`; mount.appendChild(sw);
+  const sw = document.createElement("button"); sw.type = "button"; sw.className = "tun-sw mono"; sw.innerHTML = `<b>LIST</b><i></i><b>TUNNEL</b>`; mount.appendChild(sw);
   // the list's own hit areas, numbers and clients, laid over the flat names
   // hover a name and a little moving picture from that project appears beside the line, left or right. It hangs on a
   // spring: flick the mouse and it swings, then settles. It is never allowed over any of the type.
@@ -207,7 +207,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const gs = new Float32Array(16), gv = new Float32Array(16), ea = new Float32Array(16), eaT = new Float32Array(16);
   // the creature can eat a line of the list: it shrinks away, and comes back when the creature goes home
   window.__tunEat = { eat: (i) => { eaT[i] = 1; }, reset: () => eaT.fill(0), hideAll: () => { eaT.fill(1); hrow = -1; } };
-  mount.classList.add("is-list"); sw.querySelector("span").textContent = "TUNNEL";
+  mount.classList.add("is-list");
   // each project's colours, from pale edge to hot core
   const hx = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255), PAL = (a, b, c) => [...hx(a), ...hx(b), ...hx(c)];
   // each project's colours: four bright, harmonious hues the flow cycles through
@@ -241,7 +241,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   mount.addEventListener("pointerleave", () => { mouseY = null; ptIn = false; });
   // hover is read straight from where the pointer sits in the stack, so the gaps between names are a smooth fade, not a dead zone
   mount.addEventListener("pointermove", (e) => { if (e.pointerType !== "mouse") return; const r = cv.getBoundingClientRect(); ptX = e.clientX - r.left - r.width / 2; ptY = e.clientY - r.top; ptIn = true; });
-  const setFlat = (on) => { flatT = on ? 1 : 0; mount.classList.toggle("is-list", on); sw.querySelector("span").textContent = on ? "TUNNEL" : "LIST"; poke(); };
+  const setFlat = (on) => { flatT = on ? 1 : 0; mount.classList.toggle("is-list", on); poke(); };
   sw.addEventListener("pointerdown", (e) => e.stopPropagation()); sw.addEventListener("click", () => setFlat(!flatT));
   lst.addEventListener("pointerdown", (e) => e.stopPropagation());
   lst.querySelectorAll("a").forEach((a) => {
