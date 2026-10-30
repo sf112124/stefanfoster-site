@@ -15,6 +15,25 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (!URL_ || !TOKEN) return res.status(200).json({ ok: false, reason: "no-store", top: [] });
   try {
+    // DEVOUR: fastest time to grow to full size, lowest first
+    if ((req.query && req.query.board) === "devour") {
+      const DK = "devour:times", DI = "devour:info";
+      if (req.method === "POST") {
+        const b = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
+        const id = String(b.id || "").replace(/[^a-z0-9]/gi, "").slice(0, 24), ms = Math.floor(Number(b.ms) || 0);
+        if (id.length < 8 || ms < 8000 || ms > 3600000) return res.status(400).json({ ok: false });
+        let name = clean(b.name); if (BAD.test(name)) name = "PLAYER";
+        const prev = await redis("ZSCORE", DK, id);
+        if (prev == null || ms < Number(prev)) await redis("ZADD", DK, ms, id);
+        await redis("HSET", DI, id, name);
+        const rank = await redis("ZRANK", DK, id);
+        return res.status(200).json({ ok: true, rank: rank == null ? null : rank + 1 });
+      }
+      const ids = await redis("ZRANGE", DK, 0, 9, "WITHSCORES"), out = [];
+      for (let i = 0; i < ids.length; i += 2) out.push({ id: ids[i], ms: Number(ids[i + 1]) });
+      const names = out.length ? await redis("HMGET", DI, ...out.map((o) => o.id)) : [];
+      return res.status(200).json({ ok: true, top: out.map((o, i) => ({ name: names[i] || "PLAYER", ms: o.ms, me: o.id })) });
+    }
     if (req.method === "POST") {
       const b = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
       const id = String(b.id || "").replace(/[^a-z0-9]/gi, "").slice(0, 24); if (id.length < 8) return res.status(400).json({ ok: false });
