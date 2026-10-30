@@ -234,6 +234,12 @@ export class Sound {
         this.vox(f * 2.4, f * 3.4, .06, .012, pan, { type: "triangle", at: .025, wet: .3 });
         break;
       }
+      case "purr": { // being petted: a soft low trill and a warm little rising note, sweeter the happier it is
+        const f = 110 + b * 40;
+        this.vox(f, f * 1.02, .3, .03 + b * .02, pan, { type: "triangle", am: 22 + b * 8, wet: .4, a: .05 });
+        if (Math.random() < .35 + b * .4) { const sc = [0, 2, 4, 7, 9, 12], n = 523 * Math.pow(2, sc[Math.floor(Math.random() * sc.length)] / 12); this.vox(n * .9, n * 1.06, .22, .018 + b * .015, pan, { type: "sine", at: .05, wet: .7 }); }
+        break;
+      }
       // ----- DO NOT OPEN: the spider. Dissonant, glassy and wrong, but lush: beating seconds, a bowed-glass whine, a sub you feel -----
       case "sleg": { // feet: dry chitin, two clicks close together, sometimes a low pulse under them
         if (!gate("sleg", 34)) return;

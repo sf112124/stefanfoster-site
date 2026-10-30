@@ -8,6 +8,8 @@ import { Creature, Spider, Bug, pickKind } from "./creature.js";
 // When both are back where they belong, everything is put right.
 const SEL = ".node,.wi .wt i,.ph h1 .ch,.aname i,.tile,.chip,.links>a,.links>.snd,.links>.nite,.bot>span:not(.bar),.lead,.alead,.gsec h2,.gsec p,.cli,.agrid dd,.agrid dt,.tile figcaption,.nx,.wi .wn,.akick";
 const LETTER = ".wi .wt i,.ph h1 .ch,.aname i";
+// the spider and the ship's colourway: the reference's violet ghost-tube creature, with red eyes
+const SPAL = { tube: "#a99cff", leg: "#8f7dff", joint: "#d6e6ff", box: "#3a2f7a", body: "#6a20c8", bodyLine: "#c9b4ff", head: "#e8e2ff", eye: "#ff2d4a", plate: "#c9b4ff", cellA: "#ff2d4a", cellB: "#6a20c8" };
 const SAFE = ".hole,.pad,.eatb", MENU = ".hole,.pad,.snd,.nite,.eatb";
 const FULL = 90;   // plates until it's had enough
 const HP = 60, HULL = 6, RED = "#ff2d4a";
@@ -66,6 +68,7 @@ export class Crawler {
       if (d > 2.5) this.m.moved = now;
       if (this.state === "carry" || this.state === "held") this.meter += d;
     });
+    addEventListener("pointerup", () => { if (this.E.on && this.E.pet) { this.E.pet = false; this.E.purr = 0; } });
     holes.forEach((h) => h.addEventListener("click", () => { h.blur(); this.on ? this.recall() : this.release(); }));
     pads.forEach((b) => b.addEventListener("click", () => { b.blur(); this.ship.on ? this.dock() : this.launch(); }));
     addEventListener("keydown", (e) => { if (e.key === "Escape") { if (this.on) this.recall(); if (this.ship.on) this.dock(); if (this.E.on) this.stopEating(); } });
@@ -81,7 +84,9 @@ export class Crawler {
     // while it has your cursor nothing you click lands; and a press right on it picks it up
     // flying: holding the mouse down fires, and nothing on the page takes the click (the menu buttons still do)
     addEventListener("pointerdown", (e) => {
-      if (this.E.on && !e.target.closest?.(MENU)) { e.stopPropagation(); e.preventDefault(); this.E.dash = performance.now(); return; }
+      if (this.E.on && !e.target.closest?.(MENU)) { e.stopPropagation(); e.preventDefault();
+        const E = this.E, near = E.body && E.body.segs.some((q) => Math.hypot(q.x - e.clientX, q.y - e.clientY) < 30 * E.body.size);
+        if (near && !E.over) { E.pet = true; E.petAt = performance.now(); } else E.dash = performance.now(); return; }
       if (this.ship.on && e.button === 0 && !e.target.closest?.(MENU)) { e.stopPropagation(); e.preventDefault(); this.firing = !this.ship.docking; return; }
       if (!this.on) return;
       if (this.state === "carry") { e.stopPropagation(); e.preventDefault(); return; }
@@ -331,8 +336,8 @@ export class Crawler {
     const dt = clamp((now - this.t) / 1000, 0, .05); this.t = now;
     const cs = getComputedStyle(document.documentElement), ink = cs.getPropertyValue("--ink").trim() || "#0d0d0e", bg = cs.getPropertyValue("--bg").trim() || "#f4f3ef";
     // feeding: the page goes dark and everything on this layer turns to glowing wireframe
-    const glow = this.E.on;
-    const P = glow ? this.E.P : null;
+    const glow = this.E.on || this.on || this.ship.on;
+    const P = this.E.on ? this.E.P : SPAL;
     const F = { now, dt, g, W, H, ink: glow ? P.joint : ink, bg: glow ? "#000" : bg, cols: glow ? [P.joint, P.cellA || P.rib || P.plate, P.leg, P.cellB || P.plate] : this.colors() };
     // the reference's ground: a faint square grid
     if (glow) { g.strokeStyle = "rgba(255,255,255,.05)"; g.lineWidth = 1; g.beginPath(); for (let x = (W / 2) % 110; x < W; x += 110) { g.moveTo(Math.round(x) + .5, 0); g.lineTo(Math.round(x) + .5, H); } for (let y = (H / 2) % 110; y < H; y += 110) { g.moveTo(0, Math.round(y) + .5); g.lineTo(W, Math.round(y) + .5); } g.stroke(); }
@@ -431,7 +436,7 @@ export class Crawler {
     const shake = dying ? rnd(-.9, .9) : this.rage > 1 ? rnd(-1, 1) * (this.rage - 1) : 0, wob = stun ? Math.sin(now / 60) * .5 : held ? Math.sin(now / 90) * .3 : 0;
     B.update(dt, p.x + shake, p.y + shake, this.head + wob, held ? 0 : speed); this.voice(B, W, speed, true);
     const hot = this.aim > 0 || pounce || carry || this.rage > 1.2 || now - this.hurtAt < 110;
-    B.draw(g, { ink, bg, cols, hot, eye: stun ? .5 : held ? 1.6 : 1, mouth: carry || pounce ? 1 : 0 });
+    B.neon(g, SPAL, { hot, eye: stun ? .5 : held ? 1.6 : 1, mouth: carry || pounce ? 1 : 0 });
     const ex = p.x + ch * 6 * sc, ey = p.y + sh * 6 * sc;
     // your cursor, in its grip
     if (carry) {
@@ -531,6 +536,10 @@ export class Crawler {
     if (hot) { g.strokeStyle = col; g.lineWidth = 1.4; [-.7, 0, .7].forEach((o) => { g.beginPath(); g.moveTo(30 + Math.cos(o) * 2, Math.sin(o) * 2); g.lineTo(30 + Math.cos(o) * 9, Math.sin(o) * 9); g.stroke(); }); }
     g.restore();
     // what it has left circles it: three small lights, one gone for every hit it takes
+    // reference furniture: a faint target box turning round the ship, corner brackets locked on it
+    { const r = 30 * z; g.save(); g.translate(S.x, S.y); g.strokeStyle = SPAL.box; g.lineWidth = 1; g.globalAlpha = .8; g.rotate(now / 1400); g.strokeRect(-r, -r, r * 2, r * 2); g.restore();
+      g.strokeStyle = SPAL.tube; g.globalAlpha = .6; const R = 40 * z, c2 = 6 * z;
+      [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([u, v]) => { const x = S.x + u * R, y = S.y + v * R; g.beginPath(); g.moveTo(x - u * c2, y); g.lineTo(x, y); g.lineTo(x, y - v * c2); g.stroke(); }); g.globalAlpha = 1; }
     if (!S.docking) for (let k = 0; k < S.hull; k++) { const o = now / 430 + k * (6.2832 / HULL), ox = S.x + Math.cos(o) * 25 * z, oy = S.y + Math.sin(o) * 25 * z; g.fillStyle = col; g.strokeStyle = ink; g.lineWidth = 1.1; g.beginPath(); g.arc(ox, oy, 2.4, 0, 7); g.fill(); g.stroke(); }
     g.globalAlpha = 1;
   }
@@ -604,6 +613,7 @@ export class Crawler {
     let wx = 0, wy = 0;
     // so full it waddles home to its hole and curls up to sleep
     if (E.over) { if (now - E.over > 1600) { const h = this.holePos(), dx = h.x - E.x, dy = h.y - E.y, d = Math.hypot(dx, dy); if (d > 6) { const sp = Math.min(top, d * 2.5); wx = dx / d * sp; wy = dy / d * sp; } if (d < 40) { E.nap = (E.nap || 0) + dt; } } }
+    else if (E.pet) { wx = 0; wy = 0; }
     else if (keyed) { const d = Math.hypot(kx, ky); wx = kx / d * top; wy = ky / d * top; }
     else { const dx = m.x - E.x, dy = m.y - E.y, d = Math.hypot(dx, dy); if (d > 26) { const sp = Math.min(top, d * 3.2); wx = dx / d * sp; wy = dy / d * sp; } }
     const grip = Math.min(1, dt * 5); E.vx += (wx - E.vx) * grip; E.vy += (wy - E.vy) * grip;
@@ -626,9 +636,18 @@ export class Crawler {
       }
       b.draw(g, { ink, bg, cols }); return true;
     });
-    B.update(dt, E.x, E.y, E.a, speed); this.voice(B, W, speed);
+    // being petted: every stroke along its back makes it happier, it purrs, it wriggles, little hearts float off
+    E.joy = Math.max(0, (E.joy || 0) - dt * .35);
+    if (E.pet) {
+      const hit = B.segs.find((q) => Math.hypot(q.x - m.x, q.y - m.y) < 22 * B.size), mv = Math.hypot(m.vx, m.vy);
+      if (hit && mv > 40) { hit.lit = 1; E.joy = Math.min(1, E.joy + dt * mv / 900);
+        if (now - (E.heartAt || 0) > 260 - E.joy * 140) { E.heartAt = now; E.pops.push({ txt: "♥", x: m.x + rnd(-10, 10), y: m.y - 8, t: now, c: pick(cols) }); }
+        if (now - (E.purrAt || 0) > 180) { E.purrAt = now; this.sfx("purr", m.x / W, E.joy); } }
+      E.a += Math.sin(now / 90) * E.joy * .03;
+    }
+    B.update(dt, E.x, E.y, E.a, speed); if (!E.pet) this.voice(B, W, speed);
     E.mouth = Math.max(0, E.mouth - dt * 4);
-    B.neon(g, E.P, { hot: now - E.chewAt < 180 && !E.over, sleepy: E.over ? 1 : 0, mouth: E.over ? Math.max(0, Math.sin((now - E.over) / 900)) * (now - E.over < 2800 ? 1.4 : .3) : Math.max(E.mouth, .25 + Math.sin(now / 140) * .25) });
+    B.neon(g, E.P, { happy: E.pet || E.joy > .15 ? 1 : 0, hot: now - E.chewAt < 180 && !E.over && !E.pet, sleepy: E.over ? 1 : 0, mouth: E.over ? Math.max(0, Math.sin((now - E.over) / 900)) * (now - E.over < 2800 ? 1.4 : .3) : Math.max(E.mouth, .25 + Math.sin(now / 140) * .25) });
     // and the page itself, a letter at a time
     if (!E.over && now - E.scanAt > 45) {
       E.scanAt = now;

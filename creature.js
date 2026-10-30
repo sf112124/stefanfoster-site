@@ -101,7 +101,7 @@ export class Creature {
   }
   // the debug-view look from the reference: black ground, hairline legs in one colour with dots of another at every joint,
   // faint target boxes and corner brackets round the feet, and plates built from little coloured cells
-  neon(g, P, { hot = false, mouth = 0, sleepy = 0 } = {}) {
+  neon(g, P, { hot = false, mouth = 0, sleepy = 0, happy = 0 } = {}) {
     const s = this.segs, sc = this.size, t = this.t, N = s.length;
     g.lineCap = "round"; g.lineJoin = "round";
     const sq = (x, y, r, a) => { g.save(); g.translate(x, y); g.rotate(a); g.strokeRect(-r, -r, r * 2, r * 2); g.restore(); };
@@ -132,7 +132,8 @@ export class Creature {
       if (head) {
         g.fillStyle = P.head; g.globalAlpha = .9; g.fillRect(-W2, -H2, W2 * 2, H2 * 2); g.globalAlpha = 1;
         g.strokeStyle = P.headLine || P.head; g.lineWidth = 1.2; g.strokeRect(-W2 - 2, -H2 - 2, W2 * 2 + 4, H2 * 2 + 4);
-        [-1, 1].forEach((sd) => { if (sleepy) { g.strokeStyle = P.eye; g.lineWidth = 1.2; g.beginPath(); g.moveTo(W2 * .3 - 2.5, sd * H2 * .45); g.lineTo(W2 * .3 + 2.5, sd * H2 * .45); g.stroke(); }
+        [-1, 1].forEach((sd) => { if (happy && !sleepy) { g.strokeStyle = P.eye; g.lineWidth = 1.4; g.beginPath(); g.arc(W2 * .3, sd * H2 * .45 + 1, 2.4 * sc, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); return; }
+          if (sleepy) { g.strokeStyle = P.eye; g.lineWidth = 1.2; g.beginPath(); g.moveTo(W2 * .3 - 2.5, sd * H2 * .45); g.lineTo(W2 * .3 + 2.5, sd * H2 * .45); g.stroke(); }
           else { g.fillStyle = hot ? "#ff2d4a" : P.eye; g.beginPath(); g.arc(W2 * .3, sd * H2 * .45, 1.8 * sc, 0, Math.PI * 2); g.fill(); } });
         g.strokeStyle = P.leg; g.lineWidth = 1.4;
         [-1, 1].forEach((sd) => { const op = mouth * .6; g.beginPath(); g.moveTo(W2, sd * H2 * .5); g.lineTo(W2 + 5 * sc, sd * (H2 * .5 + op * 5 * sc)); g.lineTo(W2 + 8 * sc, sd * (1 + op * 2) * sc); g.stroke(); });
@@ -327,6 +328,51 @@ export class Spider {
     if (!hit) return null;
     if (hit.l) { hit.l.lit = 1; if (fresh) hit.l.wig = 1; } else hit.q.lit = 1;
     return fresh ? hit : null;
+  }
+  // the reference's ghost-tube look: each leg a sleeve of faint stacked squares round a dotted bone, a violet body of cells
+  neon(g, P, { hot = false, eye = 1, mouth = 0 } = {}) {
+    const sc = this.size, t = this.t, TAU2 = Math.PI * 2;
+    g.lineCap = "round"; g.lineJoin = "round";
+    this.legs.forEach((l) => {
+      const j = l.j, n = j.length - 1, lit = l.lit > .05;
+      // the sleeve: squares every few pixels, shrinking toward the tip, turned along the bone
+      g.strokeStyle = lit ? P.eye : P.tube; g.lineWidth = .8;
+      for (let m = 0; m < n; m++) { const a = j[m], b = j[m + 1], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, ang2 = Math.atan2(dy, dx), k = Math.max(1, Math.floor(L / (4.2 * sc)));
+        for (let q = 0; q < k; q++) { const u = q / k, r = (4.6 - (m + u) * .85) * sc; if (r < 1) continue; g.globalAlpha = .22 + (lit ? .3 : 0);
+          g.save(); g.translate(a[0] + dx * u, a[1] + dy * u); g.rotate(ang2); g.strokeRect(-r, -r, r * 2, r * 2); g.restore(); } }
+      g.globalAlpha = 1;
+      // the bone: a run of tiny pale dots
+      g.fillStyle = P.joint;
+      for (let m = 0; m < n; m++) { const a = j[m], b = j[m + 1], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, k = Math.max(1, Math.floor(L / (3.2 * sc)));
+        for (let q = 0; q <= k; q++) { const u = q / k; g.beginPath(); g.arc(a[0] + dx * u, a[1] + dy * u, .9, 0, TAU2); g.fill(); } }
+      for (let m = 1; m <= n; m++) { g.beginPath(); g.arc(j[m][0], j[m][1], m === n ? 2.4 : 1.7, 0, TAU2); g.fill(); }
+      g.strokeStyle = P.box; g.globalAlpha = .7; g.lineWidth = 1; const fx = j[n][0], fy = j[n][1], r = 7 * sc;
+      g.save(); g.translate(fx, fy); g.rotate(this.a + l.side); g.strokeRect(-r, -r, r * 2, r * 2); g.restore(); g.globalAlpha = 1;
+    });
+    // abdomen: a violet block of cells with a red hourglass in the middle, breathing
+    const ab = this.ab, al = ab.lit, br = 1 + Math.sin(t * 2.2) * .04;
+    g.save(); g.translate(ab.x, ab.y); g.rotate(ab.a);
+    const aw = 15 * sc * br + al * 2, ah = 11 * sc * br + al * 2, cx = -aw * .45;
+    g.strokeStyle = P.bodyLine; g.lineWidth = 1; g.strokeRect(4 * sc, -2.5 * sc, 7 * sc, 5 * sc);
+    g.fillStyle = P.body; g.globalAlpha = .9; g.fillRect(cx - aw, -ah, aw * 2, ah * 2); g.globalAlpha = 1;
+    g.strokeStyle = P.bodyLine; g.lineWidth = 1.2; g.strokeRect(cx - aw - 2, -ah - 2, aw * 2 + 4, ah * 2 + 4);
+    g.lineWidth = .7; g.globalAlpha = .55;
+    for (let c = 1; c < 4; c++) { g.beginPath(); g.moveTo(cx - aw + c * aw / 2, -ah); g.lineTo(cx - aw + c * aw / 2, ah); g.stroke(); }
+    g.beginPath(); g.moveTo(cx - aw, 0); g.lineTo(cx + aw, 0); g.stroke(); g.globalAlpha = 1;
+    g.fillStyle = al > .05 ? P.joint : P.eye;
+    g.beginPath(); g.moveTo(cx + aw * .3, -ah * .45); g.lineTo(cx, 0); g.lineTo(cx + aw * .3, ah * .45); g.lineTo(cx - aw * .3, ah * .45); g.lineTo(cx, 0); g.lineTo(cx - aw * .3, -ah * .45); g.closePath(); g.fill();
+    g.restore();
+    // head: a pale box, eight red eyes, fangs
+    const hl = this.head.lit;
+    g.save(); g.translate(this.x, this.y); g.rotate(this.a);
+    const hw = 8 * sc + hl * 2, hh = 6.5 * sc + hl * 2;
+    g.fillStyle = P.head; g.globalAlpha = .92; g.fillRect(-hw, -hh, hw * 2, hh * 2); g.globalAlpha = 1;
+    g.strokeStyle = P.bodyLine; g.lineWidth = 1; g.strokeRect(-hw - 2, -hh - 2, hw * 2 + 4, hh * 2 + 4);
+    [[5, -2.2, 1.6], [5, 2.2, 1.6], [3.4, -4, 1.1], [3.4, 4, 1.1], [6.6, -.9, .9], [6.6, .9, .9], [1.4, -3, .8], [1.4, 3, .8]].forEach(([ex, ey2, r]) => {
+      g.fillStyle = hot ? "#ff1030" : P.eye; g.beginPath(); g.arc(ex * sc, ey2 * sc, r * sc * eye, 0, TAU2); g.fill(); });
+    g.strokeStyle = P.eye; g.lineWidth = 1.4;
+    [-1, 1].forEach((sd) => { const op = mouth * 3; g.beginPath(); g.moveTo(hw, sd * 2.5 * sc); g.lineTo(hw + 4 * sc, sd * (3.5 + op) * sc); g.lineTo(hw + 3 * sc, sd * (1 + op * .5) * sc); g.stroke(); });
+    g.restore();
   }
   draw(g, { ink, bg, cols, hot = false, eye = 1, mouth = 0, sleepy = 0 }) {
     const sc = this.size, t = this.t, red = "#ff2d4a";

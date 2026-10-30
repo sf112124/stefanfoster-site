@@ -590,6 +590,6 @@ html{transition:filter .6s ease}
 html.devouring{filter:invert(1) hue-rotate(180deg)}
 canvas.crawl,html img,html video{transition:filter .6s ease}
 html.devouring canvas.crawl,html.devouring img,html.devouring video{filter:invert(1) hue-rotate(180deg)}
-html.devouring{--bg:#fff}
-html.devouring{filter:invert(1) hue-rotate(180deg) contrast(1.22)}
-html.devouring canvas.crawl,html.devouring img,html.devouring video{filter:contrast(.82) hue-rotate(180deg) invert(1)}
+html.devouring,html.crawling,html.flying{--bg:#fff}
+html.devouring,html.crawling,html.flying{filter:invert(1) hue-rotate(180deg) contrast(1.22)}
+html.devouring canvas.crawl,html.devouring img,html.devouring video,html.crawling canvas.crawl,html.crawling img,html.crawling video,html.flying canvas.crawl,html.flying img,html.flying video{filter:contrast(.82) hue-rotate(180deg) invert(1)}
