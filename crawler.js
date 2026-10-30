@@ -330,7 +330,9 @@ export class Crawler {
     if (!this.on && !this.ship.on && !this.E.on) { this.running = false; return; }
     const dt = clamp((now - this.t) / 1000, 0, .05); this.t = now;
     const cs = getComputedStyle(document.documentElement), ink = cs.getPropertyValue("--ink").trim() || "#0d0d0e", bg = cs.getPropertyValue("--bg").trim() || "#f4f3ef";
-    const F = { now, dt, g, W, H, ink, bg, cols: this.colors() };
+    // feeding: the page goes dark and everything on this layer turns to glowing wireframe
+    const glow = this.E.on;
+    const F = { now, dt, g, W, H, ink: glow ? "#d8fff6" : ink, bg: glow ? "#0e0f13" : bg, cols: glow ? ["#2dffc8", "#ff3fe0", "#ffe23d", "#3fa8ff"] : this.colors() };
     g.lineCap = "round"; g.lineJoin = "round";
     // whatever has been blown loose is falling
     this.fall.forEach((f) => {
@@ -349,9 +351,21 @@ export class Crawler {
     if (this.ship.on) this.fly(F);
     this.shots(F);
     this.sparks = this.sparks.filter((q) => { const k = (now - q.t) / 420; if (k >= 1) return false; q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= .92; q.vy = q.vy * .92 + 14; g.globalAlpha = 1 - k; g.strokeStyle = q.c; g.lineWidth = 1.5; g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x - q.vx * .035, q.y - q.vy * .035); g.stroke(); g.globalAlpha = 1; return true; });
+    if (glow) this.bloom(W, H);
     this.hud(F);
     requestAnimationFrame(this.frame);
   };
+  // a cheap bloom: the frame shrunk down twice and laid back over itself, additively, so every line glows
+  bloom(W, H) {
+    const cv = this.cv, g = this.g;
+    if (!this.bl) { this.bl = [4, 12].map((k) => { const c = document.createElement("canvas"); return { k, c, g: c.getContext("2d") }; }); }
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "lighter"; g.imageSmoothingEnabled = true;
+    this.bl.forEach((L, n) => { const w = Math.ceil(W / L.k), h = Math.ceil(H / L.k); if (L.c.width !== w || L.c.height !== h) { L.c.width = w; L.c.height = h; }
+      L.g.clearRect(0, 0, w, h); L.g.imageSmoothingEnabled = true; L.g.drawImage(n ? this.bl[0].c : cv, 0, 0, w, h); });
+    g.globalAlpha = .85; g.drawImage(this.bl[0].c, 0, 0, cv.width, cv.height);
+    g.globalAlpha = .7; g.drawImage(this.bl[1].c, 0, 0, cv.width, cv.height);
+    g.restore();
+  }
   // ---- the animal ----
   animal({ now, dt, g, W, H, ink, bg, cols }) {
     const p = this.p, v = this.v, m = this.m, S = this.ship;

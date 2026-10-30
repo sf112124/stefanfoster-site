@@ -584,3 +584,9 @@ body.viewing .tun-sw{display:none}
 .tun-sw i{width:20px!important;height:11px!important}
 .tun-sw i::after{left:2px!important;top:2px!important;width:5px!important;height:5px!important}
 :not(.is-list)>.tun-sw i::after{translate:9px 0}
+
+/* feeding: the whole page inverts to night, the creature layer (and real pictures) flip back so they keep their true colours */
+html{transition:filter .6s ease}
+html.devouring{filter:invert(1) hue-rotate(180deg)}
+canvas.crawl,html img,html video{transition:filter .6s ease}
+html.devouring canvas.crawl,html.devouring img,html.devouring video{filter:invert(1) hue-rotate(180deg)}
