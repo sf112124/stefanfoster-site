@@ -545,3 +545,4 @@ html.devouring .tun-list .t{opacity:1;pointer-events:auto}
 @keyframes cut2{0%{opacity:1}50%,100%{opacity:0}}
 html.devouring .tun-thumb,:not(.is-list)>.tun-thumb{display:none}
 @media (hover:none){.tun-thumb{display:none}}
+.tun-thumb .tt.tall{width:clamp(100px,9vw,150px)}
