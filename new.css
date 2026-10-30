@@ -546,3 +546,20 @@ html.devouring .tun-list .t{opacity:1;pointer-events:auto}
 html.devouring .tun-thumb,:not(.is-list)>.tun-thumb{display:none}
 @media (hover:none){.tun-thumb{display:none}}
 .tun-thumb .tt.tall{width:clamp(78px,6.5vw,112px)}
+
+/* contact card: same paper, ink and voice as the index, still a physical card that tilts */
+.ct-card{background:linear-gradient(160deg,#faf9f6 0%,#f3f2ee 100%);color:var(--ink);border-radius:18px;box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 0 0 1px rgba(12,12,12,.06),0 2px 4px rgba(60,55,40,.05),0 30px 60px -24px rgba(60,55,40,.28),0 70px 120px -50px rgba(60,55,40,.22)}
+.ct-shine{background:radial-gradient(520px circle at var(--sx,50%) var(--sy,50%),rgba(255,255,255,.75),transparent 55%);mix-blend-mode:soft-light}
+.ct-x{color:var(--ink);opacity:.35}
+.ct-card .ct-n{font-family:var(--sans);font-stretch:100%;text-transform:none;font-weight:700;font-size:clamp(40px,6vw,76px);line-height:.9;letter-spacing:-.05em;display:inline-flex;align-items:flex-start;gap:.08em}
+.ct-dot{display:inline-block;width:.16em;height:.16em;border-radius:50%;background:var(--acc);margin-top:.12em}
+.ct-card .ct-r{font-family:var(--serif);font-stretch:100%;font-weight:400;font-size:clamp(20px,2vw,27px);letter-spacing:-.01em;color:var(--mute);margin-top:12px}
+.ct-card .ct-g{grid-template-columns:1.3fr 1fr 1fr;gap:28px}
+.ct-card .ct-g p{color:var(--mute);border-bottom:1px solid var(--line);text-transform:uppercase}
+.ct-g p b{font-weight:400;color:var(--ink);margin-right:10px}
+.ct-card .ct-g a,.ct-card .ct-g span{font-family:var(--sans);font-stretch:100%;font-weight:500;font-size:15px;letter-spacing:-.015em;line-height:1.65;color:var(--ink)}
+.ct-g span em,.ct-g a i{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--mute);font-size:1.08em;margin-left:3px}
+.ct-g span em{display:block;margin:-3px 0 8px;line-height:1.2;font-size:1.05em}
+.ct-g a i{font-family:var(--sans);font-style:normal;font-size:.85em;color:var(--acc)}
+.ct-card .ct-g a:hover{color:var(--acc)}
+@media (max-width:820px){ .ct-card .ct-g{grid-template-columns:1fr} }
