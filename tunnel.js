@@ -176,7 +176,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   const place = (L, snap) => {
     const a = lst.children[L.i]; if (!a) return;
     const mr = mount.getBoundingClientRect(), ar = a.getBoundingClientRect(), tw = L.el.offsetWidth, th = L.el.offsetHeight || tw * .6;
-    const ty = ar.top + ar.height / 2 - th / 2, [lo, hi] = textBand(ty - 6, ty + th + 6), gap = 26;
+    const ty = ar.top + ar.height / 2 - th / 2, [lo, hi] = textBand(ty - 6, ty + th + 6), gap = 64;
     let side = L.side; if (side > 0 && hi + gap + tw > mr.right - 12) side = -1; if (side < 0 && lo - gap - tw < mr.left + 12) side = 1;
     L.tx = (side > 0 ? hi + gap : lo - gap - tw) - mr.left; L.ty = ty - mr.top; L.lo = lo - mr.left; L.hi = hi - mr.left; L.side2 = side; L.tw = tw;
     if (snap || L.x == null) { L.x = L.tx + side * 18; L.y = L.ty; }
