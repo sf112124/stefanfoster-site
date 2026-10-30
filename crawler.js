@@ -9,6 +9,7 @@ import { Creature, Bug, pickKind } from "./creature.js";
 const SEL = ".node,.wi .wt i,.ph h1 .ch,.aname i,.tile,.chip,.links>a,.links>.snd,.links>.nite,.bot>span:not(.bar),.lead,.alead,.gsec h2,.gsec p,.cli,.agrid dd,.agrid dt,.tile figcaption,.nx,.wi .wn,.akick";
 const LETTER = ".wi .wt i,.ph h1 .ch,.aname i";
 const SAFE = ".hole,.pad,.eatb", MENU = ".hole,.pad,.snd,.nite,.eatb";
+const FULL = 45;   // plates until it's had enough
 const HP = 60, HULL = 6, RED = "#ff2d4a";
 const WOUND = [8, 3, 7, 2];            // the legs that give out first as it's hurt
 const KEYS = { ArrowLeft: "l", a: "l", A: "l", ArrowRight: "r", d: "r", D: "r", ArrowUp: "u", w: "u", W: "u", ArrowDown: "d", s: "d", S: "d", " ": "f" };
@@ -564,33 +565,29 @@ export class Crawler {
   }
   feast({ now, dt, g, W, H, ink, bg, cols }) {
     const E = this.E, m = this.m, k = this.keys, B = E.body;
-    if (E.over) { if (now - E.over > 3800) this.stopEating(); }
     // steer: the keys if you're using them, otherwise it chases your pointer. Click for a lunge.
     const kx = (k.r ? 1 : 0) - (k.l ? 1 : 0), ky = (k.d ? 1 : 0) - (k.u ? 1 : 0), keyed = kx || ky;
-    const top = (E.over ? 0 : 1) * (360 + Math.min(240, B.length * 7) + (now - E.dash < 260 ? 560 : 0));
+    const top = E.over ? 260 : 360 + Math.min(240, B.length * 7) + (now - E.dash < 260 ? 560 : 0);
     let wx = 0, wy = 0;
-    if (keyed) { const d = Math.hypot(kx, ky); wx = kx / d * top; wy = ky / d * top; }
+    // so full it waddles home to its hole and curls up to sleep
+    if (E.over) { const h = this.holePos(), dx = h.x - E.x, dy = h.y - E.y, d = Math.hypot(dx, dy); if (d > 6) { const sp = Math.min(top, d * 2.5); wx = dx / d * sp; wy = dy / d * sp; } if (d < 40) { E.nap = (E.nap || 0) + dt; } }
+    else if (keyed) { const d = Math.hypot(kx, ky); wx = kx / d * top; wy = ky / d * top; }
     else { const dx = m.x - E.x, dy = m.y - E.y, d = Math.hypot(dx, dy); if (d > 26) { const sp = Math.min(top, d * 3.4); wx = dx / d * sp; wy = dy / d * sp; } }
     const grip = Math.min(1, dt * 5); E.vx += (wx - E.vx) * grip; E.vy += (wy - E.vy) * grip;
     E.x = clamp(E.x + E.vx * dt, 16, W - 16); E.y = clamp(E.y + E.vy * dt, 16, H - 16);
     const speed = Math.hypot(E.vx, E.vy);
     if (speed > 25) { let da = Math.atan2(E.vy, E.vx) - E.a; da = Math.atan2(Math.sin(da), Math.cos(da)); E.a += da * Math.min(1, dt * 8); }
-    B.size = 1.2 + Math.min(.4, B.length * .012);
+    B.size = (1.2 + Math.min(.4, B.length * .012)) * (E.nap ? Math.max(0, 1 - E.nap / 1.6) : 1);
+    if (E.nap > 1.7) { this.stopEating(); return; }
     const ca = Math.cos(E.a), sa = Math.sin(E.a), mx = E.x + ca * 16 * B.size, my = E.y + sa * 16 * B.size;
-    // hunger: it empties all the time, faster the longer you are. Empty, you start losing plates.
-    if (!E.over) {
-      E.hunger = Math.max(0, E.hunger - dt * (.035 + B.length * .0025));
-      if (E.hunger <= 0 && now - E.starveAt > 900) {
-        E.starveAt = now; const q = B.segs.pop(); if (q) this.burst(q.x, q.y, 10, cols, 80, 260); this.sfx("hit", E.x / W);
-        if (B.length < 1) { E.over = now; this.sfx("back"); }
-      }
-    }
+    // fed enough and it's enormous: time for a nap
+    if (!E.over && B.length >= FULL) { E.over = now; this.sfx("back"); }
     // bugs come in from the edges
     if (!E.over && now - E.spawnAt > 1100 && E.bugs.length < 4 + Math.min(5, Math.floor(E.score / 60))) { E.spawnAt = now; E.bugs.push(new Bug(W, H, pickKind())); }
     E.bugs = E.bugs.filter((b) => {
       if (!b.update(dt, W, H, mx, my)) return false;
       if (!E.over && Math.hypot(b.x - mx, b.y - my) < 22 * B.size + b.k.r * 1.5) {
-        E.mouth = 1; E.chewAt = now; E.hunger = Math.min(1, E.hunger + .14 + b.k.pts * .02); this.score(b.k.pts * 5, b.x, b.y, cols);
+        E.mouth = 1; E.chewAt = now; this.score(b.k.pts * 5, b.x, b.y, cols);
         const grow = b.k.pts >= 15 ? 3 : b.k.pts >= 3 ? 2 : 1; for (let i = 0; i < grow; i++) B.add();
         this.burst(b.x, b.y, 14, b.k.gold ? ["#ffb21c", "#ffd76a"] : cols, 120, 420); this.sfx("catch", b.x / W); return false;
       }
@@ -598,7 +595,7 @@ export class Crawler {
     });
     B.update(dt, E.x, E.y, E.a, speed);
     E.mouth = Math.max(0, E.mouth - dt * 4);
-    B.draw(g, { ink, bg, cols, hot: now - E.chewAt < 180 || E.hunger < .2, mouth: Math.max(E.mouth, .25 + Math.sin(now / 140) * .25) });
+    B.draw(g, { ink, bg, cols, hot: now - E.chewAt < 180, mouth: Math.max(E.mouth, .25 + Math.sin(now / 140) * .25) });
     // and the page itself, a letter at a time
     if (!E.over && now - E.scanAt > 45) {
       E.scanAt = now;
@@ -623,7 +620,7 @@ export class Crawler {
         this.E.chars.push(sp);
         const cx = b.left + b.width / 2, cy = b.top + b.height / 2;
         requestAnimationFrame(() => { sp.style.transform = `translate(${(x - cx).toFixed(0)}px,${(y - cy).toFixed(0)}px) scale(0) rotate(${(Math.random() * 90 - 45).toFixed(0)}deg)`; sp.style.opacity = "0"; });
-        const E = this.E; E.mouth = Math.max(E.mouth, .7); E.chewAt = performance.now(); E.hunger = Math.min(1, E.hunger + .035); E.letters++;
+        const E = this.E; E.mouth = Math.max(E.mouth, .7); E.chewAt = performance.now(); E.letters++;
         this.score(1, cx, cy, cols); if (E.letters % 3 === 0) E.body.add();
         this.burst(cx, cy, 4, cols, 60, 200); if (Math.random() < .5) this.sfx("step", cx / innerWidth, .6);
         return true;
@@ -635,7 +632,7 @@ export class Crawler {
   }
   gulp(el, x, y, cols) {
     const E = this.E, r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    el._eaten = true; E.mouth = 1; E.chewAt = performance.now(); E.hunger = Math.min(1, E.hunger + .2);
+    el._eaten = true; E.mouth = 1; E.chewAt = performance.now();
     this.set(el, "transition", "transform .4s cubic-bezier(.55,0,.8,.2),opacity .4s");
     this.set(el, "transform", `translate(${(x - cx).toFixed(0)}px,${(y - cy).toFixed(0)}px) scale(0) rotate(${(Math.random() * 60 - 30).toFixed(0)}deg)`);
     this.set(el, "opacity", "0"); this.set(el, "pointerEvents", "none");
@@ -648,8 +645,9 @@ export class Crawler {
     if (this.E.on) {
       const E = this.E, cx = W / 2, cy = H - 64, intro = now - E.born < 6000;
       if (E.over) {
-        plate(g, cx, H / 2, 420, 110, bg, RED);
-        type(g, "STARVED", cx, H / 2 - 30, 12, RED); type(g, `SCORE ${E.score}`, cx, H / 2 + 2, 26, ink); type(g, `BEST ${E.best}`, cx, H / 2 + 34, 11, ink);
+        plate(g, cx, cy, 520, 44, bg, ink);
+        type(g, `SO FULL. NAP TIME  Z z z      SCORE ${E.score}      BEST ${E.best}`, cx, cy + 1, 12, ink);
+        if (!E.nap) { const z = (now / 600) % 1; g.globalAlpha = 1 - z; type(g, "z", E.x + 18, E.y - 20 - z * 26, 12 + z * 8, ink); g.globalAlpha = 1; }
         return;
       }
       plate(g, cx, cy, intro ? 600 : 520, 44, bg, ink);
@@ -657,8 +655,8 @@ export class Crawler {
       type(g, `SCORE ${E.score}`, cx - 236, cy + 1, 12, ink, "left");
       type(g, `BEST ${E.best}`, cx - 120, cy + 1, 11, ink, "left");
       type(g, `LEGS ${E.body.length * 2}`, cx - 30, cy + 1, 11, ink, "left");
-      type(g, "HUNGER", cx + 58, cy + 1, 11, E.hunger < .25 ? RED : ink, "left");
-      g.strokeStyle = ink; g.lineWidth = 1; g.strokeRect(cx + 124, cy - 4, 110, 8); g.fillStyle = E.hunger < .25 ? RED : "#00b894"; g.fillRect(cx + 124, cy - 4, 110 * E.hunger, 8);
+      type(g, "FULL", cx + 70, cy + 1, 11, ink, "left");
+      g.strokeStyle = ink; g.lineWidth = 1; g.strokeRect(cx + 112, cy - 4, 122, 8); g.fillStyle = "#00b894"; g.fillRect(cx + 112, cy - 4, 122 * Math.min(1, E.body.length / FULL), 8);
       if (E.combo > 1 && now - E.comboAt < 1600) type(g, `×${E.combo}`, cx + 248, cy + 1, 12, RED, "left");
       return;
     }
