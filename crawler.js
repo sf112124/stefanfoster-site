@@ -640,6 +640,8 @@ export class Crawler {
     E.joy = Math.max(0, (E.joy || 0) - dt * .35);
     if (E.pet) {
       const hit = B.segs.find((q) => Math.hypot(q.x - m.x, q.y - m.y) < 22 * B.size), mv = Math.hypot(m.vx, m.vy);
+      // the plates under and around your hand shiver; the whole body sways a little with how happy it is
+      B.segs.forEach((q) => { const d = Math.hypot(q.x - m.x, q.y - m.y), near = Math.exp(-d / (28 * B.size)); q.shiv = Math.min(1.4, Math.max(q.shiv || 0, near * (.35 + Math.min(1, mv / 500)) + E.joy * .25)); });
       if (hit && mv > 40) { hit.lit = 1; E.joy = Math.min(1, E.joy + dt * mv / 900);
         if (now - (E.heartAt || 0) > 260 - E.joy * 140) { E.heartAt = now; E.pops.push({ txt: "♥", x: m.x + rnd(-10, 10), y: m.y - 8, t: now, c: pick(cols) }); }
         if (now - (E.purrAt || 0) > 180) { E.purrAt = now; this.sfx("purr", m.x / W, E.joy); } }

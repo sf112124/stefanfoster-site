@@ -50,12 +50,15 @@ export class Creature {
       q.a = want; if (q.born >= 0) q.born = Math.min(1, q.born + dt * 2);
     }
     s.forEach((q) => { q.lit = Math.max(0, q.lit - dt * 1.6); });
+    // purring under your hand: plates near where you're stroking shiver side to side and sway, then settle
+    s.forEach((q, i) => { q.shiv = Math.max(0, (q.shiv || 0) - dt * 1.8); const sw = q.shiv * (Math.sin(this.t * 41 + i * 1.7) * 1.6 + Math.sin(this.t * 6.5 + i * .6) * 3.2) * sc;
+      q.ox = -Math.sin(q.a) * sw; q.oy = Math.cos(q.a) * sw; });
     const stepping = new Set();
     s.forEach((q, i) => q.legs.forEach((l) => { if (l.st < 1) stepping.add(i * 2 + (l.side > 0 ? 1 : 0)); }));
     s.forEach((q, i) => q.legs.forEach((l) => {
       l.lit = Math.max(0, l.lit - dt * 1.4); l.wig *= Math.pow(.02, dt);
       const grow = q.born < 0 ? 1 : q.born, ca = Math.cos(q.a), sa = Math.sin(q.a);
-      const rx = q.x - sa * l.side * q.h * .4 * sc, ry = q.y + ca * l.side * q.h * .4 * sc;
+      const rx = q.x + (q.ox || 0) - sa * l.side * q.h * .4 * sc, ry = q.y + (q.oy || 0) + ca * l.side * q.h * .4 * sc;
       // spider splay: front legs reach forward, back legs reach back
       const f = N > 2 ? (i - 1) / (N - 2) : .5, splay = lerp(.75, -.85, f), dirA = q.a + l.side * (Math.PI / 2 - splay);
       const out = l.reach * .68 * sc * grow, fwd = speed > 20 ? 10 * sc : 0;
@@ -128,7 +131,7 @@ export class Creature {
       const w = q.w * sc * grow * taper, h = q.h * sc * grow * taper, lit = q.lit, pop = (head ? this.pulse * 2 : 0) + lit * 2;
       if (w < .5) continue;
       const W2 = w / 2 + pop, H2 = h / 2 + pop;
-      g.save(); g.translate(q.x, q.y); g.rotate(q.a);
+      g.save(); g.translate(q.x + (q.ox || 0), q.y + (q.oy || 0)); g.rotate(q.a + (q.shiv || 0) * Math.sin(t * 23 + i) * .12);
       if (head) {
         g.fillStyle = P.head; g.globalAlpha = .9; g.fillRect(-W2, -H2, W2 * 2, H2 * 2); g.globalAlpha = 1;
         g.strokeStyle = P.headLine || P.head; g.lineWidth = 1.2; g.strokeRect(-W2 - 2, -H2 - 2, W2 * 2 + 4, H2 * 2 + 4);
