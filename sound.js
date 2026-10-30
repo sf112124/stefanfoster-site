@@ -206,7 +206,28 @@ export class Sound {
     const now = performance.now(), pan = (a - .5) * 1.5, r = (lo, hi) => lo + Math.random() * (hi - lo);
     // don't let the fast ones pile up
     const gate = (k, ms) => { this._cg = this._cg || {}; if (now - (this._cg[k] || 0) < ms) return false; this._cg[k] = now; return true; };
+    // a note from a minor pentatonic, picked by position along the body
+    const note = (i, base = 220) => { const sc = [0, 3, 5, 7, 10], k = ((i % 15) + 15) % 15; return base * Math.pow(2, (Math.floor(k / 5) * 12 + sc[k % 5]) / 12); };
     switch (kind) {
+      case "leg": { // a footfall: a tiny glassy synth tick, higher at the front, panned to where the foot lands
+        if (!gate("leg", 28)) return;
+        const f = note(Math.round(b), 440);
+        this.vox(f * 1.02, f, .07, .018, pan, { type: "square", bp: f * 2.2, q: 9, fm: f * .7, rate: f * 1.5, wet: .55 });
+        this.vox(f * 3, f * 2.6, .03, .008, pan, { type: "triangle", wet: .3 });
+        break;
+      }
+      case "touch": { // you touched a plate: a soft FM bell
+        const f = note(Math.round(b), 330);
+        this.vox(f, f * .995, .9, .05, pan, { type: "sine", fm: f * 1.4, rate: f * 3.01, wet: .75 });
+        this.vox(f * 2, f * 2, .45, .015, pan, { type: "triangle", at: .02, wet: .8 });
+        break;
+      }
+      case "pluck": { // you brushed a leg: a plucked wire
+        const f = note(Math.round(b), 165);
+        this.vox(f * 2.01, f * 2, .32, .04, pan, { type: "sawtooth", bp: f * 5, q: 12, wet: .5 });
+        this.vox(f, f, .5, .02, pan, { type: "sine", wet: .6 });
+        break;
+      }
       case "out": // it climbs out: a low gulp, then a ladder of clicks rising
         this.vox(70, 180, .32, .1, 0, { type: "sine", wet: .4 });
         for (let k = 0; k < 7; k++) this.vox(500 + k * 230, 700 + k * 260, .045, .028, (k % 2 ? .3 : -.3), { at: .12 + k * .055, bp: 1800 + k * 300, q: 3 });

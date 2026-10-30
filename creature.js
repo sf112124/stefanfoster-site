@@ -1,15 +1,16 @@
-// A procedurally animated creature: a head pulling a chain of body plates, every plate with a pair of jointed legs that
-// plant, hold and step on their own. Drawn like a rig in debug view: bones as lines, joints as dots, a faint box round
-// every joint, feet as rings. It can grow a plate (and a pair of legs) at a time.
+// A procedurally animated creature, drawn like a rig in debug view. A small head with a cluster of eyes pulls a chain of
+// plates; every plate carries a pair of long jointed legs that splay out like a spider's, plant, hold, and step on their
+// own. Bones are hairlines with dots along them, every joint has a faint box, every foot is a ring. Touch a plate or a
+// leg and it lights up and sings; every footfall is a little synth tick.
 const TAU = Math.PI * 2;
 const lerp = (a, b, k) => a + (b - a) * k;
 const ang = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+const hash = (n) => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
 
-function fabrik(j, L, rx, ry, tx, ty, bendX, bendY) {
+function fabrik(j, L, rx, ry, tx, ty, bx, by) {
   const n = L.length;
-  // nudge the middle joints to one side first, so knees always fold the same way
-  for (let i = 1; i < n; i++) { const k = Math.sin((i / n) * Math.PI); j[i][0] += bendX * k; j[i][1] += bendY * k; }
-  for (let it = 0; it < 3; it++) {
+  for (let i = 1; i < n; i++) { const k = Math.sin((i / n) * Math.PI); j[i][0] += bx * k; j[i][1] += by * k; }
+  for (let it = 0; it < 4; it++) {
     j[n][0] = tx; j[n][1] = ty;
     for (let i = n - 1; i >= 0; i--) { const ax = j[i][0] - j[i + 1][0], ay = j[i][1] - j[i + 1][1], q = Math.hypot(ax, ay) || 1; j[i][0] = j[i + 1][0] + ax / q * L[i]; j[i][1] = j[i + 1][1] + ay / q * L[i]; }
     j[0][0] = rx; j[0][1] = ry;
@@ -18,111 +19,140 @@ function fabrik(j, L, rx, ry, tx, ty, bendX, bendY) {
 }
 
 export class Creature {
-  constructor(x, y, a = 0, plates = 3, { gap = 20, size = 1 } = {}) {
-    this.x = x; this.y = y; this.a = a; this.gap = gap; this.size = size; this.segs = []; this.t = 0; this.pulse = 0;
+  constructor(x, y, a = 0, plates = 3, { gap = 16, size = 1 } = {}) {
+    this.x = x; this.y = y; this.a = a; this.gap = gap; this.size = size; this.segs = []; this.t = 0; this.pulse = 0; this.events = [];
     for (let i = 0; i < plates + 1; i++) this.add(true);
   }
-  // one more plate on the end, with its pair of legs
   add(quiet) {
     const n = this.segs.length, prev = this.segs[n - 1], a = prev ? prev.a : this.a;
     const x = prev ? prev.x - Math.cos(a) * this.gap : this.x, y = prev ? prev.y - Math.sin(a) * this.gap : this.y;
-    const seed = Math.random() * 1000, head = n === 0;
-    const seg = { x, y, a, w: head ? 22 : 18 + (seed % 7), h: head ? 18 : 13 + (seed % 5), seed, born: quiet ? -1 : 0, legs: [] };
+    const seed = n * 13.7 + 3.1, head = n === 0;
+    const seg = { x, y, a, i: n, w: head ? 13 : 15 + hash(seed) * 6, h: head ? 11 : 10 + hash(seed + 1) * 5, seed, born: quiet ? -1 : 0, lit: 0, legs: [],
+      cells: Array.from({ length: 6 }, (_, k) => hash(seed * 3 + k)), kind: Math.floor(hash(seed + 7) * 3) };
     if (!head) for (const side of [-1, 1]) {
-      const bones = 2 + ((seed + (side > 0 ? 3 : 0)) | 0) % 2, L = Array.from({ length: bones }, (_, k) => (bones === 2 ? [20, 22] : [16, 16, 14])[k] * (.85 + ((seed * (k + 2)) % 30) / 100));
-      const reach = L.reduce((p, q) => p + q, 0);
-      seg.legs.push({ side, L, reach, j: Array.from({ length: bones + 1 }, () => [x, y]), fx: x, fy: y, sx: x, sy: y, tx: x, ty: y, st: 1, phase: (n + (side > 0 ? 1 : 0)) % 2 });
+      const bones = 3 + (hash(seed + side) > .55 ? 1 : 0), base = 15 + hash(seed + side * 2) * 7;
+      const L = Array.from({ length: bones }, (_, k) => base * [1, 1.15, .9, .7][k] * (.85 + hash(seed + k * 5 + side) * .3));
+      seg.legs.push({ side, L, reach: L.reduce((p, q) => p + q, 0), j: Array.from({ length: bones + 1 }, () => [x, y]), fx: x, fy: y, sx: x, sy: y, tx: x, ty: y, st: 1, lit: 0, wig: 0 });
     }
     this.segs.push(seg); if (!quiet) this.pulse = 1;
     return seg;
   }
   get length() { return this.segs.length - 1; }
-  // head goes to (x, y) facing a; the rest follows
   update(dt, x, y, a, speed) {
     this.t += dt; this.pulse = Math.max(0, this.pulse - dt * 2.5);
-    const s = this.segs, h = s[0], sc = this.size; h.x = x; h.y = y; h.a = a;
-    for (let i = 1; i < s.length; i++) {
-      const p = s[i - 1], q = s[i], dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1, gap = this.gap * sc * (i === 1 ? 1.1 : 1);
+    const s = this.segs, h = s[0], sc = this.size, N = s.length; h.x = x; h.y = y; h.a = a;
+    for (let i = 1; i < N; i++) {
+      const p = s[i - 1], q = s[i], dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1, gap = this.gap * sc * (i === 1 ? .95 : 1) * (1 - Math.min(.35, i / N * .3));
       q.x = p.x + dx / d * gap; q.y = p.y + dy / d * gap;
       let want = Math.atan2(p.y - q.y, p.x - q.x), da = ang(want - p.a);
-      if (Math.abs(da) > .7) want = p.a + Math.sign(da) * .7;   // a spine can only bend so far
-      q.a = want; if (q.born >= 0) q.born = Math.min(1, q.born + dt * 2.2);
+      if (Math.abs(da) > .6) want = p.a + Math.sign(da) * .6;
+      q.a = want; if (q.born >= 0) q.born = Math.min(1, q.born + dt * 2);
     }
+    s.forEach((q) => { q.lit = Math.max(0, q.lit - dt * 1.6); });
     const stepping = new Set();
     s.forEach((q, i) => q.legs.forEach((l) => { if (l.st < 1) stepping.add(i * 2 + (l.side > 0 ? 1 : 0)); }));
     s.forEach((q, i) => q.legs.forEach((l) => {
+      l.lit = Math.max(0, l.lit - dt * 1.4); l.wig *= Math.pow(.02, dt);
       const grow = q.born < 0 ? 1 : q.born, ca = Math.cos(q.a), sa = Math.sin(q.a);
-      const rx = q.x - sa * l.side * q.h * .45 * sc, ry = q.y + ca * l.side * q.h * .45 * sc;     // hip
-      const out = l.reach * .72 * sc * grow, fwd = (speed > 20 ? 9 : 2) * sc;
-      const restX = rx - sa * l.side * out + ca * fwd, restY = ry + ca * l.side * out + sa * fwd;
+      const rx = q.x - sa * l.side * q.h * .4 * sc, ry = q.y + ca * l.side * q.h * .4 * sc;
+      // spider splay: front legs reach forward, back legs reach back
+      const f = N > 2 ? (i - 1) / (N - 2) : .5, splay = lerp(.75, -.85, f), dirA = q.a + l.side * (Math.PI / 2 - splay);
+      const out = l.reach * .78 * sc * grow, fwd = speed > 20 ? 10 * sc : 0;
+      const restX = rx + Math.cos(dirA) * out + ca * fwd, restY = ry + Math.sin(dirA) * out + sa * fwd;
       if (l.st >= 1) {
         const off = Math.hypot(l.fx - restX, l.fy - restY), far = Math.hypot(l.fx - rx, l.fy - ry);
         const key = i * 2 + (l.side > 0 ? 1 : 0), busy = stepping.has(key - 2) || stepping.has(key + 2) || stepping.has(key ^ 1);
-        if ((off > l.reach * .38 * sc && !busy) || far > l.reach * .98 * sc) {
-          const lead = Math.min(1, speed / 300) * l.reach * .3 * sc;
+        if ((off > l.reach * .3 * sc && !busy) || far > l.reach * .99 * sc) {
+          const lead = Math.min(1, speed / 260) * l.reach * .35 * sc;
           l.sx = l.fx; l.sy = l.fy; l.tx = restX + ca * lead; l.ty = restY + sa * lead; l.st = 0; stepping.add(key);
         }
       } else {
-        l.st = Math.min(1, l.st + dt * (5 + speed * .02));
+        l.st = Math.min(1, l.st + dt * (4.2 + speed * .016));
         const e = l.st * l.st * (3 - 2 * l.st); l.fx = lerp(l.sx, l.tx, e); l.fy = lerp(l.sy, l.ty, e);
-        if (l.st >= 1) l.landed = this.t;
+        if (l.st >= 1) { l.landed = this.t; this.events.push({ x: l.fx, y: l.fy, i, side: l.side, n: N }); }
       }
-      const lift = l.st < 1 ? Math.sin(l.st * Math.PI) * 7 * sc : 0;
-      const bx = -sa * l.side * 6 * sc + ca * 4 * sc, by = ca * l.side * 6 * sc + sa * 4 * sc - lift;
-      fabrik(l.j, l.L.map((v) => v * sc * Math.max(.2, grow)), rx, ry, l.fx, l.fy, bx, by);
+      // knees arch outward and up, higher while the leg is in the air
+      const lift = l.st < 1 ? Math.sin(l.st * Math.PI) : 0, wig = Math.sin(this.t * 38) * l.wig * 6 * sc;
+      const ox = Math.cos(dirA) * (8 + lift * 8) * sc - sa * wig, oy = Math.sin(dirA) * (8 + lift * 8) * sc - (4 + lift * 10) * sc + ca * wig;
+      fabrik(l.j, l.L.map((v) => v * sc * Math.max(.15, grow)), rx, ry, l.fx, l.fy, ox, oy);
     }));
   }
-  // shift everything (the page scrolled under it)
   shift(dx, dy) { this.segs.forEach((q) => { q.x += dx; q.y += dy; q.legs.forEach((l) => { l.fx += dx; l.fy += dy; l.sx += dx; l.sy += dy; l.tx += dx; l.ty += dy; l.j.forEach((p) => { p[0] += dx; p[1] += dy; }); }); }); }
+  // what's under the pointer: a plate or a leg. Returns a fresh touch once, then waits till you move off it.
+  touch(px, py) {
+    if (px == null) return null;
+    const sc = this.size; let hit = null;
+    for (const q of this.segs) { const dx = px - q.x, dy = py - q.y, ca = Math.cos(-q.a), sa = Math.sin(-q.a), lx = dx * ca - dy * sa, ly = dx * sa + dy * ca;
+      if (Math.abs(lx) < q.w * sc * .6 + 3 && Math.abs(ly) < q.h * sc * .6 + 3) { hit = { kind: "plate", q }; break; } }
+    if (!hit) for (const q of this.segs) for (const l of q.legs) for (let m = 1; m < l.j.length; m++) {
+      const a = l.j[m - 1], b = l.j[m], vx = b[0] - a[0], vy = b[1] - a[1], L = vx * vx + vy * vy || 1, t = Math.max(0, Math.min(1, ((px - a[0]) * vx + (py - a[1]) * vy) / L));
+      if (Math.hypot(a[0] + vx * t - px, a[1] + vy * t - py) < 5) { hit = { kind: "leg", q, l }; break; }
+    }
+    const key = hit ? (hit.l || hit.q) : null, fresh = key && key !== this.lastTouch;
+    this.lastTouch = key;
+    if (!hit) return null;
+    if (hit.l) { hit.l.lit = 1; if (fresh) hit.l.wig = 1; } else hit.q.lit = 1;
+    return fresh ? hit : null;
+  }
   draw(g, { ink, bg, cols, hot = false, eye = 1, mouth = 0, sleepy = 0 }) {
-    const s = this.segs, sc = this.size, t = this.t;
+    const s = this.segs, sc = this.size, t = this.t, N = s.length;
     g.lineCap = "round"; g.lineJoin = "round";
-    // legs first, under the plates
+    // legs: hairline bones with beads along them, a faint box round every joint, a ring for the foot
     s.forEach((q, i) => q.legs.forEach((l, k) => {
-      const j = l.j, n = j.length - 1, col = cols[(i + k) % cols.length];
-      g.strokeStyle = ink; g.lineWidth = 1.3; g.beginPath(); j.forEach((p, m) => (m ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.stroke();
-      // the rig boxes round each joint
-      g.globalAlpha = .28; g.strokeStyle = col; g.lineWidth = 1;
-      for (let m = 1; m < n; m++) { const b = 6 * sc, a2 = Math.atan2(j[m + 1][1] - j[m - 1][1], j[m + 1][0] - j[m - 1][0]); g.save(); g.translate(j[m][0], j[m][1]); g.rotate(a2); g.strokeRect(-b, -b, b * 2, b * 2); g.restore(); }
-      g.globalAlpha = 1;
-      for (let m = 1; m < n; m++) { g.fillStyle = ink; g.beginPath(); g.arc(j[m][0], j[m][1], 1.9, 0, TAU); g.fill(); }
-      // foot: a ring, filled with colour while it's planted
-      const fresh = l.landed && t - l.landed < .25 ? 1 - (t - l.landed) / .25 : 0;
-      g.strokeStyle = ink; g.lineWidth = 1.2; g.beginPath(); g.arc(j[n][0], j[n][1], (4.5 + fresh * 5) * sc, 0, TAU); g.stroke();
-      g.fillStyle = l.st >= 1 ? col : ink; g.beginPath(); g.arc(j[n][0], j[n][1], 2.1 * sc, 0, TAU); g.fill();
+      const j = l.j, n = j.length - 1, col = cols[(i + k) % cols.length], lit = l.lit;
+      g.strokeStyle = lit > .05 ? col : ink; g.lineWidth = .9 + lit * 1.2;
+      g.beginPath(); j.forEach((p, m) => (m ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.stroke();
+      g.fillStyle = lit > .05 ? col : ink;
+      for (let m = 0; m < n; m++) { const a = j[m], b = j[m + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), dots = Math.max(1, Math.floor(L / (5 * sc))); for (let d = 1; d < dots; d++) { const u = d / dots; g.fillRect(a[0] + (b[0] - a[0]) * u - .5, a[1] + (b[1] - a[1]) * u - .5, 1, 1); } }
+      g.strokeStyle = col; g.lineWidth = .8;
+      for (let m = 1; m < n; m++) {
+        const bs = (3.2 + (n - m)) * sc * (1 + lit * .6), a2 = Math.atan2(j[m + 1][1] - j[m][1], j[m + 1][0] - j[m][0]);
+        g.globalAlpha = .22 + lit * .6; g.save(); g.translate(j[m][0], j[m][1]); g.rotate(a2); g.strokeRect(-bs, -bs, bs * 2, bs * 2); g.restore();
+        g.globalAlpha = 1; g.fillStyle = ink; g.beginPath(); g.arc(j[m][0], j[m][1], 1.5, 0, TAU); g.fill();
+      }
+      const fresh = l.landed && t - l.landed < .3 ? 1 - (t - l.landed) / .3 : 0, fx = j[n][0], fy = j[n][1];
+      if (fresh) { g.globalAlpha = fresh * .7; g.strokeStyle = col; g.lineWidth = .8; g.beginPath(); g.arc(fx, fy, (5 + (1 - fresh) * 9) * sc, 0, TAU); g.stroke(); g.globalAlpha = 1; }
+      g.strokeStyle = ink; g.lineWidth = .9; g.beginPath(); g.arc(fx, fy, 3.6 * sc, 0, TAU); g.stroke();
+      g.fillStyle = l.st >= 1 ? col : ink; g.beginPath(); g.arc(fx, fy, 1.4 * sc, 0, TAU); g.fill();
     }));
-    // the spine through the middle of every plate
-    g.strokeStyle = ink; g.lineWidth = 1; g.setLineDash([2, 3]); g.beginPath(); s.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y))); g.stroke(); g.setLineDash([]);
-    // plates, tail first so the head sits on top
-    for (let i = s.length - 1; i >= 0; i--) {
-      const q = s[i], head = i === 0, grow = q.born < 0 ? 1 : 1 - Math.pow(1 - q.born, 3), w = q.w * sc * grow, h = q.h * sc * grow;
+    // spine
+    g.strokeStyle = ink; g.lineWidth = .7; g.globalAlpha = .6; g.setLineDash([1.5, 3]); g.beginPath(); s.forEach((q, i) => (i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y))); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
+    for (let i = N - 1; i >= 0; i--) {
+      const q = s[i], head = i === 0, grow = q.born < 0 ? 1 : 1 - Math.pow(1 - q.born, 3), taper = head ? 1 : 1 - Math.min(.4, (i / N) * .45);
+      const w = q.w * sc * grow * taper, h = q.h * sc * grow * taper, lit = q.lit;
       if (w < .5) continue;
-      const col = cols[i % cols.length], col2 = cols[(i + 1) % cols.length], pop = head ? this.pulse * 3 : 0;
+      const col = cols[i % cols.length], col2 = cols[(i + 2) % cols.length], pop = (head ? this.pulse * 2 : 0) + lit * 2;
       g.save(); g.translate(q.x, q.y); g.rotate(q.a);
-      g.fillStyle = bg; g.strokeStyle = ink; g.lineWidth = 1.5; g.fillRect(-w / 2 - pop, -h / 2 - pop, w + pop * 2, h + pop * 2); g.strokeRect(-w / 2 - pop, -h / 2 - pop, w + pop * 2, h + pop * 2);
+      const W2 = w / 2 + pop, H2 = h / 2 + pop;
+      g.fillStyle = lit > .05 ? col : bg; g.globalAlpha = lit > .05 ? .25 + lit * .6 : 1; g.fillRect(-W2, -H2, W2 * 2, H2 * 2); g.globalAlpha = 1;
+      g.strokeStyle = ink; g.lineWidth = 1.1; g.strokeRect(-W2, -H2, W2 * 2, H2 * 2);
+      // corner ticks just outside the plate
+      const tk = 3 * sc, ox = W2 + 2.5, oy = H2 + 2.5; g.lineWidth = .9; g.strokeStyle = lit > .05 ? col : ink;
+      [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([a, b]) => { g.beginPath(); g.moveTo(a * ox - a * tk, b * oy); g.lineTo(a * ox, b * oy); g.lineTo(a * ox, b * oy - b * tk); g.stroke(); });
       if (head) {
-        // corner brackets, two eyes, and a mouth that opens to eat
-        const b = 5, x0 = w / 2 + 3, y0 = h / 2 + 3; g.lineWidth = 1.5; g.strokeStyle = hot ? "#ff2d4a" : ink;
-        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([sx, sy]) => { g.beginPath(); g.moveTo(sx * x0 - sx * b, sy * y0); g.lineTo(sx * x0, sy * y0); g.lineTo(sx * x0, sy * y0 - sy * b); g.stroke(); });
-        if (sleepy) { g.strokeStyle = ink; g.lineWidth = 1.4; [-1, 1].forEach((sd) => { g.beginPath(); g.arc(w * .18, sd * h * .22, 2.6 * sc, -.3 * Math.PI + Math.PI / 2, .3 * Math.PI + Math.PI / 2); g.stroke(); }); }
-        else { g.fillStyle = hot ? "#ff2d4a" : ink; [-1, 1].forEach((sd) => { g.beginPath(); g.arc(w * .18, sd * h * .22, 2.6 * sc * eye, 0, TAU); g.fill(); }); }
-        g.fillStyle = col; g.fillRect(-w * .38, -h * .3, w * .3, h * .6);
-        if (mouth > 0) { g.fillStyle = ink; g.beginPath(); g.moveTo(w / 2, -h * .25 * mouth); g.lineTo(w / 2 + 7 * mouth, 0); g.lineTo(w / 2, h * .25 * mouth); g.fill(); }
+        // a cluster of eyes, two little palps, mandibles that open to eat
+        const ey = [[.22, -.24, 1.5], [.22, .24, 1.5], [.02, -.32, 1], [.02, .32, 1], [.36, -.08, 1.1], [.36, .08, 1.1], [-.14, -.18, .8], [-.14, .18, .8]];
+        ey.forEach(([ex, ey2, r]) => { const X = ex * w, Y = ey2 * h * 1.6;
+          if (sleepy) { g.strokeStyle = ink; g.lineWidth = .9; g.beginPath(); g.moveTo(X - r * 1.4, Y); g.lineTo(X + r * 1.4, Y); g.stroke(); }
+          else { g.fillStyle = hot ? "#ff2d4a" : ink; g.beginPath(); g.arc(X, Y, r * sc * eye, 0, TAU); g.fill(); } });
+        g.strokeStyle = ink; g.lineWidth = .9;
+        [-1, 1].forEach((sd) => { const sw = Math.sin(t * 6 + sd) * .25, op = mouth * .5;
+          g.beginPath(); g.moveTo(W2, sd * H2 * .6); g.quadraticCurveTo(W2 + 6 * sc, sd * (H2 * .7 + 3 * sc), W2 + 9 * sc, sd * (H2 * .4 + 1 + op * 6) + sw * 3); g.stroke();
+          g.beginPath(); g.moveTo(W2 - 1, sd * H2 * .25); g.lineTo(W2 + 5 * sc, sd * (2 + op * 7) * sc); g.stroke(); });
       } else {
-        // panel detail: a coloured cell, a grid of rivets, a strip
-        const r = q.seed;
-        g.fillStyle = col; g.globalAlpha = .9; g.fillRect(-w / 2 + 2.5, -h / 2 + 2.5, w * .32, h - 5); g.globalAlpha = 1;
-        g.strokeStyle = ink; g.lineWidth = 1; g.strokeRect(-w / 2 + 2.5, -h / 2 + 2.5, w * .32, h - 5);
-        const cx = w * .08, cols2 = 2 + (r % 2 | 0), rows2 = 2;
-        g.fillStyle = (r | 0) % 3 ? ink : col2;
-        for (let a2 = 0; a2 < cols2; a2++) for (let b2 = 0; b2 < rows2; b2++) { g.beginPath(); g.arc(cx + a2 * 4.2 * sc, (b2 - .5) * 5 * sc, 1.1 * sc, 0, TAU); g.fill(); }
-        g.fillStyle = col2; g.fillRect(w / 2 - 4.5, -h / 2 + 2.5, 2, h - 5);
+        // the plate's insides: a grid of little cells, a few lit in colour, and a strip of rivets
+        const cw = (w - 6) / 3, ch = (h - 5) / 2, k0 = q.kind;
+        for (let c = 0; c < 6; c++) { const cx = -w / 2 + 3 + (c % 3) * cw, cy = -h / 2 + 2.5 + Math.floor(c / 3) * ch, v = q.cells[c], on = v > .45 || lit > .05;
+          const flick = .55 + .45 * Math.sin(t * (2 + v * 4) + v * 20);
+          if (on) { g.globalAlpha = (lit > .05 ? 1 : .55 * flick); g.fillStyle = v > .75 ? col2 : col; g.fillRect(cx + .8, cy + .8, cw - 1.6, ch - 1.6); g.globalAlpha = 1; }
+          g.strokeStyle = ink; g.lineWidth = .5; g.globalAlpha = .55; g.strokeRect(cx + .8, cy + .8, cw - 1.6, ch - 1.6); g.globalAlpha = 1; }
+        if (k0 === 1) { g.fillStyle = ink; for (let d = 0; d < 3; d++) { g.beginPath(); g.arc(-w / 2 + 3 + d * cw + cw / 2, 0, .8, 0, TAU); g.fill(); } }
+        if (k0 === 2) { g.strokeStyle = ink; g.lineWidth = .7; g.beginPath(); g.moveTo(-w / 2 + 2, 0); g.lineTo(w / 2 - 2, 0); g.stroke(); }
       }
       g.restore();
     }
   }
 }
-
 // ---- prey: little bugs that wander the page and run from the creature ----
 const KINDS = {
   ant: { pts: 1, r: 4.5, wander: 45, flee: 80, fear: 80, turn: 2.2, legs: 3, col: 0 },

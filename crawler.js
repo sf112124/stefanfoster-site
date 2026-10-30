@@ -127,7 +127,7 @@ export class Crawler {
     this.on = true; this.state = "out"; this.grow = 0; this.rage = 0; this.meter = 0; this.hp = HP; this.hurtAt = 0;
     const up = h.y > innerHeight / 2 ? -1 : 1;                 // it climbs out towards the middle of the page, wherever its hole is
     this.p = { x: h.x, y: h.y }; this.v = { x: -200, y: 260 * up }; this.head = up * Math.PI / 2; this.orbit = Math.random() * 6;
-    this.legs = LEGS.map(chain); this.feel = FEEL.map(chain); this.tail = Array.from({ length: 6 }, () => [h.x, h.y]); this.body = new Creature(h.x, h.y, this.head, 4, { gap: 19 });
+    this.legs = LEGS.map(chain); this.feel = FEEL.map(chain); this.tail = Array.from({ length: 6 }, () => [h.x, h.y]); this.body = new Creature(h.x, h.y, this.head, 5, { gap: 15 });
     [...this.legs, ...this.feel].forEach((l) => { l.fx = l.sx = l.tx = h.x; l.fy = l.sy = l.ty = h.y; l.j.forEach((q) => { q[0] = h.x; q[1] = h.y; }); });
     this.aim = 0; this.cool = 1.2; this.pcool = 2.5; this.pts = []; this.ptsAt = 0; this.m.moved = performance.now();
     this.label("CALL IT BACK"); document.documentElement.classList.add("crawling");
@@ -411,7 +411,7 @@ export class Crawler {
     // the body: a head pulling a chain of plates, every plate on its own pair of legs
     const B = this.body; B.size = Math.max(.05, sc * .95);
     const shake = dying ? rnd(-.9, .9) : this.rage > 1 ? rnd(-1, 1) * (this.rage - 1) : 0, wob = stun ? Math.sin(now / 60) * .5 : held ? Math.sin(now / 90) * .3 : 0;
-    B.update(dt, p.x + shake, p.y + shake, this.head + wob, held ? 0 : speed);
+    B.update(dt, p.x + shake, p.y + shake, this.head + wob, held ? 0 : speed); this.voice(B, W, speed);
     const hot = this.aim > 0 || pounce || carry || this.rage > 1.2 || now - this.hurtAt < 110;
     B.draw(g, { ink, bg, cols, hot, eye: stun ? .5 : held ? 1.6 : 1, mouth: carry || pounce ? 1 : 0 });
     const ex = p.x + ch * 6 * sc, ey = p.y + sh * 6 * sc;
@@ -538,13 +538,20 @@ export class Crawler {
     });
     if (!this.on || this.state === "dying") this.bolts = this.bolts.filter((b) => b.by === "ship");
   }
+  // every footfall ticks, and touching a plate or a leg makes it ring
+  voice(B, W, speed) {
+    const ev = B.events.splice(0);
+    if (speed > 15) for (const e of ev.slice(0, 2)) this.sfx("leg", e.x / W, (e.n - e.i) + (e.side > 0 ? 2 : 0));
+    const hit = B.touch(this.m.x, this.m.y);
+    if (hit) this.sfx(hit.kind === "plate" ? "touch" : "pluck", this.m.x / W, hit.q.i + (hit.l && hit.l.side > 0 ? 3 : 0));
+  }
   // ---- devour: you are the creature. Hunt the bugs, eat the page letter by letter, and don't go hungry ----
   devour() {
     if (this.E.on) return;
     this.ensure();
     const W = innerWidth, H = innerHeight, x = W / 2, y = H * .62;
     let best = 0; try { best = +localStorage.getItem("devour-best") || 0; } catch (e) {}
-    this.E = { on: true, x, y, vx: 0, vy: -60, a: -Math.PI / 2, body: new Creature(x, y, -Math.PI / 2, 3, { gap: 19 }), n: 0, score: 0, best, born: performance.now(), mouth: 0, chewAt: 0, scanAt: 0, dash: 0,
+    this.E = { on: true, x, y, vx: 0, vy: -60, a: -Math.PI / 2, body: new Creature(x, y, -Math.PI / 2, 3, { gap: 15 }), n: 0, score: 0, best, born: performance.now(), mouth: 0, chewAt: 0, scanAt: 0, dash: 0,
       food: 0, bugs: [], spawnAt: 0, pops: [], chars: [], letters: 0, combo: 0, comboAt: 0, over: 0 };
     this.eats.forEach((b) => { b.classList.add("open"); b.querySelector("span").textContent = "STOP EATING"; });
     document.documentElement.classList.add("devouring"); window.__tunEat?.hideAll(); this.sfx("out");
@@ -594,7 +601,7 @@ export class Crawler {
       }
       b.draw(g, { ink, bg, cols }); return true;
     });
-    B.update(dt, E.x, E.y, E.a, speed);
+    B.update(dt, E.x, E.y, E.a, speed); this.voice(B, W, speed);
     E.mouth = Math.max(0, E.mouth - dt * 4);
     B.draw(g, { ink, bg, cols, hot: now - E.chewAt < 180 && !E.over, sleepy: E.over ? 1 : 0, mouth: E.over ? Math.max(0, Math.sin((now - E.over) / 900)) * (now - E.over < 2800 ? 1.4 : .3) : Math.max(E.mouth, .25 + Math.sin(now / 140) * .25) });
     // and the page itself, a letter at a time
