@@ -31,27 +31,31 @@
   .big { display: none; font-size: clamp(40px, 13vw, 76px); font-weight: 600; letter-spacing: -0.055em; line-height: .9; white-space: nowrap; opacity: .92; }
   .sub { margin-top: 0; font-size: 12px; opacity: .6; min-height: 1.2em; white-space: nowrap; }
   .gate {
-    position: fixed; inset: 0; display: grid; place-items: end center; text-align: center;
-    padding: 32px 32px max(9vh, env(safe-area-inset-bottom));
-    transition: opacity .8s; cursor: pointer; background: rgba(11,13,18,.25);
+    position: fixed; inset: 0; display: flex; flex-direction: column; justify-content: space-between;
+    padding: max(20px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+    transition: opacity .8s, transform .8s; cursor: pointer;
   }
+  .gate.gone { transform: scale(1.03); }
+  .gate .top { display: flex; justify-content: space-between; font-size: 12px; letter-spacing: -0.005em; opacity: .62; }
+  .gate .steps { list-style: none; counter-reset: s; margin: 0 0 22px; }
+  .gate .steps li { counter-increment: s; display: grid; grid-template-columns: 30px 1fr; align-items: baseline;
+                    font-size: 16px; line-height: 1.3; letter-spacing: -0.015em; font-weight: 450; padding: 12px 0;
+                    border-top: 1px solid rgba(255,255,255,.16); }
+  .gate .steps li::before { content: counter(s, decimal-leading-zero); font-size: 11px; opacity: .5; font-variant-numeric: tabular-nums; }
+  .gate .go { display: flex; justify-content: space-between; align-items: center; width: 100%; height: 54px; padding: 0 22px;
+              border-radius: 999px; background: rgba(255,255,255,.95); color: #0b0d12; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
   .gate.gone { opacity: 0; pointer-events: none; }
-  .gate h2 { font-size: clamp(44px, 15vw, 88px); font-weight: 600; letter-spacing: -0.055em; line-height: .9; }
-  .gate ol { list-style: none; margin: 26px auto 0; max-width: 30ch; font-size: 14px; line-height: 1.5; opacity: .82; }
-  .gate li + li { margin-top: 8px; }
   .gate .small { margin-top: 18px; font-size: 12px; opacity: .55; line-height: 1.45; max-width: 30ch; margin-left: auto; margin-right: auto; }
   .toast { position: fixed; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translate(-50%, 20px); opacity: 0;
            font-size: 12px; padding: 9px 14px; border-radius: 999px; background: rgba(255,255,255,.14);
            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transition: opacity .5s, transform .5s; pointer-events: none; white-space: nowrap; }
   .toast.on { opacity: 1; transform: translate(-50%, 0); }
-  .gate .tap { margin-top: 32px; display: inline-block; font-size: 14px; font-weight: 600; padding: 13px 22px; border-radius: 999px;
-               background: rgba(255,255,255,.94); color: #0b0d12; }
   .desk { position: fixed; inset: 0; display: none; place-items: center; text-align: center; padding: 40px; }
   .desk h2 { font-size: 64px; font-weight: 600; letter-spacing: -0.055em; line-height: .9; }
   .desk p { margin-top: 16px; font-size: 15px; opacity: .7; }
   .qr { margin: 32px auto 0; width: 156px; height: 156px; padding: 12px; background: #fff; border-radius: 16px; }
   .qr img, .qr canvas { position: static; width: 132px !important; height: 132px !important; }
-  body.thumb .gate, body.thumb .desk, body.thumb .readout, body.thumb #ink { display: none !important; }
+  body.thumb .gate, body.thumb .desk, body.thumb .readout { display: none !important; }
   body.desktop .readout, body.desktop .gate, body.desktop #ink { display: none; }
   body.desktop .desk { display: grid; }
 </style>
@@ -63,13 +67,14 @@
 <div class="readout" id="readout"><div class="big" id="big"></div><div class="sub" id="sub"></div></div>
 
 <div class="gate" id="gate">
+  <div class="top"><span>A phone instrument</span><span>Sound on</span></div>
   <div>
-    <ol aria-label="Tilt">
-      <li>Keep your phone facing you.</li>
-      <li>Tilt left and right to change chords.</li>
-      <li>Strum your screen to play the chord.</li>
+    <ol class="steps" aria-label="Tilt">
+      <li>Keep your phone facing you</li>
+      <li>Tilt left and right to change chords</li>
+      <li>Strum your screen to play the chord</li>
     </ol>
-    <span class="tap">Tap to begin</span>
+    <span class="go">Tap to begin <span>→</span></span>
   </div>
 </div>
 
@@ -323,7 +328,16 @@
   function drawInk(chord, now) {
     ic.setTransform(DPR, 0, 0, DPR, 0, 0);
     ic.clearRect(0, 0, W, H);
-    if (!ctx) return;
+    if (!ctx) {
+      for (const st of strings) {
+        const x = stringX(st.i);
+        const glint = Math.exp(-Math.pow(((now / 2600) % 1.6) - 0.2 - st.i / (STRINGS - 1), 2) * 40);
+        ic.strokeStyle = `rgba(255,255,255,${0.13 + 0.3 * glint})`;
+        ic.lineWidth = 1;
+        ic.beginPath(); ic.moveTo(x, 0); ic.lineTo(x, H); ic.stroke();
+      }
+      return;
+    }
     // the strings: thin lines, bending and glowing where they've been plucked
     ic.save();
     for (const st of strings) {
@@ -587,7 +601,7 @@ void main(){
     if (started) {
       drawWord(wordNow, W / 2, H / 2, 0, Math.min(W * 0.085, 40));
     } else {
-      drawWord('tilt', W / 2, THUMB ? H * 0.5 : H * 0.3, 0, Math.min(W * 0.26, THUMB ? H * 0.34 : 130));
+      drawWord('tilt', W / 2, THUMB ? H * 0.5 : H * 0.34, 0, Math.min(W * 0.3, THUMB ? H * 0.34 : 150));
     }
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, ttex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tc);

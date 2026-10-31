@@ -9,7 +9,7 @@ export const PROJECTS = [
     items: [
       { head: "Anywhere" },
       { file: "anywhere.mp4" },
-      { head: "Tilt (phone only)", text: "A tiny instrument for your phone. Tilt it left and right to change chords, strum the screen to play them." },
+      { head: "Tilt (phone only)" },
       { play: "tilt", img: "play-tilt.webp", sm: "play-tilt-sm.webp", caption: "Tilt (phone only)", note: "Open on your phone" },
       { head: "Poké-folio" },
       { play: "rpg", img: "pokefolio-v4.webp", sm: "pokefolio-v4-sm.webp", caption: "Poké-folio", note: "Press start" },
