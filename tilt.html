@@ -52,14 +52,30 @@
   .qr { margin: 32px auto 0; width: 156px; height: 156px; padding: 12px; background: #fff; border-radius: 16px; }
   .qr img, .qr canvas { position: static; width: 132px !important; height: 132px !important; }
   body.thumb .gate, body.thumb .desk, body.thumb .readout { display: none !important; }
-  body.desktop .readout, body.desktop .gate, body.desktop #ink { display: none; }
+  body.desktop .readout, body.desktop .gate, body.desktop #ink, body.desktop .controls, body.thumb .controls { display: none; }
   body.desktop .desk { display: grid; }
+  .controls { position: fixed; left: 0; right: 0; bottom: max(18px, env(safe-area-inset-bottom)); display: flex; justify-content: center; gap: 6px;
+              padding: 0 12px; opacity: 0; transform: translateY(10px); transition: opacity .8s .4s, transform .8s .4s; pointer-events: none; }
+  .controls.on { opacity: 1; transform: none; pointer-events: auto; }
+  .controls button { font: inherit; font-size: 12px; font-weight: 500; letter-spacing: -0.005em; color: #fff; white-space: nowrap;
+                     padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.4); background: rgba(11,13,18,.32);
+                     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: background .25s, color .25s, border-color .25s, opacity .25s; }
+  .controls button.on { background: rgba(255,255,255,.92); color: #0b0d12; border-color: transparent; }
+  .controls button.wait { animation: wait .5s ease-in-out infinite alternate; }
+  .controls button:disabled { opacity: .35; }
+  @keyframes wait { to { border-color: rgba(255,255,255,.95); background: rgba(255,255,255,.22); } }
 </style>
 </head>
 <body>
 <canvas id="gl"></canvas>
 <canvas id="ink"></canvas>
 <div class="toast" id="toast">Turn on rotation lock for the smoothest ride</div>
+<div class="controls" id="controls">
+  <button data-c="beat">Beat</button>
+  <button data-c="dbl" disabled>Double</button>
+  <button data-c="hats" disabled>Hats only</button>
+  <button data-c="muffle" disabled>Underwater</button>
+</div>
 <div class="readout" id="readout"><div class="big" id="big"></div><div class="sub" id="sub"></div></div>
 
 <div class="gate" id="gate">
@@ -217,13 +233,17 @@
     fxSend.connect(hall); hall.connect(hallGain);
     echo.connect(hall);
     echo.connect(comp); hallGain.connect(comp);
+    comp0 = comp;
+    noiseLong = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    { const d = noiseLong.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    startBeatClock();
     const nb = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
     const nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * (1 - i / nd.length);
     noiseBuf = nb;
   }
 
   // ---------- the harp ----------
-  let harpLp = null, noiseBuf = null;
+  let harpLp = null, noiseBuf = null, comp0 = null, noiseLong = null;
   const STRINGS = 12;
   const strings = Array.from({ length: STRINGS }, (_, i) => ({ i, midi: 60, amp: 0, t0: 0 }));
   const stringX = i => W * (0.09 + 0.82 * i / (STRINGS - 1));
@@ -274,6 +294,108 @@
     fxSend.gain.setTargetAtTime(0, t + 0.5, 0.45);
     rip = [0, 0, 0]; bloom = 1;
   }
+  // ---------- the beat: slow, dark, halftime 808s in the late-night Toronto style ----------
+  const BPM = 120, STEP = 60 / BPM / 4;                     // 16th notes; snare on 3 makes it feel half speed
+  const beat = { on: false, pending: false, dbl: false, hats: false, muffle: false };
+  let beatBus = null, beatLp = null, beatRev = null, clockNext = 0, clockStep = 0, bassHz = 55;
+  const PAT = {
+    half: { kick: [0, 10, 16, 23, 26], snare: [8, 24], hat: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,29,30,31], roll: [30], rim: [14, 30] },
+    dbl:  { kick: [0, 3, 8, 10, 16, 19, 24, 26, 30], snare: [4, 12, 20, 28], hat: [...Array(32).keys()], roll: [14, 22, 30], rim: [] },
+  };
+
+  function startBeatClock() {
+    beatBus = ctx.createGain(); beatBus.gain.value = 0.9;
+    beatLp = ctx.createBiquadFilter(); beatLp.type = 'lowpass'; beatLp.frequency.value = 18000; beatLp.Q.value = 0.7;
+    beatRev = makeReverb(1.8); const rv = ctx.createGain(); rv.gain.value = 0.35;
+    beatLp.connect(beatBus); beatRev.connect(rv); rv.connect(beatBus);
+    beatBus.connect(comp0); beatBus.connect(fxSend);
+    clockNext = ctx.currentTime + 0.1;
+    setInterval(() => {
+      if (!ctx || ctx.state !== 'running') return;
+      while (clockNext < ctx.currentTime + 0.12) {
+        playStep(clockStep, clockNext);
+        clockNext += STEP;
+        clockStep = (clockStep + 1) % 32;
+      }
+    }, 25);
+  }
+
+  function playStep(s, t) {
+    if (beat.pending && s % 16 === 0) { beat.on = true; beat.pending = false; setTimeout(syncButtons, Math.max(0, (t - ctx.currentTime) * 1000)); }
+    if (!beat.on) return;
+    const P = beat.dbl ? PAT.dbl : PAT.half;
+    if (P.hat.includes(s)) {
+      const accent = s % 4 === 2 ? 1 : s % 2 === 0 ? 0.75 : 0.5;
+      hat(t, accent * (0.85 + Math.random() * 0.3));
+      if (P.roll.includes(s)) { hat(t + STEP / 3, 0.45); hat(t + STEP * 2 / 3, 0.55); }   // little triplet rolls
+    }
+    if (beat.hats) return;
+    if (P.kick.includes(s)) eightOhEight(t, s % 16 === 0 ? 1 : 0.85);
+    if (P.snare.includes(s)) clap(t);
+    if (P.rim.includes(s) && Math.random() < 0.7) rim(t);
+  }
+
+  // the 808: a long, tuned sub that follows the root of whatever chord you're on, with a hard click
+  // and a little drive so you can still hear it on phone speakers
+  const drive = (() => { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * 2.6); } return c; })();
+  function eightOhEight(t, vel) {
+    const f = bassHz;
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(f * 2.6, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.05);
+    const sh = ctx.createWaveShaper(); sh.curve = drive;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.75 * vel, t + 0.004);
+    g.gain.setTargetAtTime(0.45 * vel, t + 0.06, 0.15); g.gain.setTargetAtTime(0, t + 0.5, 0.35);
+    o.connect(sh); sh.connect(g); g.connect(beatLp);
+    o.start(t); o.stop(t + 2.2);
+    const k = ctx.createOscillator(); k.type = 'sine';
+    k.frequency.setValueAtTime(180, t); k.frequency.exponentialRampToValueAtTime(50, t + 0.06);
+    const kg = ctx.createGain(); kg.gain.setValueAtTime(0.5 * vel, t); kg.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    k.connect(kg); kg.connect(beatLp); k.start(t); k.stop(t + 0.1);
+  }
+  function noise(t, dur) { const n = ctx.createBufferSource(); n.buffer = noiseLong; n.start(t, Math.random() * 0.5, dur); return n; }
+  function clap(t) {
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 0.9;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t);
+    [0, 0.011, 0.023].forEach(d => { g.gain.setValueAtTime(0.55, t + d); g.gain.setTargetAtTime(0.05, t + d + 0.002, 0.006); });
+    g.gain.setValueAtTime(0.4, t + 0.035); g.gain.setTargetAtTime(0, t + 0.04, 0.09);
+    const n = noise(t, 0.5); n.connect(bp); bp.connect(g); g.connect(beatLp); g.connect(beatRev);
+  }
+  function hat(t, vel) {
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7500;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.16 * vel, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+    const pan = ctx.createStereoPanner(); pan.pan.value = 0.25;
+    const n = noise(t, 0.06); n.connect(hp); hp.connect(g); g.connect(pan); pan.connect(beatLp);
+  }
+  function rim(t) {
+    const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = 1750;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    const pan = ctx.createStereoPanner(); pan.pan.value = -0.35;
+    o.connect(g); g.connect(pan); pan.connect(beatLp); pan.connect(beatRev); o.start(t); o.stop(t + 0.06);
+  }
+
+  function syncButtons() {
+    document.querySelectorAll('#controls button').forEach(b => {
+      const c = b.dataset.c;
+      if (c === 'beat') { b.classList.toggle('on', beat.on); b.classList.toggle('wait', beat.pending); return; }
+      b.disabled = !beat.on && !beat.pending;
+      b.classList.toggle('on', !!beat[c]);
+    });
+  }
+  document.querySelectorAll('#controls button').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    if (!ctx) return;
+    const c = b.dataset.c;
+    if (c === 'beat') {
+      if (beat.on || beat.pending) { beat.on = false; beat.pending = false; }
+      else beat.pending = true;                              // comes in at the top of the next bar
+    } else {
+      beat[c] = !beat[c];
+      if (c === 'muffle') beatLp.frequency.setTargetAtTime(beat.muffle ? 420 : 18000, ctx.currentTime, 0.12);
+    }
+    syncButtons();
+  }));
+
   function gliss() { strings.forEach((st, k) => setTimeout(() => pluck(st, 0.8), k * 32)); }
 
   // strumming: every string your finger crosses gets plucked, harder the faster you move
@@ -281,11 +403,13 @@
   // where your finger is sets the drama: near the bottom is calm, the higher up the screen the more intense
   const dramaAt = y => clamp01((H * 0.88 - y) / (H * 0.72));
   addEventListener('pointerdown', e => {
+    if (e.target.closest && e.target.closest('#controls')) return;
     if (!ctx) return;
     lastPX = e.clientX; lastPY = e.clientY; startY = e.clientY; lastPT = performance.now();
     dramaT = dramaAt(e.clientY);                                  // touching just sets the drama, it never plucks
   });
   addEventListener('pointermove', e => {
+    if (e.target.closest && e.target.closest('#controls')) return;
     if (lastPX === null) return;
     const now = performance.now(), x = e.clientX, y = e.clientY;
     // sliding up the screen builds the drama, the higher you go the more intense
@@ -419,6 +543,7 @@
     startAudio();
     await ctx.resume();
     $('gate').classList.add('gone');
+    $('controls').classList.add('on');
   });
 
   const fs = `
@@ -629,6 +754,7 @@ void main(){
       chordNow = r.f < 0.5 ? r.A : r.B;
       wordNow = chordNow.name;
       window.__tilt = chordNow.name;
+      { let f = Math.pow(2, chordNow.notes[0]); while (f > 62) f /= 2; bassHz = f; }
       $('sub').textContent = r.f > 0.04 && r.f < 0.96 ? r.A.name + '  →  ' + r.B.name : '';
       hueT = slideNow * 0.137; intenT = r.it;
       if (r.index !== lastIndex) { lastIndex = r.index; bloom = 1; }
