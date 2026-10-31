@@ -12,12 +12,13 @@ else if (root) {
   const measure = () => {
     const m = document.createElement("canvas").getContext("2d"); m.font = font(200); const o = {};
     [...new Set(TXT + "ENTER")].concat(["ENTER"]).forEach((ch) => { const t = m.measureText(ch); o[ch] = { l: t.actualBoundingBoxLeft, r: t.actualBoundingBoxRight, a: t.actualBoundingBoxAscent, d: t.actualBoundingBoxDescent }; });
-    // find a point inside the stem of ENTER's first E, for the camera to dive into on the way out
+    // find the stroke closest to the middle of ENTER (the stem of its T), for the camera to push through on the way out
     const c = document.createElement("canvas"), q = o.ENTER, iw = Math.ceil(q.l + q.r), ih = Math.ceil(q.a + q.d); c.width = iw; c.height = ih;
     const cg = c.getContext("2d", { willReadFrequently: true }); cg.font = font(200); cg.fillText("ENTER", q.l, q.a);
-    const row = Math.round(ih * .25), d = cg.getImageData(0, row, iw, 1).data; let a = -1, b = -1;
-    for (let x = 0; x < iw; x++) { const on = d[x * 4 + 3] > 128; if (on && a < 0) a = x; if (!on && a >= 0) { b = x; break; } }
-    o.dive = a >= 0 ? { fx: (a + (b < 0 ? a + 10 : b)) / 2 / iw, fy: .25, fw: Math.max(2, (b < 0 ? 10 : b - a)) / iw } : { fx: .05, fy: .25, fw: .06 };
+    const row = Math.round(ih * .62), d = cg.getImageData(0, row, iw, 1).data, runs = []; let a = -1;
+    for (let x = 0; x <= iw; x++) { const on = x < iw && d[x * 4 + 3] > 128; if (on && a < 0) a = x; if (!on && a >= 0) { runs.push([a, x]); a = -1; } }
+    const mid = runs.sort((m, n) => Math.abs((m[0] + m[1]) / 2 - iw / 2) - Math.abs((n[0] + n[1]) / 2 - iw / 2))[0] || [iw / 2 - 5, iw / 2 + 5];
+    o.dive = { fx: (mid[0] + mid[1]) / 2 / iw, fy: .62, fw: Math.max(2, mid[1] - mid[0]) / iw };
     ink = o;
   };
   document.fonts.load(font(200), TXT + "ENTER").then(measure, measure);
@@ -59,7 +60,7 @@ else if (root) {
     if (!ink) return;
     // like pushing through honey: a small part of the move happens at once, the rest follows slowly and heavily
     const ef = 1 - Math.exp(-dt * 16), es = 1 - Math.exp(-dt * 1.7);
-    for (const c of ["u", "v", "on"]) { const t = P["t" + c]; P[c + "F"] += (t - P[c + "F"]) * ef; P[c + "S"] += (t - P[c + "S"]) * es; P[c] = P[c + "F"] * .28 + P[c + "S"] * .72; }
+    if (!outAt) for (const c of ["u", "v", "on"]) { const t = P["t" + c]; P[c + "F"] += (t - P[c + "F"]) * ef; P[c + "S"] += (t - P[c + "S"]) * es; P[c] = P[c + "F"] * .28 + P[c + "S"] * .72; }
     const ease = 1 - Math.exp(-dt * 7);
 
     const tall = H > W * 1.05, LN = tall ? ["STE", "FAN", "FOS", "TER"] : ["STEFAN", "FOSTER"], n = LN.length, seam = n / 2 - 1;
@@ -69,16 +70,17 @@ else if (root) {
     const rtot = rw.reduce((s, v) => s + v, 0), avail = y1 - y0 - gap * (n - 1), rowsY = [];
     { let y = y0; rw.forEach((w) => { const h = avail * w / rtot; rowsY.push([y, h]); y += h + gap; }); }
     // ENTER: the same type at a fixed size, riding the seam between the two words
-    // on the way out ENTER swells first, shoving the name aside, then the camera dives into the stem of its E
-    const eq = ink.ENTER, easp = (eq.l + eq.r) / (eq.a + eq.d), eh0 = Math.max(18, Math.min(W, H) * .068);
-    const ot = outAt ? (now - outAt) / 1000 : 0, grow = outAt ? Math.min(1, ot / .55) : 0, gE = grow < .5 ? 4 * grow ** 3 : 1 - Math.pow(-2 * grow + 2, 3) / 2;
-    const eh = eh0 + (Math.min(H * .34, (W * .8) / easp) - eh0) * gE, ew = eh * easp;
+    const eq = ink.ENTER, easp = (eq.l + eq.r) / (eq.a + eq.d), eh = Math.max(18, Math.min(W, H) * .068), ew = eh * easp;
+    const ot = outAt ? (now - outAt) / 1000 : 0;
     const seamY = rowsY[seam][0] + rowsY[seam][1] + gap / 2, ex = (W - ew) / 2, ey = seamY - eh / 2;
     Object.assign(btn.style, { left: ex - 8 + "px", top: ey - 8 + "px", width: ew + 16 + "px", height: eh + 16 + "px" });
 
     if (outAt) {
-      const dv = ink.dive, z = Math.max(0, Math.min(1, (ot - .38) / 1.05)), zE = z * z * z;
-      cam.ax = ex + ew * dv.fx; cam.ay = ey + eh * dv.fy; cam.s = Math.exp(Math.log(2.6 * Math.hypot(W, H) / Math.max(1, ew * dv.fw)) * zE);
+      // a slow push straight into the middle of ENTER, gathering speed, everything sliding out past the edges
+      const dv = ink.dive, z = Math.min(1, ot / 2.1), zE = Math.pow(z, 2.4);
+      if (!cam.set) { cam.set = 1; cam.ax = ex + ew * dv.fx; cam.ay = ey + eh * dv.fy; }
+      cam.s = Math.exp(Math.log(2.6 * Math.hypot(W, H) / Math.max(1, ew * dv.fw)) * zE);
+      cam.fade = 1 - Math.min(1, Math.max(0, (z - .04) / .5)) ** 1.2;
       if (z >= 1) { finish(); return; }
     }
     const S = cam.s, X = (v) => cam.ax + (v - cam.ax) * S, Y = (v) => cam.ay + (v - cam.ay) * S;
@@ -109,9 +111,9 @@ else if (root) {
       });
     });
     g.restore();
-    // leaving, ENTER is a hole straight through to the site underneath
-    if (outAt) g.globalCompositeOperation = "destination-out";
-    draw("ENTER", X(ex), Y(ey), ew * S, eh * S); g.globalCompositeOperation = "source-over";
+    // leaving, ENTER becomes a window straight through to the site underneath, its white melting away as we push in
+    if (outAt) { g.globalCompositeOperation = "destination-out"; draw("ENTER", X(ex), Y(ey), ew * S, eh * S); g.globalCompositeOperation = "source-over"; g.globalAlpha = cam.fade; }
+    draw("ENTER", X(ex), Y(ey), ew * S, eh * S); g.globalAlpha = 1;
   }
   function draw(ch, x, y, w, h) {
     const q = ink[ch], iw = q.l + q.r, ih = q.a + q.d; if (w < 1 || h < 1) return;
@@ -123,7 +125,7 @@ else if (root) {
   // in: ENTER swells and shoves the name aside, then you fall through the E into the site
   const enter = () => {
     if (outAt) return;
-    outAt = performance.now(); P.ton = 0; root.classList.add("go"); document.documentElement.classList.remove("splashing");
+    outAt = performance.now(); root.classList.add("go"); document.documentElement.classList.remove("splashing");
     try { sessionStorage.setItem("splashed", "1"); } catch (e) {}
   };
   function finish() { alive = false; removeEventListener("deviceorientation", onTilt); root.remove(); }
