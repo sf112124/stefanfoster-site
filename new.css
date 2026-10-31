@@ -593,3 +593,16 @@ html.devouring canvas.crawl,html.devouring img,html.devouring video{filter:inver
 html.devouring,html.crawling,html.flying{--bg:#fff}
 html.devouring,html.crawling,html.flying{filter:invert(1) hue-rotate(180deg) contrast(1.22)}
 html.devouring canvas.crawl,html.devouring img,html.devouring video,html.crawling canvas.crawl,html.crawling img,html.crawling video,html.flying canvas.crawl,html.flying img,html.flying video{filter:contrast(.82) hue-rotate(180deg) invert(1)}
+
+/* the splash: the name tiled wall to wall in Syne, ENTER in the seam; it lifts away like a sheet when you go in */
+#splash{display:none}
+html.splashing #splash{display:block}
+#splash{position:fixed;inset:0;z-index:10000;background:var(--bg);touch-action:none;transition:transform .85s cubic-bezier(.7,0,.2,1)}
+#splash.go{transform:translateY(-100%)}
+#splash canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#splash .sp-enter{position:absolute;z-index:2;background:none;border:0;padding:0;color:transparent;font-size:1px;cursor:pointer}
+#splash .sp-enter:focus-visible{outline:1px solid var(--ink);outline-offset:2px}
+#splash .sp-hint{position:absolute;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));translate:-50% 0;display:none;background:var(--bg);color:var(--ink);padding:5px 8px;border-radius:20px;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+#splash.ask:not(.asked) .sp-hint{display:block}
+html.splashing,html.splashing body{overflow:hidden}
+html.splashing .cur{display:none}

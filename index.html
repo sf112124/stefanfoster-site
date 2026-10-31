@@ -10,10 +10,12 @@
 <meta name="description" content="Stefan Foster, creative art director in London. Film, AI and 3D.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Syne:wght@800&display=swap">
+<script>try { if (!location.hash && !sessionStorage.getItem("splashed")) document.documentElement.classList.add("splashing"); } catch (e) { if (!location.hash) document.documentElement.classList.add("splashing"); }</script>
 <link rel="stylesheet" href="new.css">
 </head>
 <body data-tunnel>
+<div id="splash" aria-label="Stefan Foster"><canvas aria-hidden="true"></canvas><button class="sp-enter" type="button">Enter</button><span class="sp-hint mono" aria-hidden="true">Tap, then tilt</span></div>
 <div class="grain" aria-hidden="true"></div>
 <div class="cur" id="cur" aria-hidden="true"><span id="curl"></span></div>
 
@@ -59,6 +61,7 @@
   <div class="lb-ui mono"><span id="lbn"></span><span id="lbc"></span><span class="lb-b"><button id="lbp" type="button">Prev</button><button id="lbx" type="button">Close</button><button id="lbnx" type="button">Next</button></span></div>
 </div>
 
+<script type="module" src="splash.js"></script>
 <script type="module" src="new.js"></script>
 </body>
 </html>
