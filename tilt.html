@@ -596,7 +596,7 @@ void main(){
     const speed = Math.abs(vel);
     if (speed > 0.02) lastMove = now;
     expr += (exprT - expr) * 0.12;
-    drama += (dramaT - drama) * (dramaT > drama ? 0.45 : 0.07);   // almost instant in, eases back out when you let go
+    drama += (dramaT - drama) * (dramaT > drama ? 0.07 : 0.06);   // slides in over about half a second, eases back out when you let go
 
     if (THUMB) fallT = H > W ? [0, 1] : [0.32, 0.95];
     else if (!isPhone) fallT = [Math.sin(now / 4000) * 0.6, Math.cos(now / 4000)];
