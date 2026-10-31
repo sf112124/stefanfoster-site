@@ -1,0 +1,14 @@
+{
+  "name": "Tilt",
+  "short_name": "Tilt",
+  "description": "A tiny instrument for your phone.",
+  "start_url": "/tilt",
+  "scope": "/tilt",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0b0d12",
+  "theme_color": "#0b0d12",
+  "icons": [
+    { "src": "/media/ai-experiments/tilt-icon.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

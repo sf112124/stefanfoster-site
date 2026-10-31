@@ -7,23 +7,29 @@
 <title>Tilt — Stefan Foster</title>
 <meta name="description" content="A tiny instrument for your phone. Turn it, tilt it, play it.">
 <link rel="icon" href="/favicon-32.png">
-<link rel="preload" href="/vendor/fonts/instrument-serif-latin-400-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="manifest" href="/tilt.webmanifest">
+<link rel="apple-touch-icon" href="/media/ai-experiments/tilt-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tilt">
+<link rel="preload" href="/vendor/fonts/geist.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-  @font-face { font-family: "Instrument Serif"; font-style: italic; font-weight: 400; font-display: block;
-    src: url(/vendor/fonts/instrument-serif-latin-400-italic.woff2) format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 100 900; font-display: block;
+    src: url(/vendor/fonts/geist.woff2) format("woff2"); }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0b0d12; }
   body {
     color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: "Geist", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
   #ink { pointer-events: none; }
-  .readout { position: fixed; left: 50%; top: 50%; text-align: center; pointer-events: none; will-change: transform; }
+  .readout { position: fixed; left: 50%; top: calc(50% + 30px); text-align: center; pointer-events: none; will-change: transform; }
   .big { display: none; font-size: clamp(40px, 13vw, 76px); font-weight: 600; letter-spacing: -0.055em; line-height: .9; white-space: nowrap; opacity: .92; }
-  .sub { margin-top: 74px; font-size: 12px; opacity: .6; min-height: 1.2em; white-space: nowrap; }
+  .sub { margin-top: 0; font-size: 12px; opacity: .6; min-height: 1.2em; white-space: nowrap; }
   .gate {
     position: fixed; inset: 0; display: grid; place-items: end center; text-align: center;
     padding: 32px 32px max(9vh, env(safe-area-inset-bottom));
@@ -33,6 +39,11 @@
   .gate h2 { font-size: clamp(44px, 15vw, 88px); font-weight: 600; letter-spacing: -0.055em; line-height: .9; }
   .gate ol { list-style: none; margin: 26px auto 0; max-width: 30ch; font-size: 14px; line-height: 1.5; opacity: .82; }
   .gate li + li { margin-top: 8px; }
+  .gate .small { margin-top: 18px; font-size: 12px; opacity: .55; line-height: 1.45; max-width: 30ch; margin-left: auto; margin-right: auto; }
+  .toast { position: fixed; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translate(-50%, 20px); opacity: 0;
+           font-size: 12px; padding: 9px 14px; border-radius: 999px; background: rgba(255,255,255,.14);
+           backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transition: opacity .5s, transform .5s; pointer-events: none; white-space: nowrap; }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
   .gate .tap { margin-top: 32px; display: inline-block; font-size: 14px; font-weight: 600; padding: 13px 22px; border-radius: 999px;
                background: rgba(255,255,255,.94); color: #0b0d12; }
   .desk { position: fixed; inset: 0; display: none; place-items: center; text-align: center; padding: 40px; }
@@ -48,6 +59,7 @@
 <body>
 <canvas id="gl"></canvas>
 <canvas id="ink"></canvas>
+<div class="toast" id="toast">Turn on rotation lock for the smoothest ride</div>
 <div class="readout" id="readout"><div class="big" id="big"></div><div class="sub" id="sub"></div></div>
 
 <div class="gate" id="gate">
@@ -55,7 +67,9 @@
     <ol aria-label="Tilt">
       <li>Turn your phone like a steering wheel, upright to upside down, to glide through the chords.</li>
       <li>Tilt the top back to open it up. Tip it forward to hush it.</li>
+      <li>Tap or shake to strum.</li>
     </ol>
+    <p class="small">Turn on rotation lock first so the screen stays put.<span id="a2hs"><br>For full screen: Share, then Add to Home Screen.</span></p>
     <span class="tap">Tap to begin</span>
   </div>
 </div>
@@ -114,6 +128,9 @@
   let exprT = 0.4, expr = 0.4;                          // tilt-back expression 0..1
   let level = 0, low = 0, hue = 0, hueT = 0, inten = 0.6, intenT = 0.6, textRot = 0;
   let slideNow = 0;
+  let bloom = 0, rip = [0, 0, 99], lastStrum = 0, lastIndex = 0;
+  const standalone = navigator.standalone || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+  if (standalone) $('a2hs').remove();
 
   // ---------- phone motion ----------
   function onMotion(e) {
@@ -127,6 +144,14 @@
     if (m2 > 0.2 * mag) {
       fallT = [fx / m2, -fy / m2];                                       // screen coords, y down
       target = Math.acos(Math.max(-1, Math.min(1, fallT[1]))) / Math.PI; // steering-wheel turn: upright 0 -> upside down 1
+    }
+    // shake: slosh the slime, and a hard shake strums the chord
+    const a = e.acceleration;
+    if (a && a.x != null) {
+      const sx = (a.x || 0) * -gSign, sy = (a.y || 0) * gSign;
+      slime.vx += sx * 0.05; slime.vy += sy * 0.05;
+      const am = Math.hypot(a.x || 0, a.y || 0, a.z || 0);
+      if (am > 13 && ctx && performance.now() - lastStrum > 700) { strum(0.9, W / 2, H / 2); }
     }
     const back = ((g.z || 0) * gSign) / mag;                             // + when the screen tilts back toward the sky
     exprT = clamp01(0.4 + back * 0.9);
@@ -156,6 +181,32 @@
     comp.connect(analyser);
     tbuf = new Float32Array(analyser.fftSize); fbuf = new Uint8Array(analyser.frequencyBinCount);
     chords = Chords();
+  }
+
+  // A soft glassy strum up through the chord you're on, with a ripple through the slime where you touched.
+  function strum(vel, x, y) {
+    if (!ctx) return;
+    const now = performance.now();
+    lastStrum = now; lastMove = now;
+    bloom = Math.max(bloom, 0.6 * vel);
+    rip = [(x / W - 0.5) * (W / H), y / H - 0.5, 0];
+    const c = chordAt(Math.round(slideNow));
+    const notes = c.notes.slice(1).map(l => Math.round(12 * (l - Math.log2(440)) + 69)).map(m => m < 64 ? m + 12 : m).sort((a, b) => a - b);
+    const t0 = ctx.currentTime + 0.01;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800 + 5000 * expr; lp.connect(bus);
+    notes.forEach((m, i) => {
+      const t = t0 + i * 0.055;
+      const f = midiHz(m);
+      const o1 = ctx.createOscillator(); o1.type = 'triangle'; o1.frequency.value = f;
+      const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2;
+      const g1 = ctx.createGain(), g2 = ctx.createGain(), pan = ctx.createStereoPanner();
+      pan.pan.value = -0.7 + 1.4 * i / Math.max(1, notes.length - 1);
+      const peak = 0.07 * vel;
+      g1.gain.setValueAtTime(0, t); g1.gain.linearRampToValueAtTime(peak, t + 0.006); g1.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+      g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(peak * 0.35, t + 0.004); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+      o1.connect(g1); o2.connect(g2); g1.connect(pan); g2.connect(pan); pan.connect(lp);
+      o1.start(t); o2.start(t); o1.stop(t + 2.6); o2.stop(t + 0.8);
+    });
   }
 
   // The chord pad: 8 voices x 3 detuned saws, sliding between chords as the phone turns.
@@ -201,7 +252,7 @@
         const cutoff = (500 + 1500 * it + 2600 * clamp01(speed / 0.45) * it) * (0.45 + 1.6 * ex);
         lp.frequency.setTargetAtTime(Math.min(cutoff, 14000), t, 0.06);
         out.gain.setTargetAtTime(active ? (0.5 + 0.45 * it) * (0.35 + 0.75 * ex) : 0, t, active ? 0.15 : 1.0);
-        return { A, B, f, it };
+        return { A, B, f, it, index };
       }
     };
   }
@@ -225,7 +276,7 @@
     return { x: dx * fr.cs + dy * fr.sn, y: -dx * fr.sn + dy * fr.cs };
   };
 
-  addEventListener('pointerdown', e => { if (!ctx) return; touch.on = true; touch.x = e.clientX; touch.y = e.clientY; });
+  addEventListener('pointerdown', e => { if (!ctx) return; strum(1, e.clientX, e.clientY); });
   addEventListener('pointermove', e => { if (touch.on) { touch.x = e.clientX; touch.y = e.clientY; } });
   addEventListener('pointerup', () => touch.on = false);
   addEventListener('pointercancel', () => touch.on = false);
@@ -250,7 +301,6 @@
     window.addEventListener('devicemotion', onMotion);
     startAudio();
     await ctx.resume();
-    circle.x = W / 2; circle.y = H * 0.72;
     $('gate').classList.add('gone');
   });
 
@@ -258,7 +308,8 @@
 precision highp float;
 varying vec2 uv;
 uniform vec2 res;
-uniform float time, level, low, hue, inten;
+uniform float time, level, low, hue, inten, bloom;
+uniform vec3 rip;
 uniform vec2 fall, stretch, drag;
 uniform sampler2D txt;
 
@@ -300,7 +351,7 @@ void main(){
   vec2 g = fall;
 
   // The dark core floats up away from gravity, so the colour pools wherever "down" is.
-  vec2 c = -g * (0.16 + 0.03 * low);
+  vec2 c = -g * (0.26 + 0.06 * low + 0.04 * bloom);
   vec2 p = q - c;
   // It sags and stretches with the flip, like something heavy and slow.
   vec2 sdir = length(stretch) > 1e-4 ? normalize(stretch) : vec2(0.0, 1.0);
@@ -319,14 +370,20 @@ void main(){
   d -= lobes * 0.07 + sag * (0.05 + 0.08 * s) + side * 0.02;
 
   // How far out from the core we are, in the glow band. The sound swells the band.
-  float band = 0.20 + 0.06 * level + 0.05 * low + 0.03 * inten;
+  // a tap sends a ring through the slime
+  float rd = length(q - rip.xy);
+  float ring = exp(-pow((rd - rip.z * 0.55) * 7.0, 2.0)) * exp(-rip.z * 1.4);
+  d -= ring * 0.06;
+  float band = 0.20 + 0.10 * level + 0.09 * low + 0.07 * inten + 0.10 * bloom;
   float t = smoothstep(-0.10, band, d);
   t = pow(t, 0.9);
   t += (big(q * 1.4 + vec2(time * 0.03, -time * 0.02)) - 0.5) * 0.12 * t;   // slow marbling inside the colour
 
   float mood = 0.5 + 0.5 * sin(hue * 6.28318);
   vec3 col = mix(ramp(t), ramp2(t), mood * 0.55);
-  col *= 0.88 + 0.25 * level;
+  t += ring * 0.35;
+  col = mix(ramp(clamp(t, 0.0, 1.0)), ramp2(clamp(t, 0.0, 1.0)), mood * 0.55);
+  col *= 0.86 + 0.4 * level + 0.25 * bloom;
 
   // The words are made of the same slow stuff as the colour: when you turn the phone they lag,
   // smear and sink a little, like sand sliding through water, then settle back into letters.
@@ -371,9 +428,9 @@ void main(){
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-  const FONT = '"Instrument Serif", Georgia, serif';
+  const FONT = '"Geist", -apple-system, Helvetica, sans-serif';
   let fontReady = false;
-  document.fonts?.load(`italic 64px ${FONT}`).then(() => fontReady = true).catch(() => fontReady = true);
+  document.fonts?.load(`500 64px ${FONT}`).then(() => fontReady = true).catch(() => fontReady = true);
   setTimeout(() => fontReady = true, 2500);
   let wordNow = 'tilt';
   let wordBlur = 0;
@@ -384,13 +441,14 @@ void main(){
     if (!fontReady) return;
     tx.setTransform(sx, 0, 0, sx, 0, 0);
     tx.translate(x, y); tx.rotate(rot);
-    tx.font = `italic 400 ${size}px ${FONT}`;
+    tx.font = `${size > 80 ? 600 : 500} ${size}px ${FONT}`;
+    try { tx.letterSpacing = `${(-0.04 * size).toFixed(1)}px`; } catch (_) {}
     tx.textAlign = 'center'; tx.textBaseline = 'middle';
     tx.filter = wordBlur > 0.3 ? `blur(${wordBlur.toFixed(1)}px)` : 'none';   // the faster it moves, the softer it gets
     tx.fillStyle = '#fff';
     tx.fillText(word, 0, 0);
   }
-  const uDrag = U('drag'), uTxt = U('txt');
+  const uDrag = U('drag'), uTxt = U('txt'), uBloom = U('bloom'), uRip = U('rip');
   const uRes = U('res'), uTime = U('time'), uLevel = U('level'), uLow = U('low'), uHue = U('hue'), uInten = U('inten'), uFall = U('fall'), uStretch = U('stretch');
 
   function resize() {
@@ -405,6 +463,11 @@ void main(){
     if (!circle.x) { circle.x = W / 2; circle.y = H * 0.72; }
   }
   addEventListener('resize', resize); resize();
+  let toasted = false;
+  addEventListener('resize', () => {
+    if (!ctx || toasted || innerWidth <= innerHeight) return;
+    toasted = true; $('toast').classList.add('on'); setTimeout(() => $('toast').classList.remove('on'), 4200);
+  });
 
   // ---------- frame loop ----------
   const t0 = performance.now();
@@ -422,7 +485,7 @@ void main(){
     else if (!isPhone) fallT = [Math.sin(now / 4000) * 0.6, Math.cos(now / 4000)];
     fallFast[0] += (fallT[0] - fallFast[0]) * 0.2; fallFast[1] += (fallT[1] - fallFast[1]) * 0.2;
     const ff = Math.hypot(fallFast[0], fallFast[1]) || 1; fallFast[0] /= ff; fallFast[1] /= ff;
-    const k = 7, damp = 3.2;
+    const k = 16, damp = 4.2;
     slime.vx += ((fallT[0] - slime.x) * k - slime.vx * damp) * dt;
     slime.vy += ((fallT[1] - slime.y) * k - slime.vy * damp) * dt;
     slime.x += slime.vx * dt; slime.y += slime.vy * dt;
@@ -449,6 +512,7 @@ void main(){
       wordNow = chordNow.name;
       $('sub').textContent = r.f > 0.04 && r.f < 0.96 ? r.A.name + '  →  ' + r.B.name : '';
       hueT = slideNow * 0.137; intenT = r.it;
+      if (r.index !== lastIndex) { lastIndex = r.index; bloom = 1; strum(0.45, W / 2, H / 2); }
     }
     drawInk(chordNow, now);
 
@@ -462,22 +526,24 @@ void main(){
     // and float it toward the real-world top, out of the circle's way
     const fr2 = worldFrame();
     const up = 0;   // centre stage now the lead is gone
-    $('readout').style.transform = `translate(${-Math.sin(-textRot) * up}px, ${-Math.cos(textRot) * up}px) translate(-50%, -50%) rotate(${textRot}rad)`;
+    $('readout').style.transform = 'translate(-50%, 0)';
 
     gl.uniform2f(uRes, canvas.width, canvas.height);
     gl.uniform1f(uTime, (now - t0) / 1000);
     gl.uniform1f(uLevel, level); gl.uniform1f(uLow, low);
     gl.uniform1f(uHue, hue); gl.uniform1f(uInten, inten * (0.6 + 0.6 * expr));
     gl.uniform2f(uFall, slime.x / sl, slime.y / sl);
-    gl.uniform2f(uStretch, slime.vx * 0.35, slime.vy * 0.35);
+    gl.uniform2f(uStretch, slime.vx * 0.6, slime.vy * 0.6);
+    bloom *= Math.exp(-dt / 0.9);
+    rip[2] += dt;
+    gl.uniform1f(uBloom, bloom); gl.uniform3f(uRip, rip[0], rip[1], rip[2]);
     // the word: "tilt" until you start, then the chord, upright in the real world
     wordBlur += (Math.min(Math.hypot(slime.vx, slime.vy) * 6, 5) - wordBlur) * 0.2;
     const started = !!ctx && !THUMB;
     if (started) {
-      const cx = W / 2 - Math.sin(-textRot) * up, cy = H / 2 - Math.cos(textRot) * up;
-      drawWord(wordNow, cx, cy, textRot, Math.min(W * 0.17, 92));
+      drawWord(wordNow, W / 2, H / 2, 0, Math.min(W * 0.085, 40));
     } else {
-      drawWord('tilt', W / 2, THUMB ? H * 0.5 : H * 0.3, 0, Math.min(W * 0.42, THUMB ? H * 0.62 : 230));
+      drawWord('tilt', W / 2, THUMB ? H * 0.5 : H * 0.3, 0, Math.min(W * 0.26, THUMB ? H * 0.34 : 130));
     }
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, ttex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tc);
