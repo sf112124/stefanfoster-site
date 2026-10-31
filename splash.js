@@ -12,6 +12,12 @@ else if (root) {
   const measure = () => {
     const m = document.createElement("canvas").getContext("2d"); m.font = font(200); const o = {};
     [...new Set(TXT + "ENTER")].concat(["ENTER"]).forEach((ch) => { const t = m.measureText(ch); o[ch] = { l: t.actualBoundingBoxLeft, r: t.actualBoundingBoxRight, a: t.actualBoundingBoxAscent, d: t.actualBoundingBoxDescent }; });
+    // find a point inside the stem of ENTER's first E, for the camera to dive into on the way out
+    const c = document.createElement("canvas"), q = o.ENTER, iw = Math.ceil(q.l + q.r), ih = Math.ceil(q.a + q.d); c.width = iw; c.height = ih;
+    const cg = c.getContext("2d", { willReadFrequently: true }); cg.font = font(200); cg.fillText("ENTER", q.l, q.a);
+    const row = Math.round(ih * .25), d = cg.getImageData(0, row, iw, 1).data; let a = -1, b = -1;
+    for (let x = 0; x < iw; x++) { const on = d[x * 4 + 3] > 128; if (on && a < 0) a = x; if (!on && a >= 0) { b = x; break; } }
+    o.dive = a >= 0 ? { fx: (a + (b < 0 ? a + 10 : b)) / 2 / iw, fy: .25, fw: Math.max(2, (b < 0 ? 10 : b - a)) / iw } : { fx: .05, fy: .25, fw: .06 };
     ink = o;
   };
   document.fonts.load(font(200), TXT + "ENTER").then(measure, measure);
@@ -46,7 +52,7 @@ else if (root) {
   const needsAsk = !!(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function");
   if (matchMedia("(hover: none)").matches) { if (needsAsk) root.classList.add("ask"); else { asked = true; addEventListener("deviceorientation", onTilt); } }
 
-  const cut = {}; let last = performance.now();
+  const cut = {}; let last = performance.now(), outAt = 0, cam = { ax: 0, ay: 0, s: 1 };
   function frame(now) {
     if (!alive) return; requestAnimationFrame(frame);
     const dt = Math.min(.05, (now - last) / 1000); last = now;
@@ -63,12 +69,23 @@ else if (root) {
     const rtot = rw.reduce((s, v) => s + v, 0), avail = y1 - y0 - gap * (n - 1), rowsY = [];
     { let y = y0; rw.forEach((w) => { const h = avail * w / rtot; rowsY.push([y, h]); y += h + gap; }); }
     // ENTER: the same type at a fixed size, riding the seam between the two words
-    const eh = Math.max(18, Math.min(W, H) * .068), eq = ink.ENTER, ew = eh * (eq.l + eq.r) / (eq.a + eq.d);
+    // on the way out ENTER swells first, shoving the name aside, then the camera dives into the stem of its E
+    const eq = ink.ENTER, easp = (eq.l + eq.r) / (eq.a + eq.d), eh0 = Math.max(18, Math.min(W, H) * .068);
+    const ot = outAt ? (now - outAt) / 1000 : 0, grow = outAt ? Math.min(1, ot / .55) : 0, gE = grow < .5 ? 4 * grow ** 3 : 1 - Math.pow(-2 * grow + 2, 3) / 2;
+    const eh = eh0 + (Math.min(H * .34, (W * .8) / easp) - eh0) * gE, ew = eh * easp;
     const seamY = rowsY[seam][0] + rowsY[seam][1] + gap / 2, ex = (W - ew) / 2, ey = seamY - eh / 2;
     Object.assign(btn.style, { left: ex - 8 + "px", top: ey - 8 + "px", width: ew + 16 + "px", height: eh + 16 + "px" });
 
-    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H); g.fillStyle = INK; g.font = font(200);
-    g.save(); g.beginPath(); g.rect(0, 0, W, H); g.rect(ex - gap, ey - gap, ew + gap * 2, eh + gap * 2); g.clip("evenodd");
+    if (outAt) {
+      const dv = ink.dive, z = Math.max(0, Math.min(1, (ot - .38) / 1.05)), zE = z * z * z;
+      cam.ax = ex + ew * dv.fx; cam.ay = ey + eh * dv.fy; cam.s = Math.exp(Math.log(2.6 * Math.hypot(W, H) / Math.max(1, ew * dv.fw)) * zE);
+      if (z >= 1) { finish(); return; }
+    }
+    const S = cam.s, X = (v) => cam.ax + (v - cam.ax) * S, Y = (v) => cam.ay + (v - cam.ay) * S;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+    if (outAt) { g.fillStyle = "#000"; g.fillRect(0, 0, W, H); }
+    g.fillStyle = INK; g.font = font(200);
+    g.save(); g.beginPath(); g.rect(0, 0, W, H); g.rect(X(ex - gap), Y(ey - gap), (ew + gap * 2) * S, (eh + gap * 2) * S); g.clip("evenodd");
     LN.forEach((word, r) => {
       // across the line: each letter's own width, swollen where the pointer is (judged from its resting place, so nothing chases itself)
       const chars = [...word], nat = chars.map(aspect), ntot = nat.reduce((s, v) => s + v, 0);
@@ -88,11 +105,13 @@ else if (root) {
         cut[key] = cut[key] ?? (over ? 1 : 0); cut[key] += ((over ? 1 : 0) - cut[key]) * (1 - Math.exp(-dt * 22));
         const f = cut[key] * cut[key] * (3 - 2 * cut[key]);
         if (f > 0) { if (r === seam) h -= f * (ry + rh - (ey - gap)); else if (r === seam + 1) { const c = ey + eh + gap - ry; y += f * c; h -= f * c; } }
-        draw(ch, x, y, w, h);
+        draw(ch, X(x), Y(y), w * S, h * S);
       });
     });
     g.restore();
-    draw("ENTER", ex, ey, ew, eh);
+    // leaving, ENTER is a hole straight through to the site underneath
+    if (outAt) g.globalCompositeOperation = "destination-out";
+    draw("ENTER", X(ex), Y(ey), ew * S, eh * S); g.globalCompositeOperation = "source-over";
   }
   function draw(ch, x, y, w, h) {
     const q = ink[ch], iw = q.l + q.r, ih = q.a + q.d; if (w < 1 || h < 1) return;
@@ -101,13 +120,15 @@ else if (root) {
   }
   requestAnimationFrame(frame);
 
-  // in: the whole sheet lifts away like a page being pulled up
+  // in: ENTER swells and shoves the name aside, then you fall through the E into the site
   const enter = () => {
-    if (root.classList.contains("go")) return;
-    root.classList.add("go"); document.documentElement.classList.remove("splashing");
+    if (outAt) return;
+    outAt = performance.now(); P.ton = 0; root.classList.add("go"); document.documentElement.classList.remove("splashing");
     try { sessionStorage.setItem("splashed", "1"); } catch (e) {}
-    setTimeout(() => { alive = false; removeEventListener("deviceorientation", onTilt); root.remove(); }, 900);
   };
+  function finish() { alive = false; removeEventListener("deviceorientation", onTilt); root.remove(); }
   btn.addEventListener("click", enter);
-  addEventListener("keydown", (e) => { if (root.isConnected && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); enter(); } });
+  // keys belong to the splash while it's up: Enter or Space lets you in, and nothing reaches the site underneath
+  const keys = (e) => { if (!root.isConnected) return removeEventListener("keydown", keys, true); e.stopImmediatePropagation(); if (e.key === "Enter" || e.key === " ") { e.preventDefault(); enter(); } };
+  addEventListener("keydown", keys, true);
 }
