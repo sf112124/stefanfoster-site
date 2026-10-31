@@ -145,7 +145,8 @@
   // People rarely hold a phone perfectly upright or perfectly flat, so the sweep runs from about 20 degrees
   // back (how you naturally hold it) to about 58 degrees back, and anything past either end counts as the end.
   const TILT_FROM = 22 * Math.PI / 180, TILT_TO = 58 * Math.PI / 180;
-  let master = null, duck = null;
+  let master = null, duck = null, outNode = null;
+  window.__tiltAudio = () => ({ ctx, master: outNode });   // lets a test harness record the output
   let chaos = 0, dramaT = 0, drama = 0, fxSend = null, vibAmt = null;
   // one palette per chord, dark core to bright edge, in the same order as the progression
   const PALS = [
@@ -209,7 +210,10 @@
     const reverb = makeReverb(), wet = ctx.createGain(); wet.gain.value = 0.5;
     bus.connect(idleGain); bus.connect(reverb); reverb.connect(wet); wet.connect(idleGain);
     duck = ctx.createGain(); duck.connect(comp);                 // everything melodic runs through here, so the kick can push it down
-    idleGain.connect(duck); master = ctx.createGain(); comp.connect(master); master.connect(ctx.destination);
+    idleGain.connect(duck); master = ctx.createGain(); comp.connect(master);
+    const limiter = ctx.createDynamicsCompressor(); limiter.threshold.value = -4; limiter.knee.value = 2; limiter.ratio.value = 20; limiter.attack.value = 0.002; limiter.release.value = 0.12;
+    const trim = ctx.createGain(); trim.gain.value = 0.8;
+    master.connect(trim); trim.connect(limiter); limiter.connect(ctx.destination); outNode = limiter;
     analyser = ctx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.6;
     comp.connect(analyser);
     tbuf = new Float32Array(analyser.fftSize); fbuf = new Uint8Array(analyser.frequencyBinCount);
@@ -296,21 +300,37 @@
     fxSend.gain.setTargetAtTime(0, t + 0.5, 0.45);
     rip = [0, 0, 0]; bloom = 1;
   }
-  // ---------- the beat: slow, dark, halftime 808s in the late-night Toronto style ----------
-  const BPM = 120, STEP = 60 / BPM / 4;                     // 16th notes; snare on 3 makes it feel half speed
+  // ---------- the beat: low-key, late-night, swung and filtered dark ----------
+  // 120 BPM with the snare on 3, so it sits at a slow halftime crawl. Everything off the grid is pushed
+  // late (swing), the snare leans back, and the whole kit lives behind a dark filter with vinyl crackle under it.
+  const BPM = 120, STEP = 60 / BPM / 4, SWING = 0.24, DARK = 9500;
   const beat = { on: false, pending: false, dbl: false, hats: false, muffle: false };
-  let beatBus = null, beatLp = null, beatRev = null, clockNext = 0, clockStep = 0, bassHz = 55;
+  let beatBus = null, beatLp = null, beatRev = null, drumBus = null, clockNext = 0, clockStep = 0, bassHz = 55, lastBassHz = 55, barN = 0;
+  let crackleOn = false;
+  const evens = [...Array(16).keys()].map(i => i * 2), odds = evens.map(i => i + 1);
   const PAT = {
-    half: { kick: [0, 10, 16, 23, 26], snare: [8, 24], hat: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,29,30,31], roll: [30], rim: [14, 30] },
-    dbl:  { kick: [0, 3, 8, 10, 16, 19, 24, 26, 30], snare: [4, 12, 20, 28], hat: [...Array(32).keys()], roll: [14, 22, 30], rim: [] },
+    half: {
+      knock: [0, 11, 16, 26],
+      bass:  [[0, 0, 1.5], [11, 0, 0.45], [16, 0, 1.3], [26, 7, 0.8, true]],   // [step, semitones over the root, length, glide in]
+      snap:  [8, 24], ghost: [31],
+      hat:   [2, 6, 10, 14, 18, 22, 26, 30], hatGhost: [7, 13, 23, 27], roll: [28],
+      shaker: odds, wood: [6, 19], open: [14],
+    },
   };
 
   function startBeatClock() {
-    beatBus = ctx.createGain(); beatBus.gain.value = 0.9;
-    beatLp = ctx.createBiquadFilter(); beatLp.type = 'lowpass'; beatLp.frequency.value = 18000; beatLp.Q.value = 0.7;
-    beatRev = makeReverb(1.8); const rv = ctx.createGain(); rv.gain.value = 0.35;
-    beatLp.connect(beatBus); beatRev.connect(rv); rv.connect(beatBus);
+    beatBus = ctx.createGain(); beatBus.gain.value = 0.42;
+    beatLp = ctx.createBiquadFilter(); beatLp.type = 'lowpass'; beatLp.frequency.value = DARK; beatLp.Q.value = 0.5;
+    const glue = ctx.createDynamicsCompressor(); glue.threshold.value = -18; glue.ratio.value = 3; glue.attack.value = 0.01; glue.release.value = 0.2;
+    drumBus = ctx.createGain();
+    drumBus.connect(glue); glue.connect(beatLp); beatLp.connect(beatBus);
+    // a dark plate for the snap and perc
+    beatRev = makeReverb(2.6);
+    const revLp = ctx.createBiquadFilter(); revLp.type = 'lowpass'; revLp.frequency.value = 3200;
+    const rv = ctx.createGain(); rv.gain.value = 0.55;
+    beatRev.connect(revLp); revLp.connect(rv); rv.connect(beatLp);
     beatBus.connect(comp0); beatBus.connect(fxSend);
+    startCrackle();
     clockNext = ctx.currentTime + 0.1;
     setInterval(() => {
       if (!ctx || ctx.state !== 'running') return;
@@ -318,65 +338,144 @@
         playStep(clockStep, clockNext);
         clockNext += STEP;
         clockStep = (clockStep + 1) % 32;
+        if (clockStep === 0) barN++;
       }
     }, 25);
   }
 
-  function playStep(s, t) {
-    if (beat.pending && s % 16 === 0) { beat.on = true; beat.pending = false; setTimeout(syncButtons, Math.max(0, (t - ctx.currentTime) * 1000)); }
+  function playStep(s, t0) {
+    if (beat.pending && s % 16 === 0) { beat.on = true; beat.pending = false; setTimeout(syncButtons, Math.max(0, (t0 - ctx.currentTime) * 1000)); }
+    crackleOn = beat.on;
     if (!beat.on) return;
-    const P = beat.dbl ? PAT.dbl : PAT.half;
-    if (P.hat.includes(s)) {
-      const accent = s % 4 === 2 ? 1 : s % 2 === 0 ? 0.75 : 0.5;
-      hat(t, accent * (0.85 + Math.random() * 0.3));
-      if (P.roll.includes(s)) { hat(t + STEP / 3, 0.45); hat(t + STEP * 2 / 3, 0.55); }   // little triplet rolls
+    const P = PAT.half;                                               // Double only touches the hats
+    const t = t0 + (s % 2 ? SWING * STEP : 0);                       // swing the off 16ths
+    const hum = () => (Math.random() - 0.5) * 0.008;
+
+    if (beat.dbl) {
+      // hats at double speed: every 16th, plus a 32nd in between, with triplet rolls at the ends of phrases
+      hat(t + hum(), (s % 4 === 2 ? 0.8 : s % 2 === 0 ? 0.6 : 0.42) * (0.85 + Math.random() * 0.3), false);
+      hat(t + STEP / 2 + hum(), 0.22 + Math.random() * 0.08, false);
+      if ((s === 14 || s === 30) && barN % 2 === 1) { for (let k = 1; k < 4; k++) hat(t + STEP * k / 3, 0.25 + 0.12 * k, false); }
+    } else {
+      if (P.hat.includes(s)) hat(t + hum(), (s % 4 === 2 ? 0.8 : 0.6) * (0.85 + Math.random() * 0.3), P.open.includes(s) && Math.random() < 0.6);
+      if (P.hatGhost.includes(s) && Math.random() < 0.8) hat(t + hum(), 0.28, false);
+      if (P.roll.includes(s) && barN % 2 === 1) { for (let k = 1; k < 4; k++) hat(t + STEP * k / 3, 0.25 + 0.12 * k, false); }
     }
+    if (P.shaker.includes(s)) shaker(t + hum(), s % 4 === 3 ? 0.9 : 0.55);
     if (beat.hats) return;
-    if (P.kick.includes(s)) eightOhEight(t, s % 16 === 0 ? 1 : 0.85);
-    if (P.snare.includes(s)) clap(t);
-    if (P.rim.includes(s) && Math.random() < 0.7) rim(t);
+
+    if (P.knock.includes(s)) knock(t, s % 16 === 0 ? 1 : 0.8);
+    const bn = P.bass.find(b => b[0] === s);
+    if (bn) eightOhEight(t, bn[1], bn[2], !!bn[3]);
+    if (P.snap.includes(s)) snap(t + 0.014, 1);                     // the snare leans back a touch
+    if (P.ghost.includes(s) && Math.random() < 0.6) snap(t + 0.01, 0.3);
+    if (P.wood.includes(s) && Math.random() < 0.75) wood(t + hum());
   }
 
-  // the 808: a long, tuned sub that follows the root of whatever chord you're on, with a hard click
-  // and a little drive so you can still hear it on phone speakers
-  const drive = (() => { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * 2.6); } return c; })();
-  function eightOhEight(t, vel) {
-    // sidechain: the chords, harp and echoes dip under every kick and swell back up
+  function duckAt(t) {
     duck.gain.setTargetAtTime(0.22, t, 0.004);
     duck.gain.setTargetAtTime(1, t + 0.06, 0.13);
-    const f = bassHz;
+  }
+
+  // a soft, round knock, not a clicky trap kick
+  function knock(t, vel) {
+    duckAt(t);
     const o = ctx.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(f * 2.6, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.05);
-    const sh = ctx.createWaveShaper(); sh.curve = drive;
+    o.frequency.setValueAtTime(78, t); o.frequency.exponentialRampToValueAtTime(44, t + 0.09);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.5 * vel, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+    o.connect(g); g.connect(lp); lp.connect(drumBus); o.start(t); o.stop(t + 0.4);
+    const n = noise(t, 0.03), nl = ctx.createBiquadFilter(); nl.type = 'lowpass'; nl.frequency.value = 700;
+    const ng = ctx.createGain(); ng.gain.setValueAtTime(0.25 * vel, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.025);
+    n.connect(nl); nl.connect(ng); ng.connect(drumBus);
+  }
+
+  // the 808: long and warm, tuned to the chord's root, sliding into the higher note at the end of the phrase
+  const warm = (() => { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * 1.7); } return c; })();
+  function eightOhEight(t, semis, len, glide) {
+    duckAt(t);
+    const f = bassHz * Math.pow(2, semis / 12);
+    const o = ctx.createOscillator(); o.type = 'sine';
+    if (glide) { o.frequency.setValueAtTime(lastBassHz, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.09); }
+    else { o.frequency.setValueAtTime(f * 1.12, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.035); }
+    lastBassHz = f;
+    const sh = ctx.createWaveShaper(); sh.curve = warm;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 850;   // keeps the 2nd and 3rd harmonics so phones can hear it
     const g = ctx.createGain();
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.75 * vel, t + 0.004);
-    g.gain.setTargetAtTime(0.45 * vel, t + 0.06, 0.15); g.gain.setTargetAtTime(0, t + 0.5, 0.35);
-    o.connect(sh); sh.connect(g); g.connect(beatLp);
-    o.start(t); o.stop(t + 2.2);
-    const k = ctx.createOscillator(); k.type = 'sine';
-    k.frequency.setValueAtTime(180, t); k.frequency.exponentialRampToValueAtTime(50, t + 0.06);
-    const kg = ctx.createGain(); kg.gain.setValueAtTime(0.5 * vel, t); kg.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-    k.connect(kg); kg.connect(beatLp); k.start(t); k.stop(t + 0.1);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.5, t + 0.006);
+    g.gain.setTargetAtTime(0.6, t + 0.05, 0.25);
+    g.gain.setTargetAtTime(0, t + len, 0.09);
+    o.connect(sh); sh.connect(lp); lp.connect(g); g.connect(beatLp);
+    o.start(t); o.stop(t + len + 0.6);
   }
+
   function noise(t, dur) { const n = ctx.createBufferSource(); n.buffer = noiseLong; n.start(t, Math.random() * 0.5, dur); return n; }
-  function clap(t) {
-    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 0.9;
-    const g = ctx.createGain(); g.gain.setValueAtTime(0, t);
-    [0, 0.011, 0.023].forEach(d => { g.gain.setValueAtTime(0.55, t + d); g.gain.setTargetAtTime(0.05, t + d + 0.002, 0.006); });
-    g.gain.setValueAtTime(0.4, t + 0.035); g.gain.setTargetAtTime(0, t + 0.04, 0.09);
-    const n = noise(t, 0.5); n.connect(bp); bp.connect(g); g.connect(beatLp); g.connect(beatRev);
+
+  // finger snap layered with a soft clap, thrown into the dark plate
+  function snap(t, vel) {
+    const n = noise(t, 0.35);
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2300; bp.Q.value = 2.2;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.85 * vel, t + 0.001);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    n.connect(bp); bp.connect(g); g.connect(drumBus); g.connect(beatRev);
+    const n2 = noise(t, 0.4);
+    const bp2 = ctx.createBiquadFilter(); bp2.type = 'bandpass'; bp2.frequency.value = 1150; bp2.Q.value = 1.1;
+    const g2 = ctx.createGain(); g2.gain.setValueAtTime(0, t);
+    [0, 0.009, 0.019].forEach(d => { g2.gain.setValueAtTime(0.5 * vel, t + d); g2.gain.setTargetAtTime(0.03, t + d + 0.001, 0.005); });
+    g2.gain.setValueAtTime(0.2 * vel, t + 0.028); g2.gain.setTargetAtTime(0, t + 0.03, 0.07);
+    n2.connect(bp2); bp2.connect(g2); g2.connect(drumBus); g2.connect(beatRev);
+    const b = ctx.createOscillator(); b.type = 'triangle';
+    b.frequency.setValueAtTime(190, t); b.frequency.exponentialRampToValueAtTime(150, t + 0.06);
+    const bg = ctx.createGain(); bg.gain.setValueAtTime(0.18 * vel, t); bg.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    b.connect(bg); bg.connect(drumBus); b.start(t); b.stop(t + 0.1);
   }
-  function hat(t, vel) {
-    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7500;
-    const g = ctx.createGain(); g.gain.setValueAtTime(0.16 * vel, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
-    const pan = ctx.createStereoPanner(); pan.pan.value = 0.25;
-    const n = noise(t, 0.06); n.connect(hp); hp.connect(g); g.connect(pan); pan.connect(beatLp);
+
+  // metallic hats built the 808 way: six square waves at odd ratios, filtered high
+  const HAT_F = [205.3, 304.4, 369.6, 522.7, 540, 800];
+  function hat(t, vel, open) {
+    const mix = ctx.createGain(); mix.gain.value = 1.4;
+    const oscs = HAT_F.map(f => { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f * 1.6; o.connect(mix); o.start(t); o.stop(t + (open ? 0.35 : 0.08)); return o; });
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 8800; bp.Q.value = 0.8;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 6500;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.75 * vel, t + 0.0015);
+    g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.3 : 0.05));
+    const pan = ctx.createStereoPanner(); pan.pan.value = 0.22;
+    mix.connect(bp); bp.connect(hp); hp.connect(g); g.connect(pan); pan.connect(drumBus);
   }
-  function rim(t) {
-    const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = 1750;
-    const g = ctx.createGain(); g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-    const pan = ctx.createStereoPanner(); pan.pan.value = -0.35;
-    o.connect(g); g.connect(pan); pan.connect(beatLp); pan.connect(beatRev); o.start(t); o.stop(t + 0.06);
+  function shaker(t, vel) {
+    const n = noise(t, 0.12);
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 6500; bp.Q.value = 1.3;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.11 * vel, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    const pan = ctx.createStereoPanner(); pan.pan.value = -0.3;
+    n.connect(bp); bp.connect(g); g.connect(pan); pan.connect(drumBus);
+  }
+  function wood(t) {
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(920, t); o.frequency.exponentialRampToValueAtTime(680, t + 0.03);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.13, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+    const pan = ctx.createStereoPanner(); pan.pan.value = -0.45;
+    o.connect(g); g.connect(pan); pan.connect(drumBus); pan.connect(beatRev); o.start(t); o.stop(t + 0.08);
+  }
+
+  // vinyl: a soft hiss and the odd crackle underneath while the beat plays
+  function startCrackle() {
+    const hiss = ctx.createBufferSource(); hiss.buffer = noiseLong; hiss.loop = true;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1500;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 5000;
+    const hg = ctx.createGain(); hg.gain.value = 0;
+    hiss.connect(hp); hp.connect(lp); lp.connect(hg); hg.connect(beatLp); hiss.start();
+    setInterval(() => {
+      if (!ctx || ctx.state !== 'running') return;
+      hg.gain.setTargetAtTime(crackleOn ? 0.012 : 0, ctx.currentTime, 0.3);
+      if (!crackleOn) return;
+      const t = ctx.currentTime + Math.random() * 0.1;
+      const c = noise(t, 0.004);
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2000 + Math.random() * 3000; bp.Q.value = 3;
+      const g = ctx.createGain(); g.gain.value = 0.08 + Math.random() * 0.12;
+      c.connect(bp); bp.connect(g); g.connect(beatLp);
+    }, 90);
   }
 
   function syncButtons() {
@@ -396,7 +495,7 @@
       else beat.pending = true;                              // comes in at the top of the next bar
     } else {
       beat[c] = !beat[c];
-      if (c === 'muffle') beatLp.frequency.setTargetAtTime(beat.muffle ? 420 : 18000, ctx.currentTime, 0.12);
+      if (c === 'muffle') beatLp.frequency.setTargetAtTime(beat.muffle ? 480 : DARK, ctx.currentTime, 0.12);
     }
     syncButtons();
   }));
