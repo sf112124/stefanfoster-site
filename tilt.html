@@ -126,7 +126,9 @@
   let slideNow = 0;
   { const m = location.search.match(/thumb=(\d)/); if (m) slideNow = +m[1]; }
   let bloom = 0, rip = [0, 0, 99], lastStrum = 0, lastIndex = 0;
-  const TILT_RANGE = 75 * Math.PI / 180;   // upright to nearly flat on its back counts as the full sweep
+  // People rarely hold a phone perfectly upright or perfectly flat, so the sweep runs from about 20 degrees
+  // back (how you naturally hold it) to about 58 degrees back, and anything past either end counts as the end.
+  const TILT_FROM = 22 * Math.PI / 180, TILT_TO = 58 * Math.PI / 180;
   let chaos = 0, dramaT = 0, drama = 0, fxSend = null, vibAmt = null;
   // one palette per chord, dark core to bright edge, in the same order as the progression
   const PALS = [
@@ -166,7 +168,7 @@
     const back = ((g.z || 0) * gSign) / mag;                             // + when the screen tilts back toward the sky
     // the sweep: phone upright and facing you is 0, lying back with the screen to the ceiling is 1
     const upr = ((g.y || 0) * gSign) / mag;
-    target = clamp01(Math.atan2(Math.abs(back), upr) / TILT_RANGE);
+    target = clamp01((Math.atan2(Math.abs(back), upr) - TILT_FROM) / (TILT_TO - TILT_FROM));
     exprT = 0.6;
   }
 
@@ -325,8 +327,8 @@
       update(lid, speed, t, now, ex, active) {
         if (opening === null) opening = lid < 0.5;
         let frac = opening ? lid : 1 - lid;
-        if (frac >= 0.96) { index++; opening = !opening; frac = opening ? lid : 1 - lid; }
-        slide += (index + clamp01(frac / 0.96) - slide) * 0.3;
+        if (frac >= 0.85) { index++; opening = !opening; frac = opening ? lid : 1 - lid; }   // land a little before the very end
+        slide += (index + clamp01(frac / 0.85) - slide) * 0.3;
         slideNow = slide;
 
         const base = Math.floor(slide), f = slide - base;
@@ -626,6 +628,7 @@ void main(){
       const r = chords.update(pos, speed, t, now, expr, true);   // always sounding while the app is open
       chordNow = r.f < 0.5 ? r.A : r.B;
       wordNow = chordNow.name;
+      window.__tilt = chordNow.name;
       $('sub').textContent = r.f > 0.04 && r.f < 0.96 ? r.A.name + '  →  ' + r.B.name : '';
       hueT = slideNow * 0.137; intenT = r.it;
       if (r.index !== lastIndex) { lastIndex = r.index; bloom = 1; }
