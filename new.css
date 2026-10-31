@@ -597,7 +597,7 @@ html.devouring canvas.crawl,html.devouring img,html.devouring video,html.crawlin
 /* the splash: the name tiled wall to wall in Syne, ENTER in the seam; it lifts away like a sheet when you go in */
 #splash{display:none}
 html.splashing #splash{display:block}
-#splash{position:fixed;inset:0;z-index:10000;background:var(--bg);touch-action:none;transition:transform .85s cubic-bezier(.7,0,.2,1)}
+#splash{position:fixed;inset:0;z-index:10000;background:#000;touch-action:none;transition:transform .85s cubic-bezier(.7,0,.2,1)}
 #splash.go{transform:translateY(-100%)}
 #splash canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 #splash .sp-enter{position:absolute;z-index:2;background:none;border:0;padding:0;color:transparent;font-size:1px;cursor:pointer}

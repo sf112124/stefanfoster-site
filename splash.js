@@ -5,7 +5,7 @@ if (root && !document.documentElement.classList.contains("splashing")) root.remo
 else if (root) {
   const cv = root.querySelector("canvas"), g = cv.getContext("2d"), btn = root.querySelector(".sp-enter");
   const FAM = "Syne", WGT = 800, TXT = "STEFANFOSTER";
-  const css = getComputedStyle(document.documentElement), INK = css.getPropertyValue("--ink").trim() || "#0c0c0c";
+  const INK = "#fff";
   const font = (px) => `${WGT} ${px}px "${FAM}", system-ui, sans-serif`;
   let ink = null, W = 0, H = 0, dpr = 1, alive = true;
 
@@ -20,7 +20,7 @@ else if (root) {
   addEventListener("resize", resize); resize();
 
   // the pointer as a smooth field: where it is (0..1 across and down) and how present it is
-  const P = { u: .5, v: .5, on: 0, tu: .5, tv: .5, ton: 0 };
+  const P = { u: .5, v: .5, on: 0, tu: .5, tv: .5, ton: 0, uF: .5, uS: .5, vF: .5, vS: .5, onF: 0, onS: 0 };
   let touching = false;
   const at = (e) => { P.tu = e.clientX / W; P.tv = e.clientY / H; P.ton = 1; };
   root.addEventListener("pointermove", at); root.addEventListener("pointerdown", (e) => { touching = e.pointerType !== "mouse"; at(e); if (!e.target.closest(".sp-enter")) askTilt(); });
@@ -51,8 +51,10 @@ else if (root) {
     if (!alive) return; requestAnimationFrame(frame);
     const dt = Math.min(.05, (now - last) / 1000); last = now;
     if (!ink) return;
+    // like pushing through honey: a small part of the move happens at once, the rest follows slowly and heavily
+    const ef = 1 - Math.exp(-dt * 16), es = 1 - Math.exp(-dt * 1.7);
+    for (const c of ["u", "v", "on"]) { const t = P["t" + c]; P[c + "F"] += (t - P[c + "F"]) * ef; P[c + "S"] += (t - P[c + "S"]) * es; P[c] = P[c + "F"] * .28 + P[c + "S"] * .72; }
     const ease = 1 - Math.exp(-dt * 7);
-    P.u += (P.tu - P.u) * ease; P.v += (P.tv - P.v) * ease; P.on += (P.ton - P.on) * ease;
 
     const tall = H > W * 1.05, LN = tall ? ["STE", "FAN", "FOS", "TER"] : ["STEFAN", "FOSTER"], n = LN.length, seam = n / 2 - 1;
     const gap = Math.max(2, Math.round(Math.min(W, H) * .0045)), x0 = gap, x1 = W - gap, y0 = gap, y1 = H - gap;
