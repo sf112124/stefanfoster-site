@@ -538,9 +538,9 @@ function renderAbout() {
     requestAnimationFrame(loop);
   })(t0);
 }
-// the experiments: Synth-folio and Poke-folio are their own pages; Web Crawler lets the spider out onto this one
+// the experiments: Synth-folio, Poke-folio and Tilt are their own pages; Web Crawler lets the spider out onto this one
 function launch(k) {
-  if (k === "synth" || k === "rpg") { location.href = k; return; }
+  if (k === "synth" || k === "rpg" || k === "tilt") { location.href = k; return; }
 }
 function countUp(el) {
   if (reduce) return;

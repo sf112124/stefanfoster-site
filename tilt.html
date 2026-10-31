@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0d12">
+<title>Tilt — Stefan Foster</title>
+<meta name="description" content="A tiny instrument for your phone. Turn it, tilt it, play it.">
+<link rel="icon" href="/favicon-32.png">
+<link rel="preload" href="/vendor/fonts/instrument-serif-latin-400-italic.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  @font-face { font-family: "Instrument Serif"; font-style: italic; font-weight: 400; font-display: block;
+    src: url(/vendor/fonts/instrument-serif-latin-400-italic.woff2) format("woff2"); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0b0d12; }
+  body {
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #ink { pointer-events: none; }
+  .readout { position: fixed; left: 50%; top: 50%; text-align: center; pointer-events: none; will-change: transform; }
+  .big { display: none; font-size: clamp(40px, 13vw, 76px); font-weight: 600; letter-spacing: -0.055em; line-height: .9; white-space: nowrap; opacity: .92; }
+  .sub { margin-top: 74px; font-size: 12px; opacity: .6; min-height: 1.2em; white-space: nowrap; }
+  .gate {
+    position: fixed; inset: 0; display: grid; place-items: end center; text-align: center;
+    padding: 32px 32px max(9vh, env(safe-area-inset-bottom));
+    transition: opacity .8s; cursor: pointer; background: rgba(11,13,18,.25);
+  }
+  .gate.gone { opacity: 0; pointer-events: none; }
+  .gate h2 { font-size: clamp(44px, 15vw, 88px); font-weight: 600; letter-spacing: -0.055em; line-height: .9; }
+  .gate ol { list-style: none; margin: 26px auto 0; max-width: 30ch; font-size: 14px; line-height: 1.5; opacity: .82; }
+  .gate li + li { margin-top: 8px; }
+  .gate .tap { margin-top: 32px; display: inline-block; font-size: 14px; font-weight: 600; padding: 13px 22px; border-radius: 999px;
+               background: rgba(255,255,255,.94); color: #0b0d12; }
+  .desk { position: fixed; inset: 0; display: none; place-items: center; text-align: center; padding: 40px; }
+  .desk h2 { font-size: 64px; font-weight: 600; letter-spacing: -0.055em; line-height: .9; }
+  .desk p { margin-top: 16px; font-size: 15px; opacity: .7; }
+  .qr { margin: 32px auto 0; width: 156px; height: 156px; padding: 12px; background: #fff; border-radius: 16px; }
+  .qr img, .qr canvas { position: static; width: 132px !important; height: 132px !important; }
+  body.thumb .gate, body.thumb .desk, body.thumb .readout, body.thumb #ink { display: none !important; }
+  body.desktop .readout, body.desktop .gate, body.desktop #ink { display: none; }
+  body.desktop .desk { display: grid; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="ink"></canvas>
+<div class="readout" id="readout"><div class="big" id="big"></div><div class="sub" id="sub"></div></div>
+
+<div class="gate" id="gate">
+  <div>
+    <ol aria-label="Tilt">
+      <li>Turn your phone like a steering wheel, upright to upside down, to glide through the chords.</li>
+      <li>Drag the circle to play a melody over them.</li>
+      <li>Tilt the top back to open it up. Tip it forward to hush it.</li>
+    </ol>
+    <span class="tap">Tap to begin</span>
+  </div>
+</div>
+
+<div class="desk">
+  <div>
+    <div style="height:34vh"></div>
+    <p>Made for your phone. Scan to play.</p>
+    <div class="qr" id="qr"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(() => {
+  const clamp01 = x => Math.min(Math.max(x, 0), 1);
+  const smooth = x => { const c = clamp01(x); return c * c * (3 - 2 * c); };
+  const midiHz = m => 440 * Math.pow(2, (m - 69) / 12);
+  const NOTE = ['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+  const $ = id => document.getElementById(id);
+
+  const THUMB = location.search.includes('thumb');
+  if (THUMB) document.body.classList.add('thumb');
+  const isPhone = !THUMB && matchMedia('(pointer: coarse)').matches && 'DeviceMotionEvent' in window;
+  if (!isPhone && !THUMB) {
+    document.body.classList.add('desktop');
+    try { new QRCode($('qr'), { text: location.href, width: 132, height: 132, colorDark: '#0b0d12', colorLight: '#ffffff' }); } catch (_) {}
+  }
+
+  // ---------- the progression ----------
+  const PROG = [
+    ['Am(add9)',  45, [52, 57, 59, 60, 64, 69, 71], 0.45],
+    ['Fmaj9♯11',  41, [48, 57, 64, 67, 69, 71, 79], 0.65],
+    ['Cmaj9/E',   40, [59, 62, 67, 71, 72, 74, 79], 0.75],
+    ['E♭maj7♯11', 39, [55, 58, 62, 63, 69, 70, 74], 0.85],
+    ['Dm11',      38, [57, 60, 65, 67, 69, 72, 76], 0.6],
+    ['B♭maj7♯11', 46, [57, 62, 64, 65, 69, 74, 76], 0.8],
+    ['E7♭9♭13',   40, [56, 60, 62, 65, 68, 72, 77], 1.0],
+    ['Amaj9',     45, [52, 61, 64, 68, 71, 76, 85], 1.0],
+  ].map(([name, bass, up, inten]) => {
+    const all = [bass, ...up];
+    const pcs = [...new Set(all.map(m => m % 12))];
+    // the lead's notes: this chord's tones across two octaves, so every note you land on belongs
+    const lead = []; for (let m = 62; m <= 86; m++) if (pcs.includes(m % 12)) lead.push(m);
+    return { name, inten, lead, notes: [bass, ...up.slice().sort((a, b) => a - b)].map(m => Math.log2(midiHz(m))) };
+  });
+  const chordAt = i => PROG[((i % PROG.length) + PROG.length) % PROG.length];
+
+  // ---------- state ----------
+  let ctx = null, bus = null, idleGain = null, analyser = null, tbuf = null, fbuf = null;
+  let chords = null, lead = null;
+  let pos = 0, vel = 0, target = 0, lastMove = 0, lastT = performance.now();
+  let gSign = -1, motionSeen = false;
+  let fallT = [0, 1], fallFast = [0, 1];               // where "down" is on screen
+  const slime = { x: 0, y: 1, vx: 0, vy: 0 };          // the slime's slow, wobbly version of that
+  let exprT = 0.4, expr = 0.4;                          // tilt-back expression 0..1
+  let level = 0, low = 0, hue = 0, hueT = 0, inten = 0.6, intenT = 0.6, textRot = 0;
+  let slideNow = 0;
+
+  // ---------- phone motion ----------
+  function onMotion(e) {
+    const g = e.accelerationIncludingGravity;
+    if (!g || g.y == null) return;
+    const mag = Math.hypot(g.x || 0, g.y || 0, g.z || 0);
+    if (mag < 2) return;
+    if (!motionSeen) { motionSeen = true; gSign = g.y < 0 ? -1 : 1; }
+    const fx = (g.x || 0) * -gSign, fy = (g.y || 0) * -gSign;          // fall direction in the screen's plane (y up)
+    const m2 = Math.hypot(fx, fy);
+    if (m2 > 0.2 * mag) {
+      fallT = [fx / m2, -fy / m2];                                       // screen coords, y down
+      target = Math.acos(Math.max(-1, Math.min(1, fallT[1]))) / Math.PI; // steering-wheel turn: upright 0 -> upside down 1
+    }
+    const back = ((g.z || 0) * gSign) / mag;                             // + when the screen tilts back toward the sky
+    exprT = clamp01(0.4 + back * 0.9);
+  }
+
+  // ---------- audio ----------
+  function makeReverb(seconds = 3.4) {
+    const len = Math.floor(ctx.sampleRate * seconds);
+    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+    }
+    const c = ctx.createConvolver(); c.buffer = buf; return c;
+  }
+
+  function startAudio() {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (_) {}
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+    idleGain = ctx.createGain();
+    bus = ctx.createGain(); bus.gain.value = 0.7;
+    const reverb = makeReverb(), wet = ctx.createGain(); wet.gain.value = 0.5;
+    bus.connect(idleGain); bus.connect(reverb); reverb.connect(wet); wet.connect(idleGain);
+    idleGain.connect(comp); comp.connect(ctx.destination);
+    analyser = ctx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.6;
+    comp.connect(analyser);
+    tbuf = new Float32Array(analyser.fftSize); fbuf = new Uint8Array(analyser.frequencyBinCount);
+    chords = Chords();
+    lead = Lead();
+  }
+
+  // The chord pad: 8 voices x 3 detuned saws, sliding between chords as the phone turns.
+  function Chords() {
+    const out = ctx.createGain(); out.gain.value = 0;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.8; lp.frequency.value = 1500;
+    lp.connect(out); out.connect(bus);
+    const detune = [-7, 0, 7], pans = [-0.6, 0, 0.6];
+    const voices = [];
+    for (let v = 0; v < 8; v++) {
+      voices.push(detune.map((d, k) => {
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.detune.value = d;
+        const g = ctx.createGain(); g.gain.value = v === 0 ? 0.11 : 0.055;
+        const p = ctx.createStereoPanner(); p.pan.value = v === 0 ? 0 : pans[k];
+        o.connect(g); g.connect(p); p.connect(lp); o.start(); return o;
+      }));
+    }
+    const sub = ctx.createOscillator(); const sg = ctx.createGain(); sg.gain.value = 0.28;
+    sub.connect(sg); sg.connect(lp); sub.start();
+
+    let index = 0, opening = null, slide = 0, vibPh = 0;
+    return {
+      update(lid, speed, t, now, ex, active) {
+        if (opening === null) opening = lid < 0.5;
+        let frac = opening ? lid : 1 - lid;
+        if (frac >= 0.96) { index++; opening = !opening; frac = opening ? lid : 1 - lid; }
+        slide += (index + clamp01(frac / 0.96) - slide) * 0.3;
+        slideNow = slide;
+
+        const base = Math.floor(slide), f = slide - base;
+        const A = chordAt(base), B = chordAt(base + 1);
+        const it = A.inten + (B.inten - A.inten) * smooth(f);
+        vibPh += 0.016 * 5.2;
+        const vibDepth = 0.001 + 0.008 * ex * ex;
+        for (let v = 0; v < 8; v++) {
+          const o = 0.3 * v / 7;
+          const tt = smooth((f - o) / 0.7);
+          let hz = Math.pow(2, A.notes[v] + (B.notes[v] - A.notes[v]) * tt);
+          if (v === 7) hz *= 1 + Math.sin(vibPh * 6.283) * vibDepth;
+          voices[v].forEach(osc => osc.frequency.setTargetAtTime(hz, t, 0.02));
+          if (v === 0) sub.frequency.setTargetAtTime(hz / 2, t, 0.02);
+        }
+        const cutoff = (500 + 1500 * it + 2600 * clamp01(speed / 0.45) * it) * (0.45 + 1.6 * ex);
+        lp.frequency.setTargetAtTime(Math.min(cutoff, 14000), t, 0.06);
+        out.gain.setTargetAtTime(active ? (0.5 + 0.45 * it) * (0.35 + 0.75 * ex) : 0, t, active ? 0.15 : 1.0);
+        return { A, B, f, it };
+      }
+    };
+  }
+
+  // The lead: a warm, glassy line that glides between the chord's own notes.
+  function Lead() {
+    const out = ctx.createGain(); out.gain.value = 0;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 5; lp.frequency.value = 2000;
+    const a = ctx.createOscillator(); a.type = 'sawtooth';
+    const b = ctx.createOscillator(); b.type = 'triangle';
+    const ag = ctx.createGain(); ag.gain.value = 0.16;
+    const bg = ctx.createGain(); bg.gain.value = 0.22;
+    a.connect(ag); b.connect(bg); ag.connect(lp); bg.connect(lp); lp.connect(out);
+    const vib = ctx.createOscillator(); vib.frequency.value = 5.6;
+    const vibAmt = ctx.createGain(); vibAmt.gain.value = 0;
+    vib.connect(vibAmt); vibAmt.connect(a.detune); vibAmt.connect(b.detune);
+    // ping-pong echo
+    const dl = ctx.createDelay(1), dr = ctx.createDelay(1); dl.delayTime.value = 0.36; dr.delayTime.value = 0.54;
+    const fb = ctx.createGain(); fb.gain.value = 0.32;
+    const pl = ctx.createStereoPanner(); pl.pan.value = -0.7; const pr = ctx.createStereoPanner(); pr.pan.value = 0.7;
+    const send = ctx.createGain(); send.gain.value = 0.35;
+    out.connect(bus); out.connect(send); send.connect(dl); dl.connect(pl); pl.connect(bus); dl.connect(dr); dr.connect(pr); pr.connect(bus); dr.connect(fb); fb.connect(dl);
+    a.start(); b.start(); vib.start();
+    a.detune.value = 4;
+    return {
+      update(midi, on, t, ex, glide) {
+        const hz = midiHz(midi);
+        a.frequency.setTargetAtTime(hz, t, glide);
+        b.frequency.setTargetAtTime(hz / 2, t, glide);
+        vibAmt.gain.setTargetAtTime(4 + 34 * ex * ex, t, 0.1);                 // cents
+        lp.frequency.setTargetAtTime(700 + 5200 * ex, t, 0.05);
+        out.gain.setTargetAtTime(on ? 0.12 + 0.4 * ex : 0, t, on ? 0.03 : 0.35);
+      }
+    };
+  }
+
+  // ---------- the lead circle: touch input in "world" coordinates ----------
+  const ink = $('ink'), ic = ink.getContext('2d');
+  let DPR = 1, W = 0, H = 0;
+  const touch = { on: false, x: 0, y: 0 };
+  const circle = { x: 0, y: 0, r: 30, glow: 0, shown: 0 };
+  let leadMidi = 69, leadPick = null, leadU = 0.5, notePos = [];
+
+  function worldFrame() {
+    // rotate so local +y is real-world down: pitch always rises toward the real sky
+    const ang = Math.atan2(-fallFast[0], fallFast[1]);
+    const cs = Math.cos(ang), sn = Math.sin(ang);
+    const half = (Math.abs(fallFast[1]) * H + Math.abs(fallFast[0]) * W) / 2 * 0.8;
+    return { ang, cs, sn, half };
+  }
+  const toLocal = (x, y, fr) => {
+    const dx = x - W / 2, dy = y - H / 2;
+    return { x: dx * fr.cs + dy * fr.sn, y: -dx * fr.sn + dy * fr.cs };
+  };
+
+  addEventListener('pointerdown', e => { if (!ctx) return; touch.on = true; touch.x = e.clientX; touch.y = e.clientY; });
+  addEventListener('pointermove', e => { if (touch.on) { touch.x = e.clientX; touch.y = e.clientY; } });
+  addEventListener('pointerup', () => touch.on = false);
+  addEventListener('pointercancel', () => touch.on = false);
+
+  function drawInk(chord, now) {
+    ic.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ic.clearRect(0, 0, W, H);
+    const fr = worldFrame();
+    circle.shown += ((ctx ? 1 : 0) - circle.shown) * 0.08;
+    if (circle.shown < 0.01) return;
+
+    // where the finger (or the resting circle) sits along the real-world up axis
+    if (touch.on) { circle.x += (touch.x - circle.x) * 0.5; circle.y += (touch.y - circle.y) * 0.5; }
+    const loc = toLocal(circle.x, circle.y, fr);
+    leadU = clamp01(0.5 - loc.y / (2 * fr.half));
+
+    // the chord's notes, as crisp lines across the screen
+    const notes = chord.lead;
+    const lo = notes[0], hi = notes[notes.length - 1];
+    notePos = notes.map(m => ({ m, u: (m - lo) / (hi - lo) }));
+    // snap with a little stickiness so it feels deliberate, then glide
+    let best = notePos[0], bd = 9;
+    for (const n of notePos) { const d = Math.abs(n.u - leadU); if (d < bd) { bd = d; best = n; } }
+    if (leadPick === null || leadPick.m !== best.m) {
+      const cur = notePos.find(n => n.m === leadPick?.m);
+      if (!cur || Math.abs(cur.u - leadU) > Math.abs(best.u - leadU) + 0.012) leadPick = best;
+    }
+    leadMidi = leadPick.m;
+
+    ic.save();
+    ic.translate(W / 2, H / 2);
+    ic.rotate(fr.ang);
+    const lineA = 0.12 + 0.35 * circle.glow;
+    const span = Math.hypot(W, H);
+    for (const n of notePos) {
+      const y = (0.5 - n.u) * 2 * fr.half;
+      const isOn = n.m === leadMidi;
+      ic.strokeStyle = `rgba(255,255,255,${(isOn ? 0.55 + 0.4 * circle.glow : lineA) * circle.shown})`;
+      ic.lineWidth = isOn ? 1.25 : 0.75;
+      ic.beginPath(); ic.moveTo(-span / 2, y); ic.lineTo(span / 2, y); ic.stroke();
+    }
+    ic.restore();
+
+    // the circle itself
+    const pulse = 1 + 0.08 * circle.glow * Math.sin(now / 90);
+    const r = circle.r * (1 + 0.25 * circle.glow) * pulse;
+    ic.strokeStyle = `rgba(255,255,255,${0.95 * circle.shown})`;
+    ic.lineWidth = 1.5;
+    ic.beginPath(); ic.arc(circle.x, circle.y, r, 0, Math.PI * 2); ic.stroke();
+    ic.fillStyle = `rgba(255,255,255,${0.95 * circle.shown})`;
+    ic.beginPath(); ic.arc(circle.x, circle.y, 4 + 3 * circle.glow, 0, Math.PI * 2); ic.fill();
+    // a soft ripple ring while you play
+    if (circle.glow > 0.02) {
+      const rr = r + 14 + 10 * ((now / 600) % 1);
+      ic.strokeStyle = `rgba(255,255,255,${0.25 * circle.glow * (1 - ((now / 600) % 1))})`;
+      ic.beginPath(); ic.arc(circle.x, circle.y, rr, 0, Math.PI * 2); ic.stroke();
+    }
+    // note name, upright in the real world
+    ic.save();
+    ic.translate(circle.x, circle.y); ic.rotate(fr.ang);
+    ic.fillStyle = `rgba(255,255,255,${(0.4 + 0.6 * circle.glow) * circle.shown})`;
+    ic.font = '600 13px -apple-system, Helvetica, sans-serif';
+    ic.textAlign = 'center';
+    ic.fillText(NOTE[leadMidi % 12], 0, -r - 12);
+    ic.restore();
+
+    // the expression meter: a thin arc on the right edge (tilt back to fill it)
+    ic.save();
+    ic.strokeStyle = 'rgba(255,255,255,.18)'; ic.lineWidth = 2;
+    const mx = W - 14, my0 = H * 0.3, my1 = H * 0.7;
+    ic.beginPath(); ic.moveTo(mx, my0); ic.lineTo(mx, my1); ic.stroke();
+    ic.strokeStyle = 'rgba(255,255,255,.85)';
+    ic.beginPath(); ic.moveTo(mx, my1); ic.lineTo(mx, my1 - (my1 - my0) * expr); ic.stroke();
+    ic.restore();
+  }
+
+  // ---------- start ----------
+  $('gate').addEventListener('click', async () => {
+    try { if (typeof DeviceMotionEvent.requestPermission === 'function') await DeviceMotionEvent.requestPermission(); } catch (_) {}
+    window.addEventListener('devicemotion', onMotion);
+    startAudio();
+    await ctx.resume();
+    circle.x = W / 2; circle.y = H * 0.72;
+    $('gate').classList.add('gone');
+  });
+
+  const fs = `
+precision highp float;
+varying vec2 uv;
+uniform vec2 res;
+uniform float time, level, low, hue, inten;
+uniform vec2 fall, stretch, drag;
+uniform sampler2D txt;
+
+float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float noise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1,0)), u.x), mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), u.x), u.y); }
+float big(vec2 p){ return noise(p) * 0.65 + noise(p * 1.9 + 7.3) * 0.35; }   // only big, slow shapes
+
+float sdRoundBox(vec2 p, vec2 b, float r){ vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
+
+// Ramp from the reference: dark core -> violet -> purple -> hot pink -> coral -> butter yellow.
+vec3 ramp(float t){
+  vec3 c0 = vec3(0.07, 0.09, 0.13);
+  vec3 c1 = vec3(0.27, 0.22, 0.55);
+  vec3 c2 = vec3(0.58, 0.33, 0.86);
+  vec3 c3 = vec3(0.96, 0.30, 0.62);
+  vec3 c4 = vec3(1.00, 0.52, 0.38);
+  vec3 c5 = vec3(0.97, 0.86, 0.42);
+  t = clamp(t, 0.0, 1.0) * 5.0;
+  vec3 c = mix(c0, c1, smoothstep(0.0, 1.0, t));
+  c = mix(c, c2, smoothstep(1.0, 2.0, t));
+  c = mix(c, c3, smoothstep(2.0, 3.0, t));
+  c = mix(c, c4, smoothstep(3.0, 4.0, t));
+  return mix(c, c5, smoothstep(4.0, 5.0, t));
+}
+// A second mood the chords drift toward: periwinkle and molten orange, like the sunset references.
+vec3 ramp2(float t){
+  vec3 a = vec3(0.12, 0.16, 0.48), b = vec3(0.38, 0.44, 0.86), c = vec3(0.98, 0.72, 0.42), d = vec3(0.95, 0.33, 0.18);
+  t = clamp(t, 0.0, 1.0) * 3.0;
+  vec3 col = mix(a, b, smoothstep(0.0, 1.0, t));
+  col = mix(col, c, smoothstep(1.0, 2.0, t));
+  return mix(col, d, smoothstep(2.0, 3.0, t));
+}
+
+void main(){
+  float aspect = res.x / res.y;
+  vec2 q = (uv - 0.5) * vec2(aspect, 1.0);
+  q.y = -q.y;                                         // screen coords, y down
+  vec2 g = fall;
+
+  // The dark core floats up away from gravity, so the colour pools wherever "down" is.
+  vec2 c = -g * (0.16 + 0.03 * low);
+  vec2 p = q - c;
+  // It sags and stretches with the flip, like something heavy and slow.
+  vec2 sdir = length(stretch) > 1e-4 ? normalize(stretch) : vec2(0.0, 1.0);
+  float s = clamp(length(stretch), 0.0, 0.6);
+  p -= sdir * dot(p, sdir) * s * 0.6;
+
+  vec2 half_ = vec2(0.5 * aspect, 0.5) - vec2(0.10, 0.12);
+  float d = sdRoundBox(p, half_, 0.24);
+
+  // Big slow lobes, heavier on the gravity side: thick drips gathering.
+  vec2 dir = normalize(p + 1e-5);
+  float side = 0.5 + 0.5 * dot(dir, g);
+  // (noise is sampled on the direction itself, so there's no seam anywhere around the edge)
+  float lobes = big(dir * 1.1 + vec2(time * 0.04, -time * 0.03)) - 0.5;
+  float sag = pow(side, 4.0);
+  d -= lobes * 0.07 + sag * (0.05 + 0.08 * s) + side * 0.02;
+
+  // How far out from the core we are, in the glow band. The sound swells the band.
+  float band = 0.20 + 0.06 * level + 0.05 * low + 0.03 * inten;
+  float t = smoothstep(-0.10, band, d);
+  t = pow(t, 0.9);
+  t += (big(q * 1.4 + vec2(time * 0.03, -time * 0.02)) - 0.5) * 0.12 * t;   // slow marbling inside the colour
+
+  float mood = 0.5 + 0.5 * sin(hue * 6.28318);
+  vec3 col = mix(ramp(t), ramp2(t), mood * 0.55);
+  col *= 0.88 + 0.25 * level;
+
+  // The words are made of the same slow stuff as the colour: when you turn the phone they lag,
+  // smear and sink a little, like sand sliding through water, then settle back into letters.
+  vec2 fu = vec2(fall.x, -fall.y);
+  float dl = clamp(length(drag) * 10.0, 0.0, 1.0);
+  float acc = 0.0, wsum = 0.0;
+  for (int i = 0; i < 10; i++) {
+    float k = (float(i) + hash(gl_FragCoord.xy * 0.37 + float(i) * 7.1)) / 10.0;   // dithered, so the smear is smooth, not stepped
+    float wob = big(uv * 2.5 + vec2(time * 0.07, k)) - 0.5;
+    vec2 o = drag * k + fu * k * k * 0.05 * dl + vec2(wob, -wob) * 0.012 * dl * k;
+    float w = 1.0 - 0.7 * k;
+    acc += texture2D(txt, uv + o).a * w;
+    wsum += w;
+  }
+  float ta = acc / wsum;
+  vec3 tcol = mix(ramp(0.86), vec3(1.0, 0.97, 0.98), 0.78);
+  col = mix(col, tcol, ta * 0.96);
+
+  // Film grain, like the reference.
+  float gr = hash(gl_FragCoord.xy + fract(time * 13.0) * 100.0) - 0.5;
+  col += gr * 0.07;
+  gl_FragColor = vec4(col, 1.0);
+}`;
+  function sh(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s)); return s; }
+  const canvas = $('gl');
+  const gl = canvas.getContext('webgl', { antialias: false, premultipliedAlpha: false });
+  const vs = `attribute vec2 p; varying vec2 uv; void main(){ uv = p * 0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }`;
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog); gl.useProgram(prog);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  const U = n => gl.getUniformLocation(prog, n);
+  // words live in their own canvas, drawn into the gradient by the shader
+  const tc = document.createElement('canvas'), tx = tc.getContext('2d');
+  const ttex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, ttex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  const FONT = '"Instrument Serif", Georgia, serif';
+  let fontReady = false;
+  document.fonts?.load(`italic 64px ${FONT}`).then(() => fontReady = true).catch(() => fontReady = true);
+  setTimeout(() => fontReady = true, 2500);
+  let wordNow = 'tilt';
+  let wordBlur = 0;
+  function drawWord(word, x, y, rot, size) {
+    const sx = tc.width / W;
+    tx.setTransform(1, 0, 0, 1, 0, 0);
+    tx.clearRect(0, 0, tc.width, tc.height);
+    if (!fontReady) return;
+    tx.setTransform(sx, 0, 0, sx, 0, 0);
+    tx.translate(x, y); tx.rotate(rot);
+    tx.font = `italic 400 ${size}px ${FONT}`;
+    tx.textAlign = 'center'; tx.textBaseline = 'middle';
+    tx.filter = wordBlur > 0.3 ? `blur(${wordBlur.toFixed(1)}px)` : 'none';   // the faster it moves, the softer it gets
+    tx.fillStyle = '#fff';
+    tx.fillText(word, 0, 0);
+  }
+  const uDrag = U('drag'), uTxt = U('txt');
+  const uRes = U('res'), uTime = U('time'), uLevel = U('level'), uLow = U('low'), uHue = U('hue'), uInten = U('inten'), uFall = U('fall'), uStretch = U('stretch');
+
+  function resize() {
+    W = innerWidth; H = innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rs = THUMB ? 1 : 0.6;
+    canvas.width = Math.round(W * dpr * rs); canvas.height = Math.round(H * dpr * rs);   // soft, so render under native
+    tc.width = canvas.width; tc.height = canvas.height;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    DPR = Math.min(window.devicePixelRatio || 1, 3);                                     // crisp graphics at full res
+    ink.width = Math.round(W * DPR); ink.height = Math.round(H * DPR);
+    if (!circle.x) { circle.x = W / 2; circle.y = H * 0.72; }
+  }
+  addEventListener('resize', resize); resize();
+
+  // ---------- frame loop ----------
+  const t0 = performance.now();
+  function frame(now) {
+    const dt = Math.min(Math.max((now - lastT) / 1000, 0.001), 0.05);
+    lastT = now;
+
+    const w = 14, e = Math.exp(-w * dt), x0 = pos - target, tmp = (vel + w * x0) * dt;
+    pos = target + (x0 + tmp) * e; vel = (vel - w * tmp) * e;
+    const speed = Math.abs(vel);
+    if (speed > 0.02 || touch.on) lastMove = now;
+    expr += (exprT - expr) * 0.12;
+
+    if (THUMB) fallT = [0.32, 0.95];
+    else if (!isPhone) fallT = [Math.sin(now / 4000) * 0.6, Math.cos(now / 4000)];
+    fallFast[0] += (fallT[0] - fallFast[0]) * 0.2; fallFast[1] += (fallT[1] - fallFast[1]) * 0.2;
+    const ff = Math.hypot(fallFast[0], fallFast[1]) || 1; fallFast[0] /= ff; fallFast[1] /= ff;
+    const k = 7, damp = 3.2;
+    slime.vx += ((fallT[0] - slime.x) * k - slime.vx * damp) * dt;
+    slime.vy += ((fallT[1] - slime.y) * k - slime.vy * damp) * dt;
+    slime.x += slime.vx * dt; slime.y += slime.vy * dt;
+    const sl = Math.hypot(slime.x, slime.y) || 1;
+
+    if (analyser) {
+      analyser.getFloatTimeDomainData(tbuf);
+      let sum = 0; for (let i = 0; i < tbuf.length; i++) sum += tbuf[i] * tbuf[i];
+      analyser.getByteFrequencyData(fbuf);
+      let lsum = 0; const nb = Math.max(2, Math.round(200 / (ctx.sampleRate / analyser.fftSize)));
+      for (let i = 0; i < nb; i++) lsum += fbuf[i];
+      const lv = clamp01(Math.sqrt(sum / tbuf.length) * 5), lw = clamp01(lsum / nb / 255 * 1.3);
+      level += (lv - level) * (lv > level ? 0.25 : 0.05);
+      low += (lw - low) * (lw > low ? 0.3 : 0.06);
+    }
+
+    let chordNow = chordAt(0);
+    if (ctx && chords) {
+      const t = ctx.currentTime;
+      const active = now - lastMove < 3000;
+      idleGain.gain.setTargetAtTime(active ? 1 : 0, t, active ? 0.03 : 0.6);
+      const r = chords.update(pos, speed, t, now, expr, now - lastMove < 2500);
+      chordNow = r.f < 0.5 ? r.A : r.B;
+      wordNow = chordNow.name;
+      $('sub').textContent = r.f > 0.04 && r.f < 0.96 ? r.A.name + '  →  ' + r.B.name : '';
+      hueT = slideNow * 0.137; intenT = r.it;
+      circle.glow += ((touch.on ? 1 : 0) - circle.glow) * (touch.on ? 0.25 : 0.06);
+    }
+    drawInk(chordNow, now);
+    if (lead && ctx) lead.update(leadMidi, touch.on, ctx.currentTime, expr, 0.045);
+
+    hue += (hueT - hue) * 0.03;
+    inten += (intenT - inten) * 0.05;
+
+    // keep the chord name upright in the real world
+    const want = Math.atan2(-slime.x, slime.y);
+    let dRot = want - textRot; dRot = Math.atan2(Math.sin(dRot), Math.cos(dRot));
+    textRot += dRot * 0.08;
+    // and float it toward the real-world top, out of the circle's way
+    const fr2 = worldFrame();
+    const up = fr2.half * 0.42;
+    $('readout').style.transform = `translate(${-Math.sin(-textRot) * up}px, ${-Math.cos(textRot) * up}px) translate(-50%, -50%) rotate(${textRot}rad)`;
+
+    gl.uniform2f(uRes, canvas.width, canvas.height);
+    gl.uniform1f(uTime, (now - t0) / 1000);
+    gl.uniform1f(uLevel, level); gl.uniform1f(uLow, low);
+    gl.uniform1f(uHue, hue); gl.uniform1f(uInten, inten * (0.6 + 0.6 * expr));
+    gl.uniform2f(uFall, slime.x / sl, slime.y / sl);
+    gl.uniform2f(uStretch, slime.vx * 0.35, slime.vy * 0.35);
+    // the word: "tilt" until you start, then the chord, upright in the real world
+    wordBlur += (Math.min(Math.hypot(slime.vx, slime.vy) * 6, 5) - wordBlur) * 0.2;
+    const started = !!ctx && !THUMB;
+    if (started) {
+      const cx = W / 2 - Math.sin(-textRot) * up, cy = H / 2 - Math.cos(textRot) * up;
+      drawWord(wordNow, cx, cy, textRot, Math.min(W * 0.17, 92));
+    } else {
+      drawWord('tilt', W / 2, THUMB ? H * 0.5 : H * 0.3, 0, Math.min(W * 0.42, THUMB ? H * 0.62 : 230));
+    }
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, ttex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tc);
+    gl.uniform1i(uTxt, 0);
+    let dgx = -slime.vx * 0.05, dgy = slime.vy * 0.05;
+    const dm = Math.hypot(dgx, dgy); if (dm > 0.06) { dgx *= 0.06 / dm; dgy *= 0.06 / dm; }
+    gl.uniform2f(uDrag, dgx, dgy);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

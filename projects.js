@@ -7,6 +7,8 @@ export const PROJECTS = [
     slug: "ai-experiments", title: "Ai Experiments", client: "Personal", kind: "AI film",
     blurb: "",
     items: [
+      { head: "Tilt", text: "A tiny instrument for your phone. Turn it upside down to slide through the chords, drag the circle to play a melody, tilt it back to open it up." },
+      { play: "tilt", img: "play-tilt.webp", sm: "play-tilt-sm.webp", caption: "Tilt", note: "Open on your phone" },
       { head: "Anywhere" },
       { file: "anywhere.mp4" },
       { head: "Poké-folio" },
