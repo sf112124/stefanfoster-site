@@ -35,7 +35,7 @@
   .gate .body { position: absolute; left: 0; right: 0; top: 46%; text-align: center; padding: 0 28px; }
   .gate .steps { font-size: 15px; line-height: 1.4; letter-spacing: -0.015em; opacity: .86; text-wrap: balance; }
   .gate .steps span { white-space: nowrap; }
-  .gate .steps .strum { display: block; margin-top: 6px; opacity: .7; }
+  .gate .steps .strum { display: block; margin-top: 6px; opacity: .7; white-space: normal; }
   .gate .go { display: inline-block; margin-top: 26px; font-size: 13px; font-weight: 500; letter-spacing: -0.005em;
               padding: 9px 18px; border-radius: 999px; border: 1px solid rgba(255,255,255,.45);
               background: rgba(255,255,255,.06); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -64,7 +64,7 @@
 
 <div class="gate" id="gate">
   <div class="body">
-    <p class="steps" aria-label="Tilt"><span>Tilt your phone backwards</span> <span>and forwards to control the music.</span><span class="strum">Swipe to strum.</span></p>
+    <p class="steps" aria-label="Tilt"><span>Tilt your phone backwards</span> <span>and forwards to control the music.</span><span class="strum"><span>Swipe to strum, lean for drama,</span> <span>shake to ripple.</span></span></p>
     <span class="go">Tap to begin</span>
   </div>
   <div class="foot">Sound on</div>
@@ -127,7 +127,7 @@
   { const m = location.search.match(/thumb=(\d)/); if (m) slideNow = +m[1]; }
   let bloom = 0, rip = [0, 0, 99], lastStrum = 0, lastIndex = 0;
   const TILT_RANGE = 75 * Math.PI / 180;   // upright to nearly flat on its back counts as the full sweep
-  let chaos = 0;
+  let chaos = 0, dramaT = 0, drama = 0, fxSend = null, fxThrowAt = -1e9;
   // one palette per chord, dark core to bright edge, in the same order as the progression
   const PALS = [
     [[.07,.09,.13],[.27,.22,.55],[.58,.33,.86],[.96,.30,.62],[1,.52,.38],[.97,.86,.42]],   // Am(add9): violet, hot pink, butter
@@ -161,13 +161,16 @@
       const sx = (a.x || 0) * -gSign, sy = (a.y || 0) * gSign;
       slime.vx += sx * 0.05; slime.vy += sy * 0.05;
       const am = Math.hypot(a.x || 0, a.y || 0, a.z || 0);
-      if (am > 13 && ctx && performance.now() - lastStrum > 900) { lastStrum = performance.now(); gliss(); }
+      if (am > 13 && ctx && performance.now() - lastStrum > 900) { lastStrum = performance.now(); throwRipple(); }
     }
     const back = ((g.z || 0) * gSign) / mag;                             // + when the screen tilts back toward the sky
     // the sweep: phone upright and facing you is 0, lying back with the screen to the ceiling is 1
     const upr = ((g.y || 0) * gSign) / mag;
     target = clamp01(Math.atan2(Math.abs(back), upr) / TILT_RANGE);
     exprT = 0.6;
+    // lean either way for drama: a small dead zone, then up to full intensity at about 35 degrees
+    const side = Math.asin(Math.max(-1, Math.min(1, ((g.x || 0) * -gSign) / mag)));
+    dramaT = clamp01((Math.abs(side) - 0.09) / 0.52);
   }
 
   // ---------- audio ----------
@@ -198,6 +201,20 @@
     const harpOut = ctx.createGain(); harpOut.gain.value = 1.0;
     const harpRev = makeReverb(2.8), harpWet = ctx.createGain(); harpWet.gain.value = 0.42;
     harpLp.connect(harpOut); harpOut.connect(comp); harpOut.connect(harpRev); harpRev.connect(harpWet); harpWet.connect(comp);
+    // the ripple: ping-pong echoes darkening as they repeat, plus a long cathedral reverb
+    fxSend = ctx.createGain(); fxSend.gain.value = 0;
+    bus.connect(fxSend); harpOut.connect(fxSend);
+    const dl = ctx.createDelay(2), dr = ctx.createDelay(2); dl.delayTime.value = 0.31; dr.delayTime.value = 0.47;
+    const fbk = ctx.createGain(); fbk.gain.value = 0.62;
+    const dark = ctx.createBiquadFilter(); dark.type = 'lowpass'; dark.frequency.value = 2600;
+    const pl = ctx.createStereoPanner(); pl.pan.value = -0.85; const pr = ctx.createStereoPanner(); pr.pan.value = 0.85;
+    const echo = ctx.createGain(); echo.gain.value = 0.55;
+    fxSend.connect(dl); dl.connect(pl); pl.connect(echo); dl.connect(dr); dr.connect(pr); pr.connect(echo);
+    dr.connect(dark); dark.connect(fbk); fbk.connect(dl);
+    const hall = makeReverb(6.5), hallGain = ctx.createGain(); hallGain.gain.value = 0.7;
+    fxSend.connect(hall); hall.connect(hallGain);
+    echo.connect(hall);
+    echo.connect(comp); hallGain.connect(comp);
     const nb = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
     const nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * (1 - i / nd.length);
     noiseBuf = nb;
@@ -237,11 +254,23 @@
     const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = Math.min(f * 3, 9000); bp.Q.value = 2;
     const ng = ctx.createGain(); ng.gain.value = 0.05 * vel;
     n.connect(bp); bp.connect(ng); ng.connect(pan); n.start(t);
-    harpLp.frequency.setTargetAtTime(2600 + 6000 * expr, t, 0.05);
+    harpLp.frequency.setTargetAtTime(2600 + 6000 * expr + 6000 * drama, t, 0.05);
     bloom = Math.max(bloom, 0.35 + 0.3 * vel);
   }
 
   // a hard shake runs a glissando up the strings
+  // a shake opens a send into a long echo and a huge reverb for a moment, then closes it,
+  // so whatever was sounding ripples away into the distance
+  function throwRipple() {
+    if (!fxSend) return;
+    const t = ctx.currentTime;
+    lastMove = performance.now();
+    fxSend.gain.cancelScheduledValues(t);
+    fxSend.gain.setValueAtTime(fxSend.gain.value, t);
+    fxSend.gain.linearRampToValueAtTime(1.0, t + 0.06);
+    fxSend.gain.setTargetAtTime(0, t + 0.5, 0.45);
+    rip = [0, 0, 0]; bloom = 1;
+  }
   function gliss() { strings.forEach((st, k) => setTimeout(() => pluck(st, 0.8), k * 32)); }
 
   // strumming: every string your finger crosses gets plucked, harder the faster you move
@@ -295,8 +324,8 @@
         const base = Math.floor(slide), f = slide - base;
         const A = chordAt(base), B = chordAt(base + 1);
         const it = A.inten + (B.inten - A.inten) * smooth(f);
-        vibPh += 0.016 * 5.2;
-        const vibDepth = 0.001 + 0.008 * ex * ex;
+        vibPh += 0.016 * (5.2 + 1.6 * drama);
+        const vibDepth = 0.001 + 0.008 * ex * ex + 0.016 * drama;
         const ch = Math.pow(Math.sin(Math.PI * f), 0.8);       // 0 on a chord, 1 halfway between
         chaos = ch;
         for (let v = 0; v < 8; v++) {
@@ -304,13 +333,15 @@
           const tt = smooth((f - o) / 0.7);
           let hz = Math.pow(2, A.notes[v] + (B.notes[v] - A.notes[v]) * tt);
           if (v === 7) hz *= 1 + Math.sin(vibPh * 6.283) * vibDepth;
+          else if (v >= 4) hz *= 1 + Math.sin(vibPh * 6.283 * (1 + 0.07 * v) + v) * 0.011 * drama;   // the upper voices join in
           hz *= 1 + ch * 0.012 * Math.sin(vibPh * (3.1 + v * 1.7) + v * 2.3);   // a queasy waver between chords
           voices[v].forEach(osc => osc.frequency.setTargetAtTime(hz, t, 0.02));
           if (v === 0) sub.frequency.setTargetAtTime(hz / 2, t, 0.02);
         }
         const cutoff = (500 + 1500 * it + 2600 * clamp01(speed / 0.45) * it) * (0.45 + 1.6 * ex) * (1 - 0.45 * ch);
-        lp.frequency.setTargetAtTime(Math.min(cutoff, 14000), t, 0.06);
-        out.gain.setTargetAtTime(active ? (0.5 + 0.45 * it) * (0.35 + 0.75 * ex) : 0, t, active ? 0.15 : 1.0);
+        lp.frequency.setTargetAtTime(Math.min(cutoff * (1 + 2.2 * drama), 16000), t, 0.06);
+        lp.Q.setTargetAtTime(0.8 + 7 * drama, t, 0.08);
+        out.gain.setTargetAtTime(active ? (0.5 + 0.45 * it) * (0.35 + 0.75 * ex) * (1 + 0.3 * drama) : 0, t, active ? 0.15 : 1.0);
         return { A, B, f, it, index };
       }
     };
@@ -549,6 +580,7 @@ void main(){
     const speed = Math.abs(vel);
     if (speed > 0.02) lastMove = now;
     expr += (exprT - expr) * 0.12;
+    drama += (dramaT - drama) * 0.1;
 
     if (THUMB) fallT = H > W ? [0, 1] : [0.32, 0.95];
     else if (!isPhone) fallT = [Math.sin(now / 4000) * 0.6, Math.cos(now / 4000)];
@@ -601,7 +633,7 @@ void main(){
     gl.uniform2f(uRes, canvas.width, canvas.height);
     gl.uniform1f(uTime, (now - t0) / 1000);
     gl.uniform1f(uLevel, level); gl.uniform1f(uLow, low);
-    gl.uniform1f(uHue, hue); gl.uniform1f(uInten, inten * (0.6 + 0.6 * expr));
+    gl.uniform1f(uHue, hue); gl.uniform1f(uInten, inten * (0.6 + 0.6 * expr) + 0.9 * drama);
     gl.uniform2f(uFall, slime.x / sl, slime.y / sl);
     gl.uniform2f(uStretch, slime.vx * 0.6, slime.vy * 0.6);
     bloom *= Math.exp(-dt / 0.9);
