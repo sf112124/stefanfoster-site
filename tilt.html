@@ -64,7 +64,7 @@
 
 <div class="gate" id="gate">
   <div class="body">
-    <p class="steps" aria-label="Tilt"><span>Tilt your phone backwards</span> <span>and forwards to control the music.</span><span class="strum"><span>Swipe across to strum, slide up for drama,</span> <span>shake to ripple.</span></span></p>
+    <p class="steps" aria-label="Tilt"><span>Tilt your phone backwards</span> <span>and forwards to control the music.</span><span class="strum"><span>Swipe across to strum, hold higher for drama,</span> <span>shake to ripple.</span></span></p>
     <span class="go">Tap to begin</span>
   </div>
   <div class="foot">Sound on</div>
@@ -276,16 +276,18 @@
 
   // strumming: every string your finger crosses gets plucked, harder the faster you move
   let lastPX = null, lastPY = 0, startY = 0, lastPT = 0;
+  // where your finger is sets the drama: near the bottom is calm, the higher up the screen the more intense
+  const dramaAt = y => clamp01((H * 0.88 - y) / (H * 0.72));
   addEventListener('pointerdown', e => {
     if (!ctx) return;
     lastPX = e.clientX; lastPY = e.clientY; startY = e.clientY; lastPT = performance.now();
-    for (const st of strings) if (Math.abs(stringX(st.i) - e.clientX) < 14) { pluck(st, 0.8); rip = [(e.clientX / W - 0.5) * (W / H), e.clientY / H - 0.5, 0]; }
+    dramaT = dramaAt(e.clientY);                                  // touching just sets the drama, it never plucks
   });
   addEventListener('pointermove', e => {
     if (lastPX === null) return;
     const now = performance.now(), x = e.clientX, y = e.clientY;
     // sliding up the screen builds the drama, the higher you go the more intense
-    dramaT = clamp01((startY - y) / (H * 0.38));
+    dramaT = dramaAt(y);
     const v = Math.min(1, Math.max(0.35, Math.abs(x - lastPX) / Math.max(8, now - lastPT) / 1.6));
     const lo = Math.min(lastPX, x), hi = Math.max(lastPX, x);
     const sideways = Math.abs(x - lastPX) > Math.abs(y - lastPY) * 0.6;   // mostly vertical moves don't strum
@@ -594,7 +596,7 @@ void main(){
     const speed = Math.abs(vel);
     if (speed > 0.02) lastMove = now;
     expr += (exprT - expr) * 0.12;
-    drama += (dramaT - drama) * (dramaT > drama ? 0.18 : 0.06);   // quick in, eases back out when you let go
+    drama += (dramaT - drama) * (dramaT > drama ? 0.45 : 0.07);   // almost instant in, eases back out when you let go
 
     if (THUMB) fallT = H > W ? [0, 1] : [0.32, 0.95];
     else if (!isPhone) fallT = [Math.sin(now / 4000) * 0.6, Math.cos(now / 4000)];
