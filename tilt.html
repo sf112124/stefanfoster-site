@@ -124,6 +124,7 @@
   let exprT = 0.4, expr = 0.4;                          // tilt-back expression 0..1
   let level = 0, low = 0, hue = 0, hueT = 0, inten = 0.6, intenT = 0.6, textRot = 0;
   let slideNow = 0;
+  { const m = location.search.match(/thumb=(\d)/); if (m) slideNow = +m[1]; }
   let bloom = 0, rip = [0, 0, 99], lastStrum = 0, lastIndex = 0;
   const TILT_RANGE = 75 * Math.PI / 180;   // upright to nearly flat on its back counts as the full sweep
   let chaos = 0;
@@ -138,7 +139,7 @@
     [[.06,.02,.06],[.30,.04,.20],[.62,.10,.35],[.90,.20,.30],[1,.45,.20],[1,.78,.40]],     // E7b9b13: blood and fire
     [[.10,.10,.18],[.40,.40,.80],[.75,.60,.95],[1,.70,.80],[1,.85,.70],[1,.97,.88]],       // Amaj9: everything lifts into light
   ];
-  const palNow = PALS[0].map(c => c.slice());
+  const palNow = PALS[((Math.round(slideNow) % 8) + 8) % 8].map(c => c.slice());
   const palFlat = new Float32Array(18);
   const standalone = navigator.standalone || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
 
@@ -549,7 +550,7 @@ void main(){
     if (speed > 0.02) lastMove = now;
     expr += (exprT - expr) * 0.12;
 
-    if (THUMB) fallT = [0.32, 0.95];
+    if (THUMB) fallT = H > W ? [0, 1] : [0.32, 0.95];
     else if (!isPhone) fallT = [Math.sin(now / 4000) * 0.6, Math.cos(now / 4000)];
     fallFast[0] += (fallT[0] - fallFast[0]) * 0.2; fallFast[1] += (fallT[1] - fallFast[1]) * 0.2;
     const ff = Math.hypot(fallFast[0], fallFast[1]) || 1; fallFast[0] /= ff; fallFast[1] /= ff;
