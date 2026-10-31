@@ -145,7 +145,7 @@
   // People rarely hold a phone perfectly upright or perfectly flat, so the sweep runs from about 20 degrees
   // back (how you naturally hold it) to about 58 degrees back, and anything past either end counts as the end.
   const TILT_FROM = 22 * Math.PI / 180, TILT_TO = 58 * Math.PI / 180;
-  let master = null;
+  let master = null, duck = null;
   let chaos = 0, dramaT = 0, drama = 0, fxSend = null, vibAmt = null;
   // one palette per chord, dark core to bright edge, in the same order as the progression
   const PALS = [
@@ -208,7 +208,8 @@
     bus = ctx.createGain(); bus.gain.value = 0.7;
     const reverb = makeReverb(), wet = ctx.createGain(); wet.gain.value = 0.5;
     bus.connect(idleGain); bus.connect(reverb); reverb.connect(wet); wet.connect(idleGain);
-    idleGain.connect(comp); master = ctx.createGain(); comp.connect(master); master.connect(ctx.destination);
+    duck = ctx.createGain(); duck.connect(comp);                 // everything melodic runs through here, so the kick can push it down
+    idleGain.connect(duck); master = ctx.createGain(); comp.connect(master); master.connect(ctx.destination);
     analyser = ctx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.6;
     comp.connect(analyser);
     tbuf = new Float32Array(analyser.fftSize); fbuf = new Uint8Array(analyser.frequencyBinCount);
@@ -219,7 +220,7 @@
     harpLp = ctx.createBiquadFilter(); harpLp.type = 'lowpass'; harpLp.frequency.value = 5000; harpLp.Q.value = 0.5;
     const harpOut = ctx.createGain(); harpOut.gain.value = 1.0;
     const harpRev = makeReverb(2.8), harpWet = ctx.createGain(); harpWet.gain.value = 0.42;
-    harpLp.connect(harpOut); harpOut.connect(comp); harpOut.connect(harpRev); harpRev.connect(harpWet); harpWet.connect(comp);
+    harpLp.connect(harpOut); harpOut.connect(duck); harpOut.connect(harpRev); harpRev.connect(harpWet); harpWet.connect(duck);
     // the ripple: ping-pong echoes darkening as they repeat, plus a long cathedral reverb
     fxSend = ctx.createGain(); fxSend.gain.value = 0;
     bus.connect(fxSend); harpOut.connect(fxSend);
@@ -233,7 +234,7 @@
     const hall = makeReverb(6.5), hallGain = ctx.createGain(); hallGain.gain.value = 0.7;
     fxSend.connect(hall); hall.connect(hallGain);
     echo.connect(hall);
-    echo.connect(comp); hallGain.connect(comp);
+    echo.connect(duck); hallGain.connect(duck);
     comp0 = comp;
     noiseLong = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     { const d = noiseLong.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
@@ -340,6 +341,9 @@
   // and a little drive so you can still hear it on phone speakers
   const drive = (() => { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * 2.6); } return c; })();
   function eightOhEight(t, vel) {
+    // sidechain: the chords, harp and echoes dip under every kick and swell back up
+    duck.gain.setTargetAtTime(0.22, t, 0.004);
+    duck.gain.setTargetAtTime(1, t + 0.06, 0.13);
     const f = bassHz;
     const o = ctx.createOscillator(); o.type = 'sine';
     o.frequency.setValueAtTime(f * 2.6, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.05);
