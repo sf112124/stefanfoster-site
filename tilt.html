@@ -63,8 +63,8 @@
 <div class="gate" id="gate">
   <div class="body">
     <ol class="steps" aria-label="Tilt">
-      <li>Keep your phone facing you</li>
-      <li>Tilt left and right to change chords</li>
+      <li>Hold your phone upright, facing you</li>
+      <li>Tilt it back towards the ceiling and up again to change chords</li>
       <li>Strum your screen to play the chord</li>
     </ol>
     <span class="go">Tap to begin</span>
@@ -127,7 +127,8 @@
   let level = 0, low = 0, hue = 0, hueT = 0, inten = 0.6, intenT = 0.6, textRot = 0;
   let slideNow = 0;
   let bloom = 0, rip = [0, 0, 99], lastStrum = 0, lastIndex = 0;
-  const TILT_RANGE = 30 * Math.PI / 180;   // a gentle side-to-side tilt, well short of where the iPhone flips to landscape
+  const TILT_RANGE = 75 * Math.PI / 180;   // upright to nearly flat on its back counts as the full sweep
+  let chaos = 0;
   const standalone = navigator.standalone || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
 
   // ---------- phone motion ----------
@@ -141,8 +142,6 @@
     const m2 = Math.hypot(fx, fy);
     if (m2 > 0.2 * mag) {
       fallT = [fx / m2, -fy / m2];                                       // screen coords, y down
-      const roll = Math.atan2(fallT[0], fallT[1]);                       // 0 upright, + / - tilted to either side
-      target = clamp01((roll / TILT_RANGE + 1) / 2);                     // full left 0 -> full right 1
     }
     // shake: slosh the slime, and a hard shake strums the chord
     const a = e.acceleration;
@@ -153,7 +152,10 @@
       if (am > 13 && ctx && performance.now() - lastStrum > 900) { lastStrum = performance.now(); gliss(); }
     }
     const back = ((g.z || 0) * gSign) / mag;                             // + when the screen tilts back toward the sky
-    exprT = clamp01(0.4 + back * 0.9);
+    // the sweep: phone upright and facing you is 0, lying back with the screen to the ceiling is 1
+    const upr = ((g.y || 0) * gSign) / mag;
+    target = clamp01(Math.atan2(Math.abs(back), upr) / TILT_RANGE);
+    exprT = 0.6;
   }
 
   // ---------- audio ----------
@@ -283,15 +285,18 @@
         const it = A.inten + (B.inten - A.inten) * smooth(f);
         vibPh += 0.016 * 5.2;
         const vibDepth = 0.001 + 0.008 * ex * ex;
+        const ch = Math.pow(Math.sin(Math.PI * f), 0.8);       // 0 on a chord, 1 halfway between
+        chaos = ch;
         for (let v = 0; v < 8; v++) {
           const o = 0.3 * v / 7;
           const tt = smooth((f - o) / 0.7);
           let hz = Math.pow(2, A.notes[v] + (B.notes[v] - A.notes[v]) * tt);
           if (v === 7) hz *= 1 + Math.sin(vibPh * 6.283) * vibDepth;
+          hz *= 1 + ch * 0.012 * Math.sin(vibPh * (3.1 + v * 1.7) + v * 2.3);   // a queasy waver between chords
           voices[v].forEach(osc => osc.frequency.setTargetAtTime(hz, t, 0.02));
           if (v === 0) sub.frequency.setTargetAtTime(hz / 2, t, 0.02);
         }
-        const cutoff = (500 + 1500 * it + 2600 * clamp01(speed / 0.45) * it) * (0.45 + 1.6 * ex);
+        const cutoff = (500 + 1500 * it + 2600 * clamp01(speed / 0.45) * it) * (0.45 + 1.6 * ex) * (1 - 0.45 * ch);
         lp.frequency.setTargetAtTime(Math.min(cutoff, 14000), t, 0.06);
         out.gain.setTargetAtTime(active ? (0.5 + 0.45 * it) * (0.35 + 0.75 * ex) : 0, t, active ? 0.15 : 1.0);
         return { A, B, f, it, index };
@@ -359,7 +364,7 @@
 precision highp float;
 varying vec2 uv;
 uniform vec2 res;
-uniform float time, level, low, hue, inten, bloom;
+uniform float time, level, low, hue, inten, bloom, chaos;
 uniform vec3 rip;
 uniform vec2 fall, stretch, drag;
 uniform sampler2D txt;
@@ -404,6 +409,9 @@ void main(){
   // The dark core floats up away from gravity, so the colour pools wherever "down" is.
   vec2 c = -g * (0.26 + 0.06 * low + 0.04 * bloom);
   vec2 p = q - c;
+  // Between chords the whole thing churns: big slow folds, nothing sits still. On a chord it calms.
+  float ct = time * (0.5 + 1.2 * chaos);
+  p += (vec2(big(p * 2.6 + vec2(ct * 0.6, 1.3)), big(p * 2.6 + vec2(7.1, -ct * 0.5))) - 0.5) * 0.42 * chaos;
   // It sags and stretches with the flip, like something heavy and slow.
   vec2 sdir = length(stretch) > 1e-4 ? normalize(stretch) : vec2(0.0, 1.0);
   float s = clamp(length(stretch), 0.0, 0.6);
@@ -416,9 +424,9 @@ void main(){
   vec2 dir = normalize(p + 1e-5);
   float side = 0.5 + 0.5 * dot(dir, g);
   // (noise is sampled on the direction itself, so there's no seam anywhere around the edge)
-  float lobes = big(dir * 1.1 + vec2(time * 0.04, -time * 0.03)) - 0.5;
+  float lobes = big(dir * (1.1 + 1.4 * chaos) + vec2(time * 0.04 + ct * 0.3 * chaos, -time * 0.03)) - 0.5;
   float sag = pow(side, 4.0);
-  d -= lobes * 0.07 + sag * (0.05 + 0.08 * s) + side * 0.02;
+  d -= lobes * (0.07 + 0.22 * chaos) + sag * (0.05 + 0.08 * s) + side * 0.02;
 
   // How far out from the core we are, in the glow band. The sound swells the band.
   // a tap sends a ring through the slime
@@ -429,8 +437,9 @@ void main(){
   float t = smoothstep(-0.10, band, d);
   t = pow(t, 0.9);
   t += (big(q * 1.4 + vec2(time * 0.03, -time * 0.02)) - 0.5) * 0.12 * t;   // slow marbling inside the colour
+  t += (big(q * 3.0 + vec2(ct * 0.5, -ct * 0.4)) - 0.5) * 0.55 * chaos;      // and churning colour in between chords
 
-  float mood = 0.5 + 0.5 * sin(hue * 6.28318);
+  float mood = 0.5 + 0.5 * sin(hue * 6.28318 + chaos * 1.8 * sin(ct * 1.3));
   vec3 col = mix(ramp(t), ramp2(t), mood * 0.55);
   t += ring * 0.35;
   col = mix(ramp(clamp(t, 0.0, 1.0)), ramp2(clamp(t, 0.0, 1.0)), mood * 0.55);
@@ -455,7 +464,8 @@ void main(){
 
   // Film grain, like the reference.
   float gr = hash(gl_FragCoord.xy + fract(time * 13.0) * 100.0) - 0.5;
-  col += gr * 0.07;
+  col *= 1.0 - 0.18 * chaos;
+  col += gr * (0.07 + 0.07 * chaos);
   gl_FragColor = vec4(col, 1.0);
 }`;
   function sh(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
@@ -499,7 +509,7 @@ void main(){
     tx.fillStyle = '#fff';
     tx.fillText(word, 0, 0);
   }
-  const uDrag = U('drag'), uTxt = U('txt'), uBloom = U('bloom'), uRip = U('rip');
+  const uDrag = U('drag'), uTxt = U('txt'), uBloom = U('bloom'), uRip = U('rip'), uChaos = U('chaos');
   const uRes = U('res'), uTime = U('time'), uLevel = U('level'), uLow = U('low'), uHue = U('hue'), uInten = U('inten'), uFall = U('fall'), uStretch = U('stretch');
 
   function resize() {
@@ -588,6 +598,7 @@ void main(){
     gl.uniform2f(uStretch, slime.vx * 0.6, slime.vy * 0.6);
     bloom *= Math.exp(-dt / 0.9);
     rip[2] += dt;
+    gl.uniform1f(uChaos, chaos);
     gl.uniform1f(uBloom, bloom); gl.uniform3f(uRip, rip[0], rip[1], rip[2]);
     // the word: "tilt" until you start, then the chord, upright in the real world
     wordBlur += (Math.min(Math.hypot(slime.vx, slime.vy) * 6, 5) - wordBlur) * 0.2;
