@@ -193,7 +193,7 @@
     analyser = ctx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.6;
     comp.connect(analyser);
     tbuf = new Float32Array(analyser.fftSize); fbuf = new Uint8Array(analyser.frequencyBinCount);
-    const vibLfo = ctx.createOscillator(); vibLfo.frequency.value = 5.6;
+    const vibLfo = ctx.createOscillator(); vibLfo.frequency.value = 6.8;
     vibAmt = ctx.createGain(); vibAmt.gain.value = 0;                  // in cents, set by how far you've slid up
     vibLfo.connect(vibAmt); vibLfo.start();
     chords = Chords();
@@ -346,7 +346,7 @@
         const cutoff = (500 + 1500 * it + 2600 * clamp01(speed / 0.45) * it) * (0.45 + 1.6 * ex) * (1 - 0.45 * ch);
         lp.frequency.setTargetAtTime(Math.min(cutoff * (1 + 2.2 * drama), 16000), t, 0.06);
         lp.Q.setTargetAtTime(0.8 + 2.5 * drama, t, 0.08);
-        vibAmt.gain.setTargetAtTime(drama * drama * 85, t, 0.05);   // up to a deep, even ~85 cent vibrato
+        vibAmt.gain.setTargetAtTime(drama * 32, t, 0.05);   // a quick, even shimmer, up to about a third of a semitone
         out.gain.setTargetAtTime(active ? (0.5 + 0.45 * it) * (0.35 + 0.75 * ex) * (1 + 0.3 * drama) : 0, t, active ? 0.15 : 1.0);
         return { A, B, f, it, index };
       }
@@ -401,6 +401,14 @@
   }
 
   // ---------- start ----------
+  // the sound runs the whole time you're in the app, and stops when you leave it
+  document.addEventListener('visibilitychange', () => {
+    if (!ctx) return;
+    if (document.hidden) ctx.suspend(); else ctx.resume();
+  });
+  addEventListener('pagehide', () => { if (ctx) ctx.suspend(); });
+  addEventListener('pageshow', () => { if (ctx && !document.hidden) ctx.resume(); });
+
   $('gate').addEventListener('click', async () => {
     try { if (typeof DeviceMotionEvent.requestPermission === 'function') await DeviceMotionEvent.requestPermission(); } catch (_) {}
     window.addEventListener('devicemotion', onMotion);
@@ -613,8 +621,7 @@ void main(){
     if (ctx && chords) {
       const t = ctx.currentTime;
       const active = now - lastMove < 3000;
-      idleGain.gain.setTargetAtTime(active ? 1 : 0, t, active ? 0.03 : 0.6);
-      const r = chords.update(pos, speed, t, now, expr, now - lastMove < 2500);
+      const r = chords.update(pos, speed, t, now, expr, true);   // always sounding while the app is open
       chordNow = r.f < 0.5 ? r.A : r.B;
       wordNow = chordNow.name;
       $('sub').textContent = r.f > 0.04 && r.f < 0.96 ? r.A.name + '  →  ' + r.B.name : '';
