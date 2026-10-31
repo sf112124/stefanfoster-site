@@ -7,10 +7,10 @@ export const PROJECTS = [
     slug: "ai-experiments", title: "Ai Experiments", client: "Personal", kind: "AI film",
     blurb: "",
     items: [
-      { head: "Tilt", text: "A tiny instrument for your phone. Turn it upside down and back to slide through the chords, tilt it back to open them up." },
-      { play: "tilt", img: "play-tilt.webp", sm: "play-tilt-sm.webp", caption: "Tilt", note: "Open on your phone" },
       { head: "Anywhere" },
       { file: "anywhere.mp4" },
+      { head: "Tilt (phone only)", text: "A tiny instrument for your phone. Turn it upside down and back to slide through the chords, tilt it back to open them up." },
+      { play: "tilt", img: "play-tilt.webp", sm: "play-tilt-sm.webp", caption: "Tilt (phone only)", note: "Open on your phone" },
       { head: "Poké-folio" },
       { play: "rpg", img: "pokefolio-v4.webp", sm: "pokefolio-v4-sm.webp", caption: "Poké-folio", note: "Press start" },
       { head: "Samurai Barber" },
