@@ -65,11 +65,10 @@
 <div class="gate" id="gate">
   <div>
     <ol aria-label="Tilt">
-      <li>Turn your phone like a steering wheel, upright to upside down, to glide through the chords.</li>
-      <li>Tilt the top back to open it up. Tip it forward to hush it.</li>
-      <li>Tap or shake to strum.</li>
+      <li>Keep your phone facing you.</li>
+      <li>Tilt left and right to change chords.</li>
+      <li>Strum your screen to play the chord.</li>
     </ol>
-    <p class="small">Turn on rotation lock first so the screen stays put.<span id="a2hs"><br>For full screen: Share, then Add to Home Screen.</span></p>
     <span class="tap">Tap to begin</span>
   </div>
 </div>
@@ -114,7 +113,7 @@
     const pcs = [...new Set(all.map(m => m % 12))];
     // the lead's notes: this chord's tones across two octaves, so every note you land on belongs
     const lead = []; for (let m = 62; m <= 86; m++) if (pcs.includes(m % 12)) lead.push(m);
-    return { name, inten, lead, notes: [bass, ...up.slice().sort((a, b) => a - b)].map(m => Math.log2(midiHz(m))) };
+    return { name, inten, lead, pcs, notes: [bass, ...up.slice().sort((a, b) => a - b)].map(m => Math.log2(midiHz(m))) };
   });
   const chordAt = i => PROG[((i % PROG.length) + PROG.length) % PROG.length];
 
@@ -129,8 +128,8 @@
   let level = 0, low = 0, hue = 0, hueT = 0, inten = 0.6, intenT = 0.6, textRot = 0;
   let slideNow = 0;
   let bloom = 0, rip = [0, 0, 99], lastStrum = 0, lastIndex = 0;
+  const TILT_RANGE = 30 * Math.PI / 180;   // a gentle side-to-side tilt, well short of where the iPhone flips to landscape
   const standalone = navigator.standalone || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
-  if (standalone) $('a2hs').remove();
 
   // ---------- phone motion ----------
   function onMotion(e) {
@@ -143,7 +142,8 @@
     const m2 = Math.hypot(fx, fy);
     if (m2 > 0.2 * mag) {
       fallT = [fx / m2, -fy / m2];                                       // screen coords, y down
-      target = Math.acos(Math.max(-1, Math.min(1, fallT[1]))) / Math.PI; // steering-wheel turn: upright 0 -> upside down 1
+      const roll = Math.atan2(fallT[0], fallT[1]);                       // 0 upright, + / - tilted to either side
+      target = clamp01((roll / TILT_RANGE + 1) / 2);                     // full left 0 -> full right 1
     }
     // shake: slosh the slime, and a hard shake strums the chord
     const a = e.acceleration;
@@ -151,7 +151,7 @@
       const sx = (a.x || 0) * -gSign, sy = (a.y || 0) * gSign;
       slime.vx += sx * 0.05; slime.vy += sy * 0.05;
       const am = Math.hypot(a.x || 0, a.y || 0, a.z || 0);
-      if (am > 13 && ctx && performance.now() - lastStrum > 700) { strum(0.9, W / 2, H / 2); }
+      if (am > 13 && ctx && performance.now() - lastStrum > 900) { lastStrum = performance.now(); gliss(); }
     }
     const back = ((g.z || 0) * gSign) / mag;                             // + when the screen tilts back toward the sky
     exprT = clamp01(0.4 + back * 0.9);
@@ -181,33 +181,76 @@
     comp.connect(analyser);
     tbuf = new Float32Array(analyser.fftSize); fbuf = new Uint8Array(analyser.frequencyBinCount);
     chords = Chords();
+    harpLp = ctx.createBiquadFilter(); harpLp.type = 'lowpass'; harpLp.frequency.value = 5000; harpLp.Q.value = 0.5;
+    const harpOut = ctx.createGain(); harpOut.gain.value = 1.0;
+    const harpRev = makeReverb(2.8), harpWet = ctx.createGain(); harpWet.gain.value = 0.42;
+    harpLp.connect(harpOut); harpOut.connect(comp); harpOut.connect(harpRev); harpRev.connect(harpWet); harpWet.connect(comp);
+    const nb = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
+    const nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * (1 - i / nd.length);
+    noiseBuf = nb;
   }
 
-  // A soft glassy strum up through the chord you're on, with a ripple through the slime where you touched.
-  function strum(vel, x, y) {
+  // ---------- the harp ----------
+  let harpLp = null, noiseBuf = null;
+  const STRINGS = 12;
+  const strings = Array.from({ length: STRINGS }, (_, i) => ({ i, midi: 60, amp: 0, t0: 0 }));
+  const stringX = i => W * (0.09 + 0.82 * i / (STRINGS - 1));
+
+  // tune the strings to the chord you're on: its notes, low to high, from G3 upward
+  function tuneStrings(chord) {
+    const pcs = chord.pcs, out = [];
+    for (let m = 55; out.length < STRINGS && m < 100; m++) if (pcs.includes(m % 12)) out.push(m);
+    strings.forEach((st, k) => st.midi = out[k]);
+  }
+
+  // a soft harp pluck: a few sine partials, the high ones dying first, plus a tiny touch of the finger
+  function pluck(st, vel) {
     if (!ctx) return;
     const now = performance.now();
-    lastStrum = now; lastMove = now;
-    bloom = Math.max(bloom, 0.6 * vel);
-    rip = [(x / W - 0.5) * (W / H), y / H - 0.5, 0];
-    const c = chordAt(Math.round(slideNow));
-    const notes = c.notes.slice(1).map(l => Math.round(12 * (l - Math.log2(440)) + 69)).map(m => m < 64 ? m + 12 : m).sort((a, b) => a - b);
-    const t0 = ctx.currentTime + 0.01;
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800 + 5000 * expr; lp.connect(bus);
-    notes.forEach((m, i) => {
-      const t = t0 + i * 0.055;
-      const f = midiHz(m);
-      const o1 = ctx.createOscillator(); o1.type = 'triangle'; o1.frequency.value = f;
-      const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2;
-      const g1 = ctx.createGain(), g2 = ctx.createGain(), pan = ctx.createStereoPanner();
-      pan.pan.value = -0.7 + 1.4 * i / Math.max(1, notes.length - 1);
-      const peak = 0.07 * vel;
-      g1.gain.setValueAtTime(0, t); g1.gain.linearRampToValueAtTime(peak, t + 0.006); g1.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
-      g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(peak * 0.35, t + 0.004); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
-      o1.connect(g1); o2.connect(g2); g1.connect(pan); g2.connect(pan); pan.connect(lp);
-      o1.start(t); o2.start(t); o1.stop(t + 2.6); o2.stop(t + 0.8);
+    lastMove = now;
+    st.amp = Math.min(1, 0.45 + vel * 0.55); st.t0 = now;
+    const t = ctx.currentTime + 0.002, f = midiHz(st.midi);
+    const pan = ctx.createStereoPanner(); pan.pan.value = -0.75 + 1.5 * st.i / (STRINGS - 1); pan.connect(harpLp);
+    const body = f < 260 ? 1.35 : 1;
+    [[1, 1, 3.4], [2, 0.42, 1.7], [3, 0.2, 0.9], [4, 0.09, 0.5]].forEach(([k, a, d]) => {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f * k * (1 + 0.0006 * k * k);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.2 * a * vel, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d * body);
+      o.connect(g); g.connect(pan); o.start(t); o.stop(t + d * body + 0.05);
     });
+    const n = ctx.createBufferSource(); n.buffer = noiseBuf;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = Math.min(f * 3, 9000); bp.Q.value = 2;
+    const ng = ctx.createGain(); ng.gain.value = 0.05 * vel;
+    n.connect(bp); bp.connect(ng); ng.connect(pan); n.start(t);
+    harpLp.frequency.setTargetAtTime(2600 + 6000 * expr, t, 0.05);
+    bloom = Math.max(bloom, 0.35 + 0.3 * vel);
   }
+
+  // a hard shake runs a glissando up the strings
+  function gliss() { strings.forEach((st, k) => setTimeout(() => pluck(st, 0.8), k * 32)); }
+
+  // strumming: every string your finger crosses gets plucked, harder the faster you move
+  let lastPX = null, lastPT = 0;
+  addEventListener('pointerdown', e => {
+    if (!ctx) return;
+    lastPX = e.clientX; lastPT = performance.now();
+    for (const st of strings) if (Math.abs(stringX(st.i) - e.clientX) < 14) { pluck(st, 0.8); rip = [(e.clientX / W - 0.5) * (W / H), e.clientY / H - 0.5, 0]; }
+  });
+  addEventListener('pointermove', e => {
+    if (lastPX === null) return;
+    const now = performance.now(), x = e.clientX;
+    const v = Math.min(1, Math.max(0.35, Math.abs(x - lastPX) / Math.max(8, now - lastPT) / 1.6));
+    const lo = Math.min(lastPX, x), hi = Math.max(lastPX, x);
+    for (const st of strings) {
+      const sx = stringX(st.i);
+      if (sx > lo && sx <= hi) { pluck(st, v); rip = [(sx / W - 0.5) * (W / H), e.clientY / H - 0.5, 0]; }
+    }
+    lastPX = x; lastPT = now;
+  });
+  addEventListener('pointerup', () => lastPX = null);
+  addEventListener('pointercancel', () => lastPX = null);
 
   // The chord pad: 8 voices x 3 detuned saws, sliding between chords as the phone turns.
   function Chords() {
@@ -276,22 +319,22 @@
     return { x: dx * fr.cs + dy * fr.sn, y: -dx * fr.sn + dy * fr.cs };
   };
 
-  addEventListener('pointerdown', e => { if (!ctx) return; strum(1, e.clientX, e.clientY); });
-  addEventListener('pointermove', e => { if (touch.on) { touch.x = e.clientX; touch.y = e.clientY; } });
-  addEventListener('pointerup', () => touch.on = false);
-  addEventListener('pointercancel', () => touch.on = false);
 
   function drawInk(chord, now) {
     ic.setTransform(DPR, 0, 0, DPR, 0, 0);
     ic.clearRect(0, 0, W, H);
     if (!ctx) return;
-    // the expression meter: a thin arc on the right edge (tilt back to fill it)
+    // the strings: thin lines, bending and glowing where they've been plucked
     ic.save();
-    ic.strokeStyle = 'rgba(255,255,255,.18)'; ic.lineWidth = 2;
-    const mx = W - 14, my0 = H * 0.3, my1 = H * 0.7;
-    ic.beginPath(); ic.moveTo(mx, my0); ic.lineTo(mx, my1); ic.stroke();
-    ic.strokeStyle = 'rgba(255,255,255,.85)';
-    ic.beginPath(); ic.moveTo(mx, my1); ic.lineTo(mx, my1 - (my1 - my0) * expr); ic.stroke();
+    for (const st of strings) {
+      const x = stringX(st.i);
+      const age = now - st.t0;
+      const env = st.amp * Math.exp(-age / 700);
+      const disp = env * 9 * Math.sin(age / 13);
+      ic.strokeStyle = `rgba(255,255,255,${0.26 + 0.6 * env})`;
+      ic.lineWidth = 1 + 0.6 * env;
+      ic.beginPath(); ic.moveTo(x, 0); ic.quadraticCurveTo(x + disp * 2, H / 2, x, H); ic.stroke();
+    }
     ic.restore();
   }
 
@@ -512,7 +555,8 @@ void main(){
       wordNow = chordNow.name;
       $('sub').textContent = r.f > 0.04 && r.f < 0.96 ? r.A.name + '  →  ' + r.B.name : '';
       hueT = slideNow * 0.137; intenT = r.it;
-      if (r.index !== lastIndex) { lastIndex = r.index; bloom = 1; strum(0.45, W / 2, H / 2); }
+      if (r.index !== lastIndex) { lastIndex = r.index; bloom = 1; }
+      tuneStrings(chordNow);
     }
     drawInk(chordNow, now);
 
