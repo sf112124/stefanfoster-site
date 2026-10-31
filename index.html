@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Syne:wght@800&display=swap">
-<script>try { if (!location.hash && !sessionStorage.getItem("splashed")) document.documentElement.classList.add("splashing"); } catch (e) { if (!location.hash) document.documentElement.classList.add("splashing"); }</script>
+<script>(function () { var desk = matchMedia("(hover: hover) and (pointer: fine)").matches && innerWidth > 700, seen = false; try { seen = !!sessionStorage.getItem("splashed"); } catch (e) {} if (desk && !location.hash && !seen) document.documentElement.classList.add("splashing"); })();</script>
 <link rel="stylesheet" href="new.css">
 </head>
 <body data-tunnel>
