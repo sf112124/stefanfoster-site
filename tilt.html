@@ -54,7 +54,6 @@
   <div>
     <ol aria-label="Tilt">
       <li>Turn your phone like a steering wheel, upright to upside down, to glide through the chords.</li>
-      <li>Drag the circle to play a melody over them.</li>
       <li>Tilt the top back to open it up. Tip it forward to hush it.</li>
     </ol>
     <span class="tap">Tap to begin</span>
@@ -157,7 +156,6 @@
     comp.connect(analyser);
     tbuf = new Float32Array(analyser.fftSize); fbuf = new Uint8Array(analyser.frequencyBinCount);
     chords = Chords();
-    lead = Lead();
   }
 
   // The chord pad: 8 voices x 3 detuned saws, sliding between chords as the phone turns.
@@ -208,38 +206,6 @@
     };
   }
 
-  // The lead: a warm, glassy line that glides between the chord's own notes.
-  function Lead() {
-    const out = ctx.createGain(); out.gain.value = 0;
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 5; lp.frequency.value = 2000;
-    const a = ctx.createOscillator(); a.type = 'sawtooth';
-    const b = ctx.createOscillator(); b.type = 'triangle';
-    const ag = ctx.createGain(); ag.gain.value = 0.16;
-    const bg = ctx.createGain(); bg.gain.value = 0.22;
-    a.connect(ag); b.connect(bg); ag.connect(lp); bg.connect(lp); lp.connect(out);
-    const vib = ctx.createOscillator(); vib.frequency.value = 5.6;
-    const vibAmt = ctx.createGain(); vibAmt.gain.value = 0;
-    vib.connect(vibAmt); vibAmt.connect(a.detune); vibAmt.connect(b.detune);
-    // ping-pong echo
-    const dl = ctx.createDelay(1), dr = ctx.createDelay(1); dl.delayTime.value = 0.36; dr.delayTime.value = 0.54;
-    const fb = ctx.createGain(); fb.gain.value = 0.32;
-    const pl = ctx.createStereoPanner(); pl.pan.value = -0.7; const pr = ctx.createStereoPanner(); pr.pan.value = 0.7;
-    const send = ctx.createGain(); send.gain.value = 0.35;
-    out.connect(bus); out.connect(send); send.connect(dl); dl.connect(pl); pl.connect(bus); dl.connect(dr); dr.connect(pr); pr.connect(bus); dr.connect(fb); fb.connect(dl);
-    a.start(); b.start(); vib.start();
-    a.detune.value = 4;
-    return {
-      update(midi, on, t, ex, glide) {
-        const hz = midiHz(midi);
-        a.frequency.setTargetAtTime(hz, t, glide);
-        b.frequency.setTargetAtTime(hz / 2, t, glide);
-        vibAmt.gain.setTargetAtTime(4 + 34 * ex * ex, t, 0.1);                 // cents
-        lp.frequency.setTargetAtTime(700 + 5200 * ex, t, 0.05);
-        out.gain.setTargetAtTime(on ? 0.12 + 0.4 * ex : 0, t, on ? 0.03 : 0.35);
-      }
-    };
-  }
-
   // ---------- the lead circle: touch input in "world" coordinates ----------
   const ink = $('ink'), ic = ink.getContext('2d');
   let DPR = 1, W = 0, H = 0;
@@ -267,65 +233,7 @@
   function drawInk(chord, now) {
     ic.setTransform(DPR, 0, 0, DPR, 0, 0);
     ic.clearRect(0, 0, W, H);
-    const fr = worldFrame();
-    circle.shown += ((ctx ? 1 : 0) - circle.shown) * 0.08;
-    if (circle.shown < 0.01) return;
-
-    // where the finger (or the resting circle) sits along the real-world up axis
-    if (touch.on) { circle.x += (touch.x - circle.x) * 0.5; circle.y += (touch.y - circle.y) * 0.5; }
-    const loc = toLocal(circle.x, circle.y, fr);
-    leadU = clamp01(0.5 - loc.y / (2 * fr.half));
-
-    // the chord's notes, as crisp lines across the screen
-    const notes = chord.lead;
-    const lo = notes[0], hi = notes[notes.length - 1];
-    notePos = notes.map(m => ({ m, u: (m - lo) / (hi - lo) }));
-    // snap with a little stickiness so it feels deliberate, then glide
-    let best = notePos[0], bd = 9;
-    for (const n of notePos) { const d = Math.abs(n.u - leadU); if (d < bd) { bd = d; best = n; } }
-    if (leadPick === null || leadPick.m !== best.m) {
-      const cur = notePos.find(n => n.m === leadPick?.m);
-      if (!cur || Math.abs(cur.u - leadU) > Math.abs(best.u - leadU) + 0.012) leadPick = best;
-    }
-    leadMidi = leadPick.m;
-
-    ic.save();
-    ic.translate(W / 2, H / 2);
-    ic.rotate(fr.ang);
-    const lineA = 0.12 + 0.35 * circle.glow;
-    const span = Math.hypot(W, H);
-    for (const n of notePos) {
-      const y = (0.5 - n.u) * 2 * fr.half;
-      const isOn = n.m === leadMidi;
-      ic.strokeStyle = `rgba(255,255,255,${(isOn ? 0.55 + 0.4 * circle.glow : lineA) * circle.shown})`;
-      ic.lineWidth = isOn ? 1.25 : 0.75;
-      ic.beginPath(); ic.moveTo(-span / 2, y); ic.lineTo(span / 2, y); ic.stroke();
-    }
-    ic.restore();
-
-    // the circle itself
-    const pulse = 1 + 0.08 * circle.glow * Math.sin(now / 90);
-    const r = circle.r * (1 + 0.25 * circle.glow) * pulse;
-    ic.strokeStyle = `rgba(255,255,255,${0.95 * circle.shown})`;
-    ic.lineWidth = 1.5;
-    ic.beginPath(); ic.arc(circle.x, circle.y, r, 0, Math.PI * 2); ic.stroke();
-    ic.fillStyle = `rgba(255,255,255,${0.95 * circle.shown})`;
-    ic.beginPath(); ic.arc(circle.x, circle.y, 4 + 3 * circle.glow, 0, Math.PI * 2); ic.fill();
-    // a soft ripple ring while you play
-    if (circle.glow > 0.02) {
-      const rr = r + 14 + 10 * ((now / 600) % 1);
-      ic.strokeStyle = `rgba(255,255,255,${0.25 * circle.glow * (1 - ((now / 600) % 1))})`;
-      ic.beginPath(); ic.arc(circle.x, circle.y, rr, 0, Math.PI * 2); ic.stroke();
-    }
-    // note name, upright in the real world
-    ic.save();
-    ic.translate(circle.x, circle.y); ic.rotate(fr.ang);
-    ic.fillStyle = `rgba(255,255,255,${(0.4 + 0.6 * circle.glow) * circle.shown})`;
-    ic.font = '600 13px -apple-system, Helvetica, sans-serif';
-    ic.textAlign = 'center';
-    ic.fillText(NOTE[leadMidi % 12], 0, -r - 12);
-    ic.restore();
-
+    if (!ctx) return;
     // the expression meter: a thin arc on the right edge (tilt back to fill it)
     ic.save();
     ic.strokeStyle = 'rgba(255,255,255,.18)'; ic.lineWidth = 2;
@@ -507,7 +415,7 @@ void main(){
     const w = 14, e = Math.exp(-w * dt), x0 = pos - target, tmp = (vel + w * x0) * dt;
     pos = target + (x0 + tmp) * e; vel = (vel - w * tmp) * e;
     const speed = Math.abs(vel);
-    if (speed > 0.02 || touch.on) lastMove = now;
+    if (speed > 0.02) lastMove = now;
     expr += (exprT - expr) * 0.12;
 
     if (THUMB) fallT = [0.32, 0.95];
@@ -541,10 +449,8 @@ void main(){
       wordNow = chordNow.name;
       $('sub').textContent = r.f > 0.04 && r.f < 0.96 ? r.A.name + '  →  ' + r.B.name : '';
       hueT = slideNow * 0.137; intenT = r.it;
-      circle.glow += ((touch.on ? 1 : 0) - circle.glow) * (touch.on ? 0.25 : 0.06);
     }
     drawInk(chordNow, now);
-    if (lead && ctx) lead.update(leadMidi, touch.on, ctx.currentTime, expr, 0.045);
 
     hue += (hueT - hue) * 0.03;
     inten += (intenT - inten) * 0.05;
@@ -555,7 +461,7 @@ void main(){
     textRot += dRot * 0.08;
     // and float it toward the real-world top, out of the circle's way
     const fr2 = worldFrame();
-    const up = fr2.half * 0.42;
+    const up = 0;   // centre stage now the lead is gone
     $('readout').style.transform = `translate(${-Math.sin(-textRot) * up}px, ${-Math.cos(textRot) * up}px) translate(-50%, -50%) rotate(${textRot}rad)`;
 
     gl.uniform2f(uRes, canvas.width, canvas.height);
