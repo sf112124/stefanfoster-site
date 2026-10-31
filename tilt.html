@@ -145,6 +145,7 @@
   // People rarely hold a phone perfectly upright or perfectly flat, so the sweep runs from about 20 degrees
   // back (how you naturally hold it) to about 58 degrees back, and anything past either end counts as the end.
   const TILT_FROM = 22 * Math.PI / 180, TILT_TO = 58 * Math.PI / 180;
+  let master = null;
   let chaos = 0, dramaT = 0, drama = 0, fxSend = null, vibAmt = null;
   // one palette per chord, dark core to bright edge, in the same order as the progression
   const PALS = [
@@ -207,7 +208,7 @@
     bus = ctx.createGain(); bus.gain.value = 0.7;
     const reverb = makeReverb(), wet = ctx.createGain(); wet.gain.value = 0.5;
     bus.connect(idleGain); bus.connect(reverb); reverb.connect(wet); wet.connect(idleGain);
-    idleGain.connect(comp); comp.connect(ctx.destination);
+    idleGain.connect(comp); master = ctx.createGain(); comp.connect(master); master.connect(ctx.destination);
     analyser = ctx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.6;
     comp.connect(analyser);
     tbuf = new Float32Array(analyser.fftSize); fbuf = new Uint8Array(analyser.frequencyBinCount);
@@ -530,12 +531,27 @@
 
   // ---------- start ----------
   // the sound runs the whole time you're in the app, and stops when you leave it
-  document.addEventListener('visibilitychange', () => {
-    if (!ctx) return;
-    if (document.hidden) ctx.suspend(); else ctx.resume();
-  });
-  addEventListener('pagehide', () => { if (ctx) ctx.suspend(); });
-  addEventListener('pageshow', () => { if (ctx && !document.hidden) ctx.resume(); });
+  // fade out before pausing, so nothing gets cut off mid-note on the way out, and fade back in on return
+  let leaving = null;
+  function goQuiet() {
+    if (!ctx || !master) return;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setTargetAtTime(0, ctx.currentTime, 0.015);
+    clearTimeout(leaving);
+    leaving = setTimeout(() => ctx.suspend(), 120);
+  }
+  function comeBack() {
+    if (!ctx || !master) return;
+    clearTimeout(leaving);
+    ctx.resume().then(() => {
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setValueAtTime(0, ctx.currentTime);
+      master.gain.setTargetAtTime(1, ctx.currentTime + 0.05, 0.12);
+    });
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) goQuiet(); else comeBack(); });
+  addEventListener('pagehide', goQuiet);
+  addEventListener('pageshow', () => { if (!document.hidden) comeBack(); });
 
   $('gate').addEventListener('click', async () => {
     try { if (typeof DeviceMotionEvent.requestPermission === 'function') await DeviceMotionEvent.requestPermission(); } catch (_) {}
