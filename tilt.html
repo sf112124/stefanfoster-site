@@ -42,7 +42,7 @@
               animation: breathe 2.8s ease-in-out infinite; }
   @keyframes breathe { 50% { border-color: rgba(255,255,255,.85); background: rgba(255,255,255,.12); } }
   .gate .foot { position: absolute; left: 0; right: 0; bottom: max(22px, env(safe-area-inset-bottom)); text-align: center; font-size: 11px; opacity: .45; letter-spacing: .02em; }
-  .toast { position: fixed; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translate(-50%, 20px); opacity: 0;
+  .toast { position: fixed; left: 50%; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 96px); z-index: 5; transform: translate(-50%, 20px); opacity: 0;
            font-size: 12px; padding: 9px 14px; border-radius: 999px; background: rgba(255,255,255,.14);
            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transition: opacity .5s, transform .5s; pointer-events: none; white-space: nowrap; }
   .toast.on { opacity: 1; transform: translate(-50%, 0); }
@@ -54,9 +54,12 @@
   body.thumb .gate, body.thumb .desk, body.thumb .readout { display: none !important; }
   body.desktop .readout, body.desktop .gate, body.desktop #ink, body.desktop .controls, body.thumb .controls { display: none; }
   body.desktop .desk { display: grid; }
-  .controls { position: fixed; left: 0; right: 0; bottom: max(18px, env(safe-area-inset-bottom)); display: flex; justify-content: center; gap: 6px;
+  .controls { position: fixed; left: 0; right: 0; bottom: max(18px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 8px;
               padding: 0 12px; opacity: 0; transform: translateY(10px); transition: opacity .8s .4s, transform .8s .4s; pointer-events: none; }
   .controls.on { opacity: 1; transform: none; pointer-events: auto; }
+  .controls .crow { display: flex; justify-content: center; gap: 6px; }
+  .controls button.rec.on { background: #ff4d5e; color: #fff; }
+  .controls button.hold.on { background: rgba(255,255,255,.92); color: #0b0d12; }
   .controls button { font: inherit; font-size: 12px; font-weight: 500; letter-spacing: -0.005em; color: #fff; white-space: nowrap;
                      padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.4); background: rgba(11,13,18,.32);
                      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: background .25s, color .25s, border-color .25s, opacity .25s; }
@@ -71,10 +74,17 @@
 <canvas id="ink"></canvas>
 <div class="toast" id="toast">Turn on rotation lock for the smoothest ride</div>
 <div class="controls" id="controls">
-  <button data-c="beat">Beat</button>
-  <button data-c="dbl" disabled>Double</button>
-  <button data-c="hats" disabled>Hats only</button>
-  <button data-c="muffle" disabled>Underwater</button>
+  <div class="crow">
+    <button data-v="mic" id="micBtn">Mic</button>
+    <button data-v="voc" id="vocBtn" class="hold" disabled>Hold for vocoder</button>
+    <button data-v="rec" id="recBtn" class="rec">Rec</button>
+  </div>
+  <div class="crow">
+    <button data-c="beat">Beat</button>
+    <button data-c="dbl" disabled>Double</button>
+    <button data-c="hats" disabled>Hats only</button>
+    <button data-c="muffle" disabled>Underwater</button>
+  </div>
 </div>
 <div class="readout" id="readout"><div class="big" id="big"></div><div class="sub" id="sub"></div></div>
 
@@ -500,14 +510,14 @@
   }
 
   function syncButtons() {
-    document.querySelectorAll('#controls button').forEach(b => {
+    document.querySelectorAll('#controls button[data-c]').forEach(b => {
       const c = b.dataset.c;
       if (c === 'beat') { b.classList.toggle('on', beat.on); b.classList.toggle('wait', beat.pending); return; }
       b.disabled = !beat.on && !beat.pending;
       b.classList.toggle('on', !!beat[c]);
     });
   }
-  document.querySelectorAll('#controls button').forEach(b => b.addEventListener('click', e => {
+  document.querySelectorAll('#controls button[data-c]').forEach(b => b.addEventListener('click', e => {
     e.stopPropagation();
     if (!ctx) return;
     const c = b.dataset.c;
@@ -520,6 +530,220 @@
     }
     syncButtons();
   }));
+
+  // ---------- the voice: hard autotune locked to the chord, a vocoder you hold, vocal reverb and echo ----------
+  const TUNER = `
+  class Tuner extends AudioWorkletProcessor {
+    constructor() {
+      super();
+      this.sr = sampleRate; this.N = 8192; this.buf = new Float32Array(this.N); this.w = 0;
+      this.dec = 4; this.dN = 1024; this.dbuf = new Float32Array(this.dN); this.dw = 0; this.dc = 0; this.lp = 0;
+      this.blocks = 0; this.ratio = 1; this.ratioT = 1; this.phase = 0; this.win = 1100; this.winT = 1100;
+      this.allowed = [9, 11, 0, 2, 4, 7]; this.voiced = 0;
+      this.W = 380; this.maxLag = Math.floor(this.sr / this.dec / 70); this.minLag = Math.floor(this.sr / this.dec / 950);
+      this.x = new Float32Array(this.W + this.maxLag + 2); this.d = new Float32Array(this.maxLag + 2);
+      this.port.onmessage = e => { if (e.data.allowed) this.allowed = e.data.allowed; };
+    }
+    detect() {
+      const W = this.W, M = this.maxLag, L = this.dN, x = this.x, d = this.d;
+      let st = (this.dw - W - M + L * 8) % L, e = 0;
+      for (let i = 0; i < W + M; i++) x[i] = this.dbuf[(st + i) % L];
+      for (let i = 0; i < W; i++) e += x[i] * x[i];
+      if (e / W < 2e-5) return 0;
+      let run = 0; d[0] = 1;
+      for (let t = 1; t <= M; t++) { let s = 0; for (let i = 0; i < W; i++) { const q = x[i] - x[i + t]; s += q * q; } run += s; d[t] = run > 0 ? s * t / run : 1; }
+      let best = -1;
+      for (let t = this.minLag; t < M; t++) { if (d[t] < 0.14) { while (t + 1 < M && d[t + 1] < d[t]) t++; best = t; break; } }
+      if (best < 1) return 0;
+      const a = d[best - 1], b = d[best], c = d[best + 1], den = a - 2 * b + c;
+      return (best + (den ? 0.5 * (a - c) / den : 0)) * this.dec;
+    }
+    target(period) {
+      const midi = 69 + 12 * Math.log2(this.sr / period / 440);
+      let bestM = Math.round(midi), bd = 99;
+      for (let m = Math.round(midi) - 6; m <= Math.round(midi) + 6; m++) {
+        if (!this.allowed.includes(((m % 12) + 12) % 12)) continue;
+        const dd = Math.abs(m - midi); if (dd < bd) { bd = dd; bestM = m; }
+      }
+      return Math.pow(2, (bestM - midi) / 12);
+    }
+    read(delay) {
+      let p = this.w - delay; while (p < 0) p += this.N;
+      const i = Math.floor(p), f = p - i, a = this.buf[i % this.N], b = this.buf[(i + 1) % this.N];
+      return a + (b - a) * f;
+    }
+    process(inputs, outputs) {
+      const inp = inputs[0] && inputs[0][0], out = outputs[0][0];
+      if (!inp) { out.fill(0); return true; }
+      const k = 1 - Math.exp(-1 / (0.006 * this.sr));          // retune speed: basically instant, the hard robotic snap
+      for (let n = 0; n < inp.length; n++) {
+        const v = inp[n];
+        this.buf[this.w] = v;
+        this.lp += (v - this.lp) * 0.3;
+        if (++this.dc >= this.dec) { this.dc = 0; this.dbuf[this.dw] = this.lp; this.dw = (this.dw + 1) % this.dN; }
+        this.ratio += (this.ratioT - this.ratio) * k;
+        this.win += (this.winT - this.win) * 0.001;
+        this.phase += (1 - this.ratio) / this.win;
+        this.phase -= Math.floor(this.phase);
+        const p2 = (this.phase + 0.5) % 1;
+        const g1 = 0.5 - 0.5 * Math.cos(2 * Math.PI * this.phase), g2 = 0.5 - 0.5 * Math.cos(2 * Math.PI * p2);
+        out[n] = this.read(this.phase * this.win + 48) * g1 + this.read(p2 * this.win + 48) * g2;
+        this.w = (this.w + 1) % this.N;
+      }
+      if (++this.blocks >= 3) {
+        this.blocks = 0;
+        const per = this.detect();
+        if (per > 0) { this.ratioT = Math.min(2, Math.max(0.5, this.target(per))); this.winT = Math.min(2200, Math.max(700, per * 2.5)); }
+        else this.ratioT = 1;
+      }
+      return true;
+    }
+  }
+  registerProcessor('tuner', Tuner);`;
+
+  let mic = null, micStream = null, tuner = null, voc = null, vocOn = false, rec = null, recChunks = [], recBlob = null, recStart = 0, recTimer = null;
+  const ALL_MINOR = [9, 11, 0, 2, 4, 5, 7];
+  // what the voice is allowed to land on: the chord's own notes, plus any notes of A minor that don't rub a semitone against it
+  function allowedFor(chord) {
+    const pcs = chord.pcs.slice();
+    ALL_MINOR.forEach(n => { if (!pcs.includes(n) && !pcs.some(c => { const dd = ((c - n) % 12 + 12) % 12; return dd === 1 || dd === 11; })) pcs.push(n); });
+    return pcs;
+  }
+  async function startMic() {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (_) {}
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: 0 } });
+    if (!tuner) {
+      const url = URL.createObjectURL(new Blob([TUNER], { type: 'application/javascript' }));
+      await ctx.audioWorklet.addModule(url);
+      tuner = new AudioWorkletNode(ctx, 'tuner', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
+      buildVoiceChain();
+    }
+    mic = ctx.createMediaStreamSource(micStream);
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 90;
+    const pre = ctx.createGain(); pre.gain.value = 1.6;
+    mic.connect(hp); hp.connect(pre); pre.connect(tuner); pre.connect(voc.input);
+    mic._chain = [hp, pre];
+    tuner.port.postMessage({ allowed: allowedFor(chordAt(Math.round(slideNow))) });
+  }
+  function stopMic() {
+    if (mic) { mic.disconnect(); mic._chain.forEach(n => n.disconnect()); mic = null; }
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (_) {}
+  }
+
+  function buildVoiceChain() {
+    // the tuned voice: tightened, a little presence, then a dotted-8th ping-pong and a big plate
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -24; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.12;
+    const pres = ctx.createBiquadFilter(); pres.type = 'peaking'; pres.frequency.value = 3200; pres.gain.value = 4; pres.Q.value = 0.8;
+    const vox = ctx.createGain(); vox.gain.value = 1.3;
+    tuner.connect(comp); comp.connect(pres); pres.connect(vox); vox.connect(comp0);
+    const dl = ctx.createDelay(2), dr = ctx.createDelay(2); dl.delayTime.value = 0.375; dr.delayTime.value = 0.375;
+    const fb = ctx.createGain(); fb.gain.value = 0.38;
+    const dlp = ctx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 3500;
+    const pl = ctx.createStereoPanner(); pl.pan.value = -0.7; const pr = ctx.createStereoPanner(); pr.pan.value = 0.7;
+    const send = ctx.createGain(); send.gain.value = 0.32;
+    vox.connect(send); send.connect(dl); dl.connect(pl); dl.connect(dr); dr.connect(pr); dr.connect(dlp); dlp.connect(fb); fb.connect(dl);
+    pl.connect(comp0); pr.connect(comp0);
+    const plate = makeReverb(2.4), pg = ctx.createGain(); pg.gain.value = 0.38;
+    vox.connect(plate); plate.connect(pg); pg.connect(comp0);
+    pl.connect(plate); pr.connect(plate);
+    vox.connect(fxSend);
+
+    // the vocoder: your voice's shape, played by the chord
+    const input = ctx.createGain();
+    const out = ctx.createGain(); out.gain.value = 0;
+    const carrier = ctx.createGain(); carrier.gain.value = 0.25;
+    const oscs = [0, 1, 2, 3, 4].map(() => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.connect(carrier); o.start(); return o; });
+    const hiss = ctx.createBufferSource(); hiss.buffer = noiseLong; hiss.loop = true; const hg = ctx.createGain(); hg.gain.value = 0.05;
+    const hh = ctx.createBiquadFilter(); hh.type = 'highpass'; hh.frequency.value = 5000; hiss.connect(hh); hh.connect(hg); hg.connect(carrier); hiss.start();
+    const absCurve = new Float32Array(1024); for (let i = 0; i < 1024; i++) absCurve[i] = Math.abs(i / 1023 * 2 - 1);
+    const BANDS = 18;
+    for (let i = 0; i < BANDS; i++) {
+      const f = 150 * Math.pow(7000 / 150, i / (BANDS - 1));
+      const a = ctx.createBiquadFilter(); a.type = 'bandpass'; a.frequency.value = f; a.Q.value = 7;
+      const r = ctx.createWaveShaper(); r.curve = absCurve;
+      const sm = ctx.createBiquadFilter(); sm.type = 'lowpass'; sm.frequency.value = 35;
+      const amp = ctx.createGain(); amp.gain.value = 22;
+      input.connect(a); a.connect(r); r.connect(sm); sm.connect(amp);
+      const cb = ctx.createBiquadFilter(); cb.type = 'bandpass'; cb.frequency.value = f; cb.Q.value = 7;
+      const vca = ctx.createGain(); vca.gain.value = 0;
+      carrier.connect(cb); cb.connect(vca); amp.connect(vca.gain); vca.connect(out);
+    }
+    out.connect(vox);
+    voc = { input, out, oscs };
+    tuneVocoder(chordAt(Math.round(slideNow)));
+  }
+  function tuneVocoder(chord) {
+    if (!voc) return;
+    const notes = chord.notes.slice(1).map(l => Math.round(12 * (l - Math.log2(440)) + 69)).filter(m => m >= 50 && m <= 80);
+    const pick = notes.slice(-5);
+    voc.oscs.forEach((o, i) => o.frequency.setTargetAtTime(midiHz(pick[i % pick.length] || 57), ctx.currentTime, 0.04));
+  }
+  let lastVoiceChord = '';
+  function voiceFollowChord(chord) {
+    if (chord.name === lastVoiceChord) return;
+    lastVoiceChord = chord.name;
+    if (tuner) tuner.port.postMessage({ allowed: allowedFor(chord) });
+    tuneVocoder(chord);
+  }
+
+  // buttons: Mic toggles, Vocoder is held, Rec records everything you hear
+  const micBtn = $('micBtn'), vocBtn = $('vocBtn'), recBtn = $('recBtn');
+  micBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+    if (!ctx) return;
+    if (mic) { stopMic(); micBtn.classList.remove('on'); micBtn.textContent = 'Mic'; vocBtn.disabled = true; return; }
+    micBtn.textContent = 'Starting…';
+    try {
+      await startMic();
+      micBtn.classList.add('on'); micBtn.textContent = 'Mic on'; vocBtn.disabled = false;
+      toast('Headphones on, or it will feed back');
+    } catch (err) {
+      micBtn.textContent = 'Mic';
+      toast('The mic was blocked. Allow it in your browser settings and try again');
+    }
+  });
+  const vocHold = on => {
+    if (!voc) return;
+    vocOn = on; vocBtn.classList.toggle('on', on);
+    voc.out.gain.setTargetAtTime(on ? 1 : 0, ctx.currentTime, on ? 0.03 : 0.12);
+  };
+  vocBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); vocBtn.setPointerCapture(e.pointerId); vocHold(true); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => vocBtn.addEventListener(ev, () => vocHold(false)));
+  vocBtn.addEventListener('contextmenu', e => e.preventDefault());
+
+  recBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+    if (!ctx) return;
+    if (recBlob) { await saveTake(); return; }
+    if (rec && rec.state === 'recording') { rec.stop(); return; }
+    const dest = ctx.createMediaStreamDestination(); outNode.connect(dest);
+    const type = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+    try { rec = new MediaRecorder(dest.stream, type ? { mimeType: type } : undefined); } catch (_) { toast('Recording is not supported in this browser'); return; }
+    recChunks = [];
+    rec.ondataavailable = ev => { if (ev.data && ev.data.size) recChunks.push(ev.data); };
+    rec.onstop = () => {
+      outNode.disconnect(dest);
+      clearInterval(recTimer);
+      recBlob = new Blob(recChunks, { type: rec.mimeType || type || 'audio/mp4' });
+      recBtn.classList.remove('on'); recBtn.textContent = 'Save take';
+    };
+    rec.start(250); recStart = performance.now();
+    recBtn.classList.add('on');
+    recTimer = setInterval(() => { const s = Math.floor((performance.now() - recStart) / 1000); recBtn.textContent = `● ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }, 250);
+    recBtn.textContent = '● 0:00';
+  });
+  async function saveTake() {
+    const ext = recBlob.type.includes('mp4') ? 'm4a' : 'webm';
+    const name = `tilt-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.${ext}`;
+    const file = new File([recBlob], name, { type: recBlob.type });
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: 'Tilt' });
+      else { const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+      recBlob = null; recBtn.textContent = 'Rec';
+    } catch (_) { /* cancelled the share sheet: keep the take so they can try again */ }
+  }
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 3600); }
 
   function gliss() { strings.forEach((st, k) => setTimeout(() => pluck(st, 0.8), k * 32)); }
 
@@ -659,6 +883,7 @@
   let leaving = null;
   function goQuiet() {
     if (!ctx || !master) return;
+    if (rec && rec.state === 'recording') rec.stop();
     master.gain.cancelScheduledValues(ctx.currentTime);
     master.gain.setTargetAtTime(0, ctx.currentTime, 0.015);
     clearTimeout(leaving);
@@ -894,6 +1119,7 @@ void main(){
       chordNow = r.f < 0.5 ? r.A : r.B;
       wordNow = chordNow.name;
       window.__tilt = chordNow.name;
+      voiceFollowChord(chordNow);
       { let f = Math.pow(2, chordNow.notes[0]); while (f > 62) f /= 2; bassHz = f; }
       $('sub').textContent = r.f > 0.04 && r.f < 0.96 ? r.A.name + '  →  ' + r.B.name : '';
       hueT = slideNow * 0.137; intenT = r.it;
