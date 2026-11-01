@@ -688,7 +688,7 @@
   }
   registerProcessor('grab', Grab);`;
 
-  let mic = null, micStream = null, tuner = null, voc = null, vocOn = false, rec = null, recChunks = [], recStart = 0, recTimer = null;
+  let micSource = 'default', mic = null, micStream = null, tuner = null, voc = null, vocOn = false, rec = null, recChunks = [], recStart = 0, recTimer = null;
   const ALL_MINOR = [9, 11, 0, 2, 4, 5, 7];
   // what the voice is allowed to land on: the chord's own notes, plus any notes of A minor that don't rub a semitone against it
   function allowedFor(chord) {
@@ -698,7 +698,20 @@
   }
   async function startMic() {
     try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (_) {}
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: 0 } });
+    const want = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: 0 };
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: want });
+    // AirPods drop into call mode (mono, muffled, laggy) when their own mic is used, so ask for the phone's mic instead
+    micSource = 'default';
+    try {
+      const ins = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+      const cur = micStream.getAudioTracks()[0], curLabel = (cur && cur.label) || '';
+      const phone = ins.find(d => /iphone|built.?in|internal|phone/i.test(d.label) && !/airpods|bluetooth|headset|hands.?free|beats/i.test(d.label));
+      if (phone && phone.label !== curLabel) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: { ...want, deviceId: { exact: phone.deviceId } } });
+        micSource = 'phone';
+      } else if (phone) micSource = 'phone';
+    } catch (_) {}
     if (!tuner) {
       const url = URL.createObjectURL(new Blob([TUNER], { type: 'application/javascript' }));
       await ctx.audioWorklet.addModule(url);
@@ -816,7 +829,7 @@
   async function ensureMic() {
     if (mic) return true;
     label(micBtn, 'Starting…');
-    try { await startMic(); syncVoice(); toast('Wired headphones on for the tightest monitoring'); return true; }
+    try { await startMic(); syncVoice(); toast(micSource === 'phone' ? 'Using your phone\u2019s mic, so your headphones stay in music mode' : 'Headphones on, or it will feed back'); return true; }
     catch (err) { syncVoice(); toast('The mic was blocked. Allow it in your browser settings'); return false; }
   }
   micBtn.addEventListener('click', async e => {
