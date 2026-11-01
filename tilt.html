@@ -347,46 +347,39 @@
       while (clockNext < ctx.currentTime + 0.12) {
         playStep(clockStep, clockNext);
         clockNext += STEP;
-        clockStep = (clockStep + 1) % 32;
+        clockStep = (clockStep + 1) % 64;
         if (clockStep === 0) barN++;
       }
     }, 25);
   }
 
-  function playStep(s, t0) {
-    if (beat.pending && s % 16 === 0) { beat.on = true; beat.pending = false; setTimeout(syncButtons, Math.max(0, (t0 - ctx.currentTime) * 1000)); }
+  // Stefan's pattern: four bars of 16ths. x = hit, 2 = two hits in that 16th, 3 = a triplet in it.
+  const GRID = {
+    kick:  'x...........x...|..x.x.......x...|x...........x...|..x.x.......x...',
+    bass:  'x...........x...|..x.x.......x...|x...........x...|..x.x.......x...',
+    snare: '........x.......|........x.......|........x.......|........x.......',
+    clap:  '........x.......|....x...x...x...|........x.......|x...x...x.......',
+    hat:   'x.x.x.x.x.x.x.x.|22222.x.x.x.3.3.|........x.x.2222|x.x.x.x.x.x.x.x.',
+    hatX2: 'xxxxxxxxxxxx2222|xxxxxxxx22xx3332|........xxxx2222|xxxxxxxxxxxxxx33',   // what Double switches the hats to
+    open:  '............x...|............x...|............x...|............x...',
+  };
+  const LANES = Object.fromEntries(Object.entries(GRID).map(([k, v]) => [k, v.replace(/\|/g, '').split('').map(c => c === '.' ? 0 : c === 'x' ? 1 : +c)]));
+
+  function playStep(s, t) {
+    if (beat.pending && s % 16 === 0) { beat.on = true; beat.pending = false; setTimeout(syncButtons, Math.max(0, (t - ctx.currentTime) * 1000)); }
     crackleOn = beat.on;
     if (!beat.on) return;
-    const P = PAT.half;                                               // Double only touches the hats
-    const t = t0 + (s % 2 ? SWING * STEP : 0);                       // swing the off 16ths
-    const hum = () => 0;
-
-    // Hats. Normally one on every beat, with the odd trap flourish: a doubled hit, a triplet across a beat,
-    // a quick 16th run into the next bar. Double puts that same pulse into double time: 8ths, with faster rolls.
-    const tri = (from, beats, n, vel) => { for (let k = 0; k < n; k++) hat(from + STEP * 4 * beats * k / n, vel * (0.8 + 0.2 * (k % 2))); };
-    if (!beat.dbl) {
-      const v = (s % 8 === 0 ? 0.85 : 0.7) * (0.9 + Math.random() * 0.2);
-      if (s === 12) tri(t, 1, 3, 0.65);                              // triplet across beat 4 of bar one
-      else if (s === 28) { for (let k = 0; k < 4; k++) hat(t + STEP * k, 0.5 + 0.1 * k); }   // 16th run into the next bar
-      else if (s % 4 === 0) hat(t, v);                               // one on every beat
-      else if (s === 22 || s === 6) hat(t, 0.5);                     // the odd doubled hit
-    } else {
-      const v = (s % 4 === 0 ? 0.85 : 0.62) * (0.9 + Math.random() * 0.2);
-      if (s === 14) { for (let k = 0; k < 4; k++) hat(t + STEP * k / 2, 0.45 + 0.08 * k); }   // 32nd roll
-      else if (s === 15) {}
-      else if (s === 28) tri(t, 1, 6, 0.6);                          // 16th-note triplets across the last beat
-      else if (s > 28) {}
-      else if (s % 2 === 0) hat(t, v);                               // 8ths: the same pulse in double time
-    }
-    if (P.shaker.includes(s)) shaker(t + hum(), s % 4 === 3 ? 0.9 : 0.55);
+    const h = (beat.dbl ? LANES.hatX2 : LANES.hat)[s];
+    if (h) for (let k = 0; k < h; k++) hat(t + STEP * k / h, (k === 0 ? (s % 4 === 0 ? 0.85 : 0.7) : 0.55) * (0.92 + Math.random() * 0.16), false);
+    if (LANES.open[s]) hat(t, 0.7, true);
     if (beat.hats) return;
-
-    if (P.knock.includes(s)) knock(t, s % 16 === 0 ? 1 : 0.8);
-    const bn = P.bass.find(b => b[0] === s);
-    if (bn) eightOhEight(t, bn[1], bn[2], !!bn[3]);
-    if (P.snap.includes(s)) { snap(t, 1); snare(t); }
-    if (P.ghost.includes(s) && Math.random() < 0.6) snap(t + 0.01, 0.3);
-    if (P.wood.includes(s) && Math.random() < 0.75) wood(t + hum());
+    if (LANES.kick[s]) knock(t, s % 16 === 0 ? 1 : 0.88);
+    if (LANES.bass[s]) {
+      let k = 1; while (k < 16 && !LANES.bass[(s + k) % 64]) k++;          // ring until the next 808
+      eightOhEight(t, 0, Math.min(k * STEP - 0.03, 1.6), false);
+    }
+    if (LANES.snare[s]) snare(t);
+    if (LANES.clap[s]) clap(t);
   }
 
   function duckAt(t) {
@@ -431,18 +424,28 @@
   function noise(t, dur) { const n = ctx.createBufferSource(); n.buffer = noiseLong; n.start(t, Math.random() * 0.5, dur); return n; }
 
   // finger snap layered with a soft clap, thrown into the dark plate
-  // a tight, crisp trap snare under the clap: a bright noise crack with a short tonal body
+  // the crisp snare: a hard click, a bright cracking noise band, a sizzle on top and a short tonal body, driven a little
+  const CRACK = (() => { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * 2.2); } return c; })();
+  const envG = (g, t, peak, a, d) => { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0008, t + d); };
   function snare(t) {
-    const n = noise(t, 0.2);
-    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
-    const pk = ctx.createBiquadFilter(); pk.type = 'peaking'; pk.frequency.value = 5200; pk.gain.value = 6; pk.Q.value = 1;
-    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.7, t + 0.001);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
-    n.connect(hp); hp.connect(pk); pk.connect(g); g.connect(drumBus); g.connect(beatRev);
-    const o = ctx.createOscillator(); o.type = 'triangle';
-    o.frequency.setValueAtTime(260, t); o.frequency.exponentialRampToValueAtTime(185, t + 0.05);
-    const og = ctx.createGain(); og.gain.setValueAtTime(0.35, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-    o.connect(og); og.connect(drumBus); o.start(t); o.stop(t + 0.1);
+    const bus = ctx.createGain(); const sh = ctx.createWaveShaper(); sh.curve = CRACK; bus.connect(sh); sh.connect(drumBus); sh.connect(beatRev);
+    const c = noise(t, 0.004), cg = ctx.createGain(); cg.gain.value = 0.7; c.connect(cg); cg.connect(bus);
+    const n = noise(t, 0.25), hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1500;
+    const pk = ctx.createBiquadFilter(); pk.type = 'peaking'; pk.frequency.value = 4500; pk.gain.value = 8; pk.Q.value = 1.2;
+    const ng = ctx.createGain(); envG(ng, t, 0.6, 0.0005, 0.16); n.connect(hp); hp.connect(pk); pk.connect(ng); ng.connect(bus);
+    const z = noise(t, 0.3), zh = ctx.createBiquadFilter(); zh.type = 'highpass'; zh.frequency.value = 7000;
+    const zg = ctx.createGain(); envG(zg, t, 0.25, 0.001, 0.22); z.connect(zh); zh.connect(zg); zg.connect(bus);
+    [[185, 0.4, 0.07], [330, 0.25, 0.045]].forEach(([f, a, d]) => {
+      const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(f * 1.25, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.02);
+      const og = ctx.createGain(); envG(og, t, a, 0.0008, d); o.connect(og); og.connect(bus); o.start(t); o.stop(t + d + 0.02);
+    });
+  }
+  function clap(t) {
+    const n = noise(t, 0.4), bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1300; bp.Q.value = 1.1;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t);
+    [0, 0.009, 0.019].forEach(d => { g.gain.setValueAtTime(0.5, t + d); g.gain.setTargetAtTime(0.03, t + d + 0.001, 0.005); });
+    g.gain.setValueAtTime(0.35, t + 0.028); g.gain.setTargetAtTime(0, t + 0.03, 0.08);
+    n.connect(bp); bp.connect(g); g.connect(drumBus); g.connect(beatRev);
   }
   function snap(t, vel) {
     const n = noise(t, 0.35);
