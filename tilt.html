@@ -329,15 +329,15 @@
   };
 
   function startBeatClock() {
-    beatBus = ctx.createGain(); beatBus.gain.value = 0.42;
-    beatLp = ctx.createBiquadFilter(); beatLp.type = 'lowpass'; beatLp.frequency.value = DARK; beatLp.Q.value = 0.5;
+    beatBus = ctx.createGain(); beatBus.gain.value = 0.75;
+    beatLp = ctx.createBiquadFilter(); beatLp.type = 'lowpass'; beatLp.frequency.value = 20000; beatLp.Q.value = 0.5;
     const glue = ctx.createDynamicsCompressor(); glue.threshold.value = -18; glue.ratio.value = 3; glue.attack.value = 0.01; glue.release.value = 0.2;
     drumBus = ctx.createGain();
-    drumBus.connect(glue); glue.connect(beatLp); beatLp.connect(beatBus);
+    drumBus.connect(beatLp); beatLp.connect(beatBus);
     // a dark plate for the snap and perc
-    beatRev = makeReverb(1.3);
-    const revLp = ctx.createBiquadFilter(); revLp.type = 'lowpass'; revLp.frequency.value = 3200;
-    const rv = ctx.createGain(); rv.gain.value = 0.3;
+    beatRev = makeReverb(1.0);
+    const revLp = ctx.createBiquadFilter(); revLp.type = 'lowpass'; revLp.frequency.value = 9000;
+    const rv = ctx.createGain(); rv.gain.value = 0.22;
     beatRev.connect(revLp); revLp.connect(rv); rv.connect(beatLp);
     beatBus.connect(comp0); beatBus.connect(fxSend);
     startCrackle();
@@ -358,17 +358,21 @@
     kick:  'x...........x...|..x.x.......x...|x...........x...|..x.x.......x...',
     bass:  'x...........x...|..x.x.......x...|x...........x...|..x.x.......x...',
     snare: '........x.......|........x.......|........x.......|........x.......',
-    clap:  '........x.......|....x...x...x...|........x.......|x...x...x.......',
-    hat:   'x.x.x.x.x.x.x.x.|22222.x.x.x.3.3.|........x.x.2222|x.x.x.x.x.x.x.x.',
-    hatX2: 'xxxxxxxxxxxx2222|xxxxxxxx22xx3332|........xxxx2222|xxxxxxxxxxxxxx33',   // what Double switches the hats to
     open:  '............x...|............x...|............x...|............x...',
+    clap:  '........x.......|........x.......|........x.......|........x...x...',
+    hat:   'x.x.x.x.x.x.2222|xxxxxxxx22xx3332|........xxxx2222|x.x.x.x.xxxxxx33',
+    clapX2:'........x.......|....x...x...x...|........x.......|x...x...x.......',   // Double swaps in these claps
+    hatX2: 'xxxxxxxxxxxx2222|xxxxxxxx22xx3332|........xxxx2222|xxxxxxxxxxxxxx33',   // and these hats
   };
   const LANES = Object.fromEntries(Object.entries(GRID).map(([k, v]) => [k, v.replace(/\|/g, '').split('').map(c => c === '.' ? 0 : c === 'x' ? 1 : +c)]));
 
-  function playStep(s, t) {
-    if (beat.pending && s % 16 === 0) { beat.on = true; beat.pending = false; setTimeout(syncButtons, Math.max(0, (t - ctx.currentTime) * 1000)); }
+  let beatOrigin = 0;
+  function playStep(clk, t) {
+    // the beat always comes in at the top of bar 1 of the pattern, on the next bar line
+    if (beat.pending && clk % 16 === 0) { beat.on = true; beat.pending = false; beatOrigin = clk; setTimeout(syncButtons, Math.max(0, (t - ctx.currentTime) * 1000)); }
     crackleOn = beat.on;
     if (!beat.on) return;
+    const s = (clk - beatOrigin + 64) % 64;
     const h = (beat.dbl ? LANES.hatX2 : LANES.hat)[s];
     if (h) for (let k = 0; k < h; k++) hat(t + STEP * k / h, (k === 0 ? (s % 4 === 0 ? 0.85 : 0.7) : 0.55) * (0.92 + Math.random() * 0.16), false);
     if (LANES.open[s]) hat(t, 0.7, true);
@@ -379,12 +383,12 @@
       eightOhEight(t, 0, Math.min(k * STEP - 0.03, 1.6), false);
     }
     if (LANES.snare[s]) snare(t);
-    if (LANES.clap[s]) clap(t);
+    if ((beat.dbl ? LANES.clapX2 : LANES.clap)[s]) clap(t);
   }
 
   function duckAt(t) {
-    duck.gain.setTargetAtTime(0.22, t, 0.004);
-    duck.gain.setTargetAtTime(1, t + 0.06, 0.13);
+    duck.gain.setTargetAtTime(0.5, t, 0.004);
+    duck.gain.setTargetAtTime(1, t + 0.05, 0.1);
   }
 
   // a punchy trap kick: a fast pitch drop for the thump, a click on top, and a little drive so phones can hear it
