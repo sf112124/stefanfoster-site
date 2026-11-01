@@ -351,17 +351,22 @@
     const t = t0 + (s % 2 ? SWING * STEP : 0);                       // swing the off 16ths
     const hum = () => 0;
 
-    if (beat.dbl) {
-      // hats at double speed: every 16th, plus a 32nd in between, with triplet rolls at the ends of phrases
-      hat(t, (s % 4 === 0 ? 0.85 : s % 2 === 0 ? 0.65 : 0.5) * (0.9 + Math.random() * 0.2), false);
-      hat(t + STEP / 2, 0.38, false);
-      if ((s === 14 || s === 30) && barN % 2 === 1) { for (let k = 1; k < 4; k++) hat(t + STEP * k / 3, 0.25 + 0.12 * k, false); }
+    // Hats. Normally one on every beat, with the odd trap flourish: a doubled hit, a triplet across a beat,
+    // a quick 16th run into the next bar. Double puts that same pulse into double time: 8ths, with faster rolls.
+    const tri = (from, beats, n, vel) => { for (let k = 0; k < n; k++) hat(from + STEP * 4 * beats * k / n, vel * (0.8 + 0.2 * (k % 2))); };
+    if (!beat.dbl) {
+      const v = (s % 8 === 0 ? 0.85 : 0.7) * (0.9 + Math.random() * 0.2);
+      if (s === 12) tri(t, 1, 3, 0.65);                              // triplet across beat 4 of bar one
+      else if (s === 28) { for (let k = 0; k < 4; k++) hat(t + STEP * k, 0.5 + 0.1 * k); }   // 16th run into the next bar
+      else if (s % 4 === 0) hat(t, v);                               // one on every beat
+      else if (s === 22 || s === 6) hat(t, 0.5);                     // the odd doubled hit
     } else {
-      // straight 8ths, then the classic trap rolls: 16ths into 32nds at the end of bar one, a triplet flick at the end of bar two
-      const v = (s % 4 === 0 ? 0.85 : 0.65) * (0.9 + Math.random() * 0.2);
-      if (s >= 12 && s <= 15) { hat(t, s % 2 ? 0.5 : v); hat(t + STEP / 2, 0.42, false); }
-      else if (s === 28 || s === 29) { hat(t, 0.6); hat(t + STEP / 3, 0.45); hat(t + STEP * 2 / 3, 0.55); }
-      else if (P.hat.includes(s)) hat(t, v, false);
+      const v = (s % 4 === 0 ? 0.85 : 0.62) * (0.9 + Math.random() * 0.2);
+      if (s === 14) { for (let k = 0; k < 4; k++) hat(t + STEP * k / 2, 0.45 + 0.08 * k); }   // 32nd roll
+      else if (s === 15) {}
+      else if (s === 28) tri(t, 1, 6, 0.6);                          // 16th-note triplets across the last beat
+      else if (s > 28) {}
+      else if (s % 2 === 0) hat(t, v);                               // 8ths: the same pulse in double time
     }
     if (P.shaker.includes(s)) shaker(t + hum(), s % 4 === 3 ? 0.9 : 0.55);
     if (beat.hats) return;
@@ -369,7 +374,7 @@
     if (P.knock.includes(s)) knock(t, s % 16 === 0 ? 1 : 0.8);
     const bn = P.bass.find(b => b[0] === s);
     if (bn) eightOhEight(t, bn[1], bn[2], !!bn[3]);
-    if (P.snap.includes(s)) snap(t, 1);
+    if (P.snap.includes(s)) { snap(t, 1); snare(t); }
     if (P.ghost.includes(s) && Math.random() < 0.6) snap(t + 0.01, 0.3);
     if (P.wood.includes(s) && Math.random() < 0.75) wood(t + hum());
   }
@@ -416,6 +421,19 @@
   function noise(t, dur) { const n = ctx.createBufferSource(); n.buffer = noiseLong; n.start(t, Math.random() * 0.5, dur); return n; }
 
   // finger snap layered with a soft clap, thrown into the dark plate
+  // a tight, crisp trap snare under the clap: a bright noise crack with a short tonal body
+  function snare(t) {
+    const n = noise(t, 0.2);
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
+    const pk = ctx.createBiquadFilter(); pk.type = 'peaking'; pk.frequency.value = 5200; pk.gain.value = 6; pk.Q.value = 1;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.7, t + 0.001);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    n.connect(hp); hp.connect(pk); pk.connect(g); g.connect(drumBus); g.connect(beatRev);
+    const o = ctx.createOscillator(); o.type = 'triangle';
+    o.frequency.setValueAtTime(260, t); o.frequency.exponentialRampToValueAtTime(185, t + 0.05);
+    const og = ctx.createGain(); og.gain.setValueAtTime(0.35, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    o.connect(og); og.connect(drumBus); o.start(t); o.stop(t + 0.1);
+  }
   function snap(t, vel) {
     const n = noise(t, 0.35);
     const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2300; bp.Q.value = 2.2;
