@@ -42,8 +42,8 @@
               animation: breathe 2.8s ease-in-out infinite; }
   @keyframes breathe { 50% { border-color: rgba(255,255,255,.85); background: rgba(255,255,255,.12); } }
   .gate .foot { position: absolute; left: 0; right: 0; bottom: max(22px, env(safe-area-inset-bottom)); text-align: center; font-size: 11px; opacity: .45; letter-spacing: .02em; }
-  .toast { position: fixed; left: 50%; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 96px); z-index: 5; transform: translate(-50%, 20px); opacity: 0;
-           font-size: 12px; padding: 9px 14px; border-radius: 999px; background: rgba(255,255,255,.14);
+  .toast { position: fixed; left: 50%; top: max(18px, env(safe-area-inset-top)); z-index: 5; transform: translate(-50%, -16px); opacity: 0;
+           font-size: 12px; padding: 9px 14px; border-radius: 999px; background: rgba(14,16,22,.5); border: 1px solid rgba(255,255,255,.12);
            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transition: opacity .5s, transform .5s; pointer-events: none; white-space: nowrap; }
   .toast.on { opacity: 1; transform: translate(-50%, 0); }
   .desk { position: fixed; inset: 0; display: none; place-items: center; text-align: center; padding: 40px; }
@@ -54,19 +54,57 @@
   body.thumb .gate, body.thumb .desk, body.thumb .readout { display: none !important; }
   body.desktop .readout, body.desktop .gate, body.desktop #ink, body.desktop .controls, body.thumb .controls { display: none; }
   body.desktop .desk { display: grid; }
-  .controls { position: fixed; left: 0; right: 0; bottom: max(18px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 8px;
-              padding: 0 12px; opacity: 0; transform: translateY(10px); transition: opacity .8s .4s, transform .8s .4s; pointer-events: none; }
+  .controls { position: fixed; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 8px;
+              padding: 0 16px; opacity: 0; transform: translateY(10px); transition: opacity .8s .4s, transform .8s .4s; pointer-events: none; }
   .controls.on { opacity: 1; transform: none; pointer-events: auto; }
-  .controls .crow { display: flex; justify-content: center; gap: 6px; }
-  .controls button.rec.on { background: #ff4d5e; color: #fff; }
-  .controls button.hold.on { background: rgba(255,255,255,.92); color: #0b0d12; }
-  .controls button { font: inherit; font-size: 12px; font-weight: 500; letter-spacing: -0.005em; color: #fff; white-space: nowrap;
-                     padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.4); background: rgba(11,13,18,.32);
-                     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: background .25s, color .25s, border-color .25s, opacity .25s; }
-  .controls button.on { background: rgba(255,255,255,.92); color: #0b0d12; border-color: transparent; }
-  .controls button.wait { animation: wait .5s ease-in-out infinite alternate; }
-  .controls button:disabled { opacity: .35; }
-  @keyframes wait { to { border-color: rgba(255,255,255,.95); background: rgba(255,255,255,.22); } }
+  .controls button { font: inherit; color: #fff; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .glass { background: rgba(14,16,22,.46); border: 1px solid rgba(255,255,255,.13);
+           backdrop-filter: blur(24px) saturate(1.5); -webkit-backdrop-filter: blur(24px) saturate(1.5); }
+
+  .dock { display: flex; align-items: center; gap: 2px; padding: 5px; border-radius: 999px; }
+  .tab { height: 44px; padding: 0 18px; border-radius: 999px; background: transparent; display: inline-flex; align-items: center; gap: 8px;
+         font-size: 14px !important; font-weight: 500; letter-spacing: -0.01em; transition: background .25s; }
+  .tab .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.28); transition: background .3s, box-shadow .3s; }
+  .tab.live .dot { background: #fff; box-shadow: 0 0 10px rgba(255,255,255,.9); }
+  .tab.open { background: rgba(255,255,255,.14); }
+  .recb { height: 44px; min-width: 44px; margin-left: 4px; padding: 0 15px; border-radius: 999px; background: rgba(255,255,255,.1) !important;
+          display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-size: 14px !important; font-weight: 500; font-variant-numeric: tabular-nums; transition: background .25s; }
+  .recb i { width: 14px; height: 14px; border-radius: 50%; background: #ff4d5e; transition: border-radius .25s, transform .25s; }
+  .recb.on { background: rgba(255,77,94,.24) !important; }
+  .recb.on i { border-radius: 3px; transform: scale(.86); animation: blink 1s steps(2) infinite; }
+  .recb span:empty { display: none; }
+  @keyframes blink { 50% { opacity: .35; } }
+
+  .sheet { display: none; width: min(100%, 340px); padding: 6px; border-radius: 24px; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .sheet.open { display: grid; animation: rise .35s cubic-bezier(.2,.8,.2,1); }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+  .chip { position: relative; overflow: hidden; height: 48px; border-radius: 18px; background: rgba(255,255,255,.08);
+          font-size: 13.5px !important; font-weight: 500; letter-spacing: -0.01em; transition: background .25s, color .25s, opacity .25s, transform .12s; }
+  .chip:active { transform: scale(.97); }
+  .chip.on { background: rgba(255,255,255,.93); color: #0b0d12 !important; }
+  .chip:disabled { opacity: .3; }
+  .chip.wait { animation: wait .5s ease-in-out infinite alternate; }
+  .chip.recording { background: rgba(255,77,94,.35); }
+  .chip.recording::before { content: ""; position: absolute; inset: 0; width: calc(var(--p, 0) * 100%); background: rgba(255,77,94,.75); }
+  .chip.recording span { position: relative; }
+  .chip.armed { background: rgba(255,255,255,.26); }
+  .chip.hit { background: rgba(255,255,255,.55); transition: none; }
+  .chip .x { position: absolute; right: 0; top: 0; bottom: 0; width: 38px; display: none; place-items: center; font-size: 17px; opacity: .55; }
+  .chip.has .x { display: grid; }
+  .chip.has { padding-right: 22px; }
+  @keyframes wait { to { background: rgba(255,255,255,.24); } }
+
+  .take { display: none; width: min(100%, 340px); padding: 8px; border-radius: 24px; flex-direction: column; gap: 6px; }
+  .take.open { display: flex; animation: rise .35s cubic-bezier(.2,.8,.2,1); }
+  .take .top { display: flex; align-items: center; gap: 10px; padding-right: 8px; }
+  .play { width: 44px; height: 44px; flex: none; border-radius: 50%; background: #fff !important; display: grid; place-items: center; }
+  .play svg { width: 16px; height: 16px; fill: #0b0d12; }
+  .take canvas { position: static; flex: 1; width: auto; height: 40px; min-width: 0; }
+  .take .t { font-size: 12px; opacity: .7; font-variant-numeric: tabular-nums; min-width: 32px; text-align: right; }
+  .take .row { display: grid; grid-template-columns: 1fr 1fr 64px; gap: 6px; }
+  .take .row .chip { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+  .take .row svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .take .row .bin.sure { background: rgba(255,77,94,.8); }
 </style>
 </head>
 <body>
@@ -74,16 +112,34 @@
 <canvas id="ink"></canvas>
 <div class="toast" id="toast">Turn on rotation lock for the smoothest ride</div>
 <div class="controls" id="controls">
-  <div class="crow">
-    <button data-v="mic" id="micBtn">Mic</button>
-    <button data-v="voc" id="vocBtn" class="hold" disabled>Hold for vocoder</button>
-    <button data-v="rec" id="recBtn" class="rec">Rec</button>
+  <div class="take glass" id="take">
+    <div class="top">
+      <button class="play" id="playBtn" aria-label="Play"><svg viewBox="0 0 16 16"><path id="playIcon" d="M4 2.5v11l9.5-5.5z"/></svg></button>
+      <canvas id="wave"></canvas>
+      <span class="t" id="takeTime">0:00</span>
+    </div>
+    <div class="row">
+      <button class="chip" id="dlBtn"><svg viewBox="0 0 16 16"><path d="M8 2v8.5M4.5 7 8 10.5 11.5 7M3 13.5h10"/></svg><span>MP3</span></button>
+      <button class="chip" id="shareBtn"><svg viewBox="0 0 16 16"><path d="M8 10V2M5 4.5 8 1.5l3 3M4 7H3v7.5h10V7h-1"/></svg><span>Share</span></button>
+      <button class="chip bin" id="binBtn" aria-label="Delete take">✕</button>
+    </div>
   </div>
-  <div class="crow">
-    <button data-c="beat">Beat</button>
-    <button data-c="dbl" disabled>Double</button>
-    <button data-c="hats" disabled>Hats only</button>
-    <button data-c="muffle" disabled>Underwater</button>
+  <div class="sheet glass" id="sheetVoice">
+    <button class="chip" id="micBtn"><span>Mic</span></button>
+    <button class="chip" id="vocBtn" disabled><span>Hold: vocoder</span></button>
+    <button class="chip" id="loopBtn"><span>Loop 2 bars</span><i class="x">×</i></button>
+    <button class="chip" id="sampBtn"><span>Hold to sample</span><i class="x">×</i></button>
+  </div>
+  <div class="sheet glass" id="sheetBeat">
+    <button class="chip" data-c="beat">Beat</button>
+    <button class="chip" data-c="dbl" disabled>Double</button>
+    <button class="chip" data-c="hats" disabled>Hats only</button>
+    <button class="chip" data-c="muffle" disabled>Underwater</button>
+  </div>
+  <div class="dock glass">
+    <button class="tab" data-tab="Beat"><i class="dot"></i>Beat</button>
+    <button class="tab" data-tab="Voice"><i class="dot"></i>Voice</button>
+    <button class="recb" id="recBtn" aria-label="Record"><i></i><span id="recTime"></span></button>
   </div>
 </div>
 <div class="readout" id="readout"><div class="big" id="big"></div><div class="sub" id="sub"></div></div>
@@ -155,8 +211,8 @@
   // People rarely hold a phone perfectly upright or perfectly flat, so the sweep runs from about 20 degrees
   // back (how you naturally hold it) to about 58 degrees back, and anything past either end counts as the end.
   const TILT_FROM = 22 * Math.PI / 180, TILT_TO = 58 * Math.PI / 180;
-  let master = null, duck = null, outNode = null;
-  window.__tiltAudio = () => ({ ctx, master: outNode });   // lets a test harness record the output
+  let master = null, duck = null, outNode = null, carve = null, liveTrim = null, grab = null, voiceFx = null;
+  window.__tiltAudio = () => ({ ctx, master: outNode, voice: voiceFx, music: comp0 });   // lets a test harness record the output
   let chaos = 0, dramaT = 0, drama = 0, fxSend = null, vibAmt = null;
   // one palette per chord, dark core to bright edge, in the same order as the progression
   const PALS = [
@@ -219,10 +275,11 @@
     bus = ctx.createGain(); bus.gain.value = 0.7;
     const reverb = makeReverb(), wet = ctx.createGain(); wet.gain.value = 0.5;
     bus.connect(idleGain); bus.connect(reverb); reverb.connect(wet); wet.connect(idleGain);
-    duck = ctx.createGain(); duck.connect(comp);                 // everything melodic runs through here, so the kick can push it down
+    duck = ctx.createGain(); carve = ctx.createBiquadFilter(); carve.type = 'peaking'; carve.frequency.value = 2600; carve.Q.value = 0.8; carve.gain.value = 0;
+    duck.connect(carve); carve.connect(comp);                 // everything melodic runs through here, so the kick can push it down
     idleGain.connect(duck); master = ctx.createGain(); comp.connect(master);
     const limiter = ctx.createDynamicsCompressor(); limiter.threshold.value = -4; limiter.knee.value = 2; limiter.ratio.value = 20; limiter.attack.value = 0.002; limiter.release.value = 0.12;
-    const trim = ctx.createGain(); trim.gain.value = 0.8;
+    const trim = ctx.createGain(); trim.gain.value = 0.8; liveTrim = trim;
     master.connect(trim); trim.connect(limiter); limiter.connect(ctx.destination); outNode = limiter;
     analyser = ctx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.6;
     comp.connect(analyser);
@@ -345,6 +402,7 @@
     setInterval(() => {
       if (!ctx || ctx.state !== 'running') return;
       while (clockNext < ctx.currentTime + 0.12) {
+        onClock(clockStep, clockNext);
         playStep(clockStep, clockNext);
         clockNext += STEP;
         clockStep = (clockStep + 1) % 64;
@@ -523,6 +581,7 @@
       b.disabled = !beat.on && !beat.pending;
       b.classList.toggle('on', !!beat[c]);
     });
+    document.querySelector('.tab[data-tab=Beat]').classList.toggle('live', beat.on || beat.pending);
   }
   document.querySelectorAll('#controls button[data-c]').forEach(b => b.addEventListener('click', e => {
     e.stopPropagation();
@@ -533,7 +592,7 @@
       else beat.pending = true;                              // comes in at the top of the next bar
     } else {
       beat[c] = !beat[c];
-      if (c === 'muffle') beatLp.frequency.setTargetAtTime(beat.muffle ? 480 : DARK, ctx.currentTime, 0.12);
+      if (c === 'muffle') beatLp.frequency.setTargetAtTime(beat.muffle ? 480 : 20000, ctx.currentTime, 0.12);
     }
     syncButtons();
   }));
@@ -545,7 +604,7 @@
       super();
       this.sr = sampleRate; this.N = 8192; this.buf = new Float32Array(this.N); this.w = 0;
       this.dec = 4; this.dN = 1024; this.dbuf = new Float32Array(this.dN); this.dw = 0; this.dc = 0; this.lp = 0;
-      this.blocks = 0; this.ratio = 1; this.ratioT = 1; this.phase = 0; this.win = 1100; this.winT = 1100;
+      this.blocks = 0; this.ratio = 1; this.ratioT = 1; this.phase = 0; this.win = 600; this.winT = 600;
       this.allowed = [9, 11, 0, 2, 4, 7]; this.voiced = 0;
       this.W = 380; this.maxLag = Math.floor(this.sr / this.dec / 70); this.minLag = Math.floor(this.sr / this.dec / 950);
       this.x = new Float32Array(this.W + this.maxLag + 2); this.d = new Float32Array(this.maxLag + 2);
@@ -589,26 +648,47 @@
         this.lp += (v - this.lp) * 0.3;
         if (++this.dc >= this.dec) { this.dc = 0; this.dbuf[this.dw] = this.lp; this.dw = (this.dw + 1) % this.dN; }
         this.ratio += (this.ratioT - this.ratio) * k;
-        this.win += (this.winT - this.win) * 0.001;
+        this.win += (this.winT - this.win) * 0.002;
         this.phase += (1 - this.ratio) / this.win;
         this.phase -= Math.floor(this.phase);
         const p2 = (this.phase + 0.5) % 1;
         const g1 = 0.5 - 0.5 * Math.cos(2 * Math.PI * this.phase), g2 = 0.5 - 0.5 * Math.cos(2 * Math.PI * p2);
-        out[n] = this.read(this.phase * this.win + 48) * g1 + this.read(p2 * this.win + 48) * g2;
+        out[n] = this.read(this.phase * this.win + 8) * g1 + this.read(p2 * this.win + 8) * g2;
         this.w = (this.w + 1) % this.N;
       }
       if (++this.blocks >= 3) {
         this.blocks = 0;
         const per = this.detect();
-        if (per > 0) { this.ratioT = Math.min(2, Math.max(0.5, this.target(per))); this.winT = Math.min(2200, Math.max(700, per * 2.5)); }
+        if (per > 0) { this.ratioT = Math.min(2, Math.max(0.5, this.target(per))); this.winT = Math.min(1000, Math.max(260, per * 2)); }
         else this.ratioT = 1;
       }
       return true;
     }
   }
-  registerProcessor('tuner', Tuner);`;
+  registerProcessor('tuner', Tuner);
+  class Grab extends AudioWorkletProcessor {
+    constructor() {
+      super(); this.jobs = [];
+      this.port.onmessage = e => {
+        const d = e.data;
+        if (d.stop !== undefined) { const j = this.jobs.find(j => j.id === d.stop); if (j) this.finish(j); return; }
+        this.jobs.push({ id: d.id, at: d.at, n: d.n, buf: new Float32Array(d.n), w: 0 });
+      };
+    }
+    finish(j) { this.jobs = this.jobs.filter(x => x !== j); this.port.postMessage({ id: j.id, buf: j.buf.slice(0, j.w) }); }
+    process(inputs) {
+      const x = inputs[0] && inputs[0][0];
+      if (!x || !this.jobs.length) return true;
+      for (const j of this.jobs.slice()) {
+        for (let i = 0; i < x.length && j.w < j.n; i++) if (currentTime + i / sampleRate >= j.at) j.buf[j.w++] = x[i];
+        if (j.w >= j.n) this.finish(j);
+      }
+      return true;
+    }
+  }
+  registerProcessor('grab', Grab);`;
 
-  let mic = null, micStream = null, tuner = null, voc = null, vocOn = false, rec = null, recChunks = [], recBlob = null, recStart = 0, recTimer = null;
+  let mic = null, micStream = null, tuner = null, voc = null, vocOn = false, rec = null, recChunks = [], recStart = 0, recTimer = null;
   const ALL_MINOR = [9, 11, 0, 2, 4, 5, 7];
   // what the voice is allowed to land on: the chord's own notes, plus any notes of A minor that don't rub a semitone against it
   function allowedFor(chord) {
@@ -623,38 +703,46 @@
       const url = URL.createObjectURL(new Blob([TUNER], { type: 'application/javascript' }));
       await ctx.audioWorklet.addModule(url);
       tuner = new AudioWorkletNode(ctx, 'tuner', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
+      grab = new AudioWorkletNode(ctx, 'grab', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
+      const sink = ctx.createGain(); sink.gain.value = 0; grab.connect(sink); sink.connect(ctx.destination);
+      grab.port.onmessage = e => { const f = grabWaits[e.data.id]; delete grabWaits[e.data.id]; if (f) f(e.data.buf); };
       buildVoiceChain();
     }
     mic = ctx.createMediaStreamSource(micStream);
     const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 90;
-    const pre = ctx.createGain(); pre.gain.value = 1.6;
+    const pre = ctx.createGain(); pre.gain.value = 1.4;
     mic.connect(hp); hp.connect(pre); pre.connect(tuner); pre.connect(voc.input);
     mic._chain = [hp, pre];
     tuner.port.postMessage({ allowed: allowedFor(chordAt(Math.round(slideNow))) });
+    carve.gain.setTargetAtTime(-4.5, ctx.currentTime, 0.3);
   }
   function stopMic() {
+    if (carve) carve.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
     if (mic) { mic.disconnect(); mic._chain.forEach(n => n.disconnect()); mic = null; }
     if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (_) {}
   }
 
   function buildVoiceChain() {
-    // the tuned voice: tightened, a little presence, then a dotted-8th ping-pong and a big plate
-    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -24; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.12;
-    const pres = ctx.createBiquadFilter(); pres.type = 'peaking'; pres.frequency.value = 3200; pres.gain.value = 4; pres.Q.value = 0.8;
-    const vox = ctx.createGain(); vox.gain.value = 1.3;
-    tuner.connect(comp); comp.connect(pres); pres.connect(vox); vox.connect(comp0);
+    // the tuned voice: cleaned up and opened out, then straight to the master past the compressors so it's as quick to your ears as possible
+    const eq = (type, f, g, q) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (g !== undefined) b.gain.value = g; if (q) b.Q.value = q; return b; };
+    const hpf = eq('highpass', 110, undefined, 0.7), mud = eq('peaking', 320, -4, 1.1), pres = eq('peaking', 3000, 3.5, 0.9), air = eq('highshelf', 9000, 5);
+    const sat = ctx.createWaveShaper(); { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * 1.8) / Math.tanh(1.8); } sat.curve = c; }
+    const vox = ctx.createGain(); vox.gain.value = 0.8;
+    tuner.connect(hpf); hpf.connect(mud); mud.connect(pres); pres.connect(air); air.connect(sat); sat.connect(vox);
+    vox.connect(grab);                                     // loops and samples are taken from the dry tuned voice
+    voiceFx = ctx.createGain(); vox.connect(voiceFx); voiceFx.connect(master);
     const dl = ctx.createDelay(2), dr = ctx.createDelay(2); dl.delayTime.value = 0.375; dr.delayTime.value = 0.375;
-    const fb = ctx.createGain(); fb.gain.value = 0.38;
-    const dlp = ctx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 3500;
-    const pl = ctx.createStereoPanner(); pl.pan.value = -0.7; const pr = ctx.createStereoPanner(); pr.pan.value = 0.7;
-    const send = ctx.createGain(); send.gain.value = 0.32;
-    vox.connect(send); send.connect(dl); dl.connect(pl); dl.connect(dr); dr.connect(pr); dr.connect(dlp); dlp.connect(fb); fb.connect(dl);
-    pl.connect(comp0); pr.connect(comp0);
-    const plate = makeReverb(2.4), pg = ctx.createGain(); pg.gain.value = 0.38;
-    vox.connect(plate); plate.connect(pg); pg.connect(comp0);
-    pl.connect(plate); pr.connect(plate);
-    vox.connect(fxSend);
+    const fb = ctx.createGain(); fb.gain.value = 0.3;
+    const dlp = ctx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 4000;
+    const dhp = ctx.createBiquadFilter(); dhp.type = 'highpass'; dhp.frequency.value = 300;
+    const pl = ctx.createStereoPanner(); pl.pan.value = -0.6; const pr = ctx.createStereoPanner(); pr.pan.value = 0.6;
+    const send = ctx.createGain(); send.gain.value = 0.2;
+    voiceFx.connect(send); send.connect(dhp); dhp.connect(dl); dl.connect(pl); dl.connect(dr); dr.connect(pr); dr.connect(dlp); dlp.connect(fb); fb.connect(dl);
+    pl.connect(master); pr.connect(master);
+    const plate = makeReverb(1.8), phi = eq('highpass', 280), plo = eq('lowpass', 7000), pg = ctx.createGain(); pg.gain.value = 0.22;
+    voiceFx.connect(plate); plate.connect(phi); phi.connect(plo); plo.connect(pg); pg.connect(master);
+    voiceFx.connect(fxSend);
 
     // the vocoder: your voice's shape, played by the chord
     const input = ctx.createGain();
@@ -676,7 +764,7 @@
       const vca = ctx.createGain(); vca.gain.value = 0;
       carrier.connect(cb); cb.connect(vca); amp.connect(vca.gain); vca.connect(out);
     }
-    out.connect(vox);
+    out.connect(hpf);
     voc = { input, out, oscs };
     tuneVocoder(chordAt(Math.round(slideNow)));
   }
@@ -694,62 +782,257 @@
     tuneVocoder(chord);
   }
 
-  // buttons: Mic toggles, Vocoder is held, Rec records everything you hear
-  const micBtn = $('micBtn'), vocBtn = $('vocBtn'), recBtn = $('recBtn');
+  // ---------- the dock: Beat and Voice open their sheets, the red dot records ----------
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(t => t.addEventListener('click', e => {
+    e.stopPropagation();
+    const sheet = $('sheet' + t.dataset.tab), open = !sheet.classList.contains('open');
+    document.querySelectorAll('.sheet').forEach(x => x.classList.remove('open'));
+    tabs.forEach(x => x.classList.remove('open'));
+    if (open) { sheet.classList.add('open'); t.classList.add('open'); }
+  }));
+
+  const micBtn = $('micBtn'), vocBtn = $('vocBtn'), recBtn = $('recBtn'), loopBtn = $('loopBtn'), sampBtn = $('sampBtn');
+  const label = (b, txt) => { b.querySelector('span').textContent = txt; };
+  const loop = { state: 'off', src: null, gain: null, buf: null, origin: 0 };
+  const samp = { state: 'empty', buf: null, src: null, id: 0 };
+  const LOOP_STEPS = 32;
+  const latency = () => (ctx.baseLatency || 0.01) + (ctx.outputLatency || 0.02) + 0.012;   // how late your voice arrives versus what you heard
+
+  function syncVoice() {
+    micBtn.classList.toggle('on', !!mic); label(micBtn, mic ? 'Mic on' : 'Mic');
+    vocBtn.disabled = !mic;
+    loopBtn.classList.toggle('wait', loop.state === 'wait');
+    loopBtn.classList.toggle('recording', loop.state === 'rec');
+    loopBtn.classList.toggle('armed', loop.state === 'on');
+    loopBtn.classList.toggle('has', loop.state === 'on');
+    label(loopBtn, { off: 'Loop 2 bars', wait: 'Sing on the 1', rec: 'Recording loop', on: 'Loop playing' }[loop.state]);
+    sampBtn.classList.toggle('recording', samp.state === 'rec');
+    sampBtn.classList.toggle('armed', samp.state === 'ready');
+    sampBtn.classList.toggle('has', samp.state === 'ready');
+    label(sampBtn, { empty: 'Hold to sample', rec: 'Sampling…', ready: 'Tap sample' }[samp.state]);
+    document.querySelector('.tab[data-tab=Voice]').classList.toggle('live', !!mic || loop.state === 'on');
+  }
+  async function ensureMic() {
+    if (mic) return true;
+    label(micBtn, 'Starting…');
+    try { await startMic(); syncVoice(); toast('Wired headphones on for the tightest monitoring'); return true; }
+    catch (err) { syncVoice(); toast('The mic was blocked. Allow it in your browser settings'); return false; }
+  }
   micBtn.addEventListener('click', async e => {
     e.stopPropagation();
     if (!ctx) return;
-    if (mic) { stopMic(); micBtn.classList.remove('on'); micBtn.textContent = 'Mic'; vocBtn.disabled = true; return; }
-    micBtn.textContent = 'Starting…';
-    try {
-      await startMic();
-      micBtn.classList.add('on'); micBtn.textContent = 'Mic on'; vocBtn.disabled = false;
-      toast('Headphones on, or it will feed back');
-    } catch (err) {
-      micBtn.textContent = 'Mic';
-      toast('The mic was blocked. Allow it in your browser settings and try again');
-    }
+    if (mic) { stopMic(); syncVoice(); return; }
+    await ensureMic();
   });
   const vocHold = on => {
     if (!voc) return;
     vocOn = on; vocBtn.classList.toggle('on', on);
     voc.out.gain.setTargetAtTime(on ? 1 : 0, ctx.currentTime, on ? 0.03 : 0.12);
   };
-  vocBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); vocBtn.setPointerCapture(e.pointerId); vocHold(true); });
+  vocBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (vocBtn.disabled) return; vocBtn.setPointerCapture(e.pointerId); vocHold(true); });
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => vocBtn.addEventListener(ev, () => vocHold(false)));
-  vocBtn.addEventListener('contextmenu', e => e.preventDefault());
+  [vocBtn, sampBtn, loopBtn, recBtn].forEach(b => b.addEventListener('contextmenu', e => e.preventDefault()));
 
+  // grab a stretch of the tuned voice, sample-accurate
+  const grabWaits = {}; let grabId = 0;
+  function capture(at, seconds) { const id = ++grabId; const p = new Promise(r => { grabWaits[id] = r; }); grab.port.postMessage({ id, at, n: Math.round(seconds * ctx.sampleRate) }); return { id, p }; }
+  function toBuffer(data, fade = 0.004) {
+    const b = ctx.createBuffer(1, Math.max(1, data.length), ctx.sampleRate), d = b.getChannelData(0); d.set(data);
+    const f = Math.min(d.length >> 1, Math.round(fade * ctx.sampleRate));
+    for (let i = 0; i < f; i++) { d[i] *= i / f; d[d.length - 1 - i] *= i / f; }
+    return b;
+  }
+
+  // the loop: two bars of your voice, recorded from the next bar line and played back in time with the beat
+  function onClock(clk, t) {
+    if (loop.state !== 'wait' || clk % 16 !== 0) return;
+    loop.state = 'rec'; loop.origin = t;
+    const dur = LOOP_STEPS * STEP, job = capture(t + latency(), dur);
+    loop.job = job.id;
+    setTimeout(() => { syncVoice(); loopProgress(); }, Math.max(0, (t - ctx.currentTime) * 1000));
+    job.p.then(data => {
+      if (loop.state !== 'rec' || loop.job !== job.id) return;
+      loop.buf = toBuffer(data, 0.003);
+      const src = ctx.createBufferSource(); src.buffer = loop.buf; src.loop = true;
+      const g = ctx.createGain(); g.gain.value = 1; src.connect(g); g.connect(voiceFx);
+      const when = ctx.currentTime + 0.03, d = loop.buf.duration;
+      src.start(when, ((when - loop.origin) % d + d) % d);
+      loop.src = src; loop.gain = g; loop.state = 'on'; syncVoice();
+    });
+  }
+  function loopProgress() {
+    if (loop.state !== 'rec') { loopBtn.style.removeProperty('--p'); return; }
+    loopBtn.style.setProperty('--p', clamp01((ctx.currentTime - loop.origin) / (LOOP_STEPS * STEP)));
+    requestAnimationFrame(loopProgress);
+  }
+  function clearLoop() {
+    if (loop.src) { const g = loop.gain, s0 = loop.src; g.gain.setTargetAtTime(0, ctx.currentTime, 0.03); s0.stop(ctx.currentTime + 0.2); }
+    if (loop.state === 'rec' && loop.job) grab.port.postMessage({ stop: loop.job });
+    loop.src = null; loop.buf = null; loop.state = 'off'; syncVoice();
+  }
+  loopBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+    if (!ctx) return;
+    if (loop.state !== 'off') { clearLoop(); return; }
+    if (!(await ensureMic())) return;
+    loop.state = 'wait'; syncVoice();
+  });
+
+  // the sample: hold to grab a bit of your voice, then tap to fire it, snapped to the beat's 16ths when the beat is on
+  sampBtn.addEventListener('pointerdown', async e => {
+    e.preventDefault(); e.stopPropagation();
+    if (!ctx) return;
+    if (e.target.closest('.x')) { samp.buf = null; samp.state = 'empty'; syncVoice(); return; }
+    if (samp.state === 'ready') { fireSample(); return; }
+    if (!mic) { await ensureMic(); if (mic) toast('Mic on. Now hold to sample'); return; }
+    sampBtn.setPointerCapture(e.pointerId);
+    const job = capture(ctx.currentTime + latency(), 4);
+    samp.id = job.id; samp.state = 'rec'; samp.t0 = ctx.currentTime; syncVoice(); sampProgress();
+    job.p.then(data => {
+      if (samp.id !== job.id) return;
+      // trim the silence off the front so it fires the instant you tap
+      let a = 0, b = data.length - 1; const th = 0.025;
+      while (a < data.length && Math.abs(data[a]) < th) a++;
+      while (b > a && Math.abs(data[b]) < th * 0.6) b--;
+      a = Math.max(0, a - Math.round(0.006 * ctx.sampleRate)); b = Math.min(data.length, b + Math.round(0.08 * ctx.sampleRate));
+      if (b - a < ctx.sampleRate * 0.05) { samp.state = 'empty'; syncVoice(); toast('Didn’t catch anything. Hold and sing'); return; }
+      samp.buf = toBuffer(data.subarray(a, b), 0.003); samp.state = 'ready'; syncVoice();
+    });
+  });
+  const endSample = () => { if (samp.state === 'rec') grab.port.postMessage({ stop: samp.id }); };
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => sampBtn.addEventListener(ev, endSample));
+  function sampProgress() {
+    if (samp.state !== 'rec') { sampBtn.style.removeProperty('--p'); return; }
+    sampBtn.style.setProperty('--p', clamp01((ctx.currentTime - samp.t0) / 4));
+    requestAnimationFrame(sampProgress);
+  }
+  function fireSample() {
+    const now = ctx.currentTime + 0.008;
+    const t = beat.on ? clockNext - STEP * Math.floor((clockNext - now) / STEP) : now;
+    if (samp.src) { try { samp.src.stop(t); } catch (_) {} }                  // choke the last one, like a chop
+    const src = ctx.createBufferSource(); src.buffer = samp.buf; src.connect(voiceFx); src.start(t); samp.src = src;
+    setTimeout(() => { sampBtn.classList.add('hit'); setTimeout(() => sampBtn.classList.remove('hit'), 90); }, Math.max(0, (t - ctx.currentTime) * 1000));
+  }
+
+  // ---------- recording, then play it back, save it as an mp3 or share it ----------
+  let take = null, takeSrc = null, takeAt = 0, takeOff = 0, takeMp3 = null, takePeaks = null;
+  const fmt = s0 => `${Math.floor(s0 / 60)}:${String(Math.floor(s0 % 60)).padStart(2, '0')}`;
   recBtn.addEventListener('click', async e => {
     e.stopPropagation();
     if (!ctx) return;
-    if (recBlob) { await saveTake(); return; }
     if (rec && rec.state === 'recording') { rec.stop(); return; }
+    pauseTake();
     const dest = ctx.createMediaStreamDestination(); outNode.connect(dest);
     const type = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
     try { rec = new MediaRecorder(dest.stream, type ? { mimeType: type } : undefined); } catch (_) { toast('Recording is not supported in this browser'); return; }
     recChunks = [];
     rec.ondataavailable = ev => { if (ev.data && ev.data.size) recChunks.push(ev.data); };
-    rec.onstop = () => {
+    rec.onstop = async () => {
       outNode.disconnect(dest);
       clearInterval(recTimer);
-      recBlob = new Blob(recChunks, { type: rec.mimeType || type || 'audio/mp4' });
-      recBtn.classList.remove('on'); recBtn.textContent = 'Save take';
+      recBtn.classList.remove('on'); $('recTime').textContent = '';
+      const blob = new Blob(recChunks, { type: rec.mimeType || type || 'audio/mp4' });
+      try { showTake(await ctx.decodeAudioData(await blob.arrayBuffer())); }
+      catch (_) { toast('Couldn’t open that take'); }
     };
     rec.start(250); recStart = performance.now();
-    recBtn.classList.add('on');
-    recTimer = setInterval(() => { const s = Math.floor((performance.now() - recStart) / 1000); recBtn.textContent = `● ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }, 250);
-    recBtn.textContent = '● 0:00';
+    recBtn.classList.add('on'); $('recTime').textContent = '0:00';
+    recTimer = setInterval(() => { $('recTime').textContent = fmt((performance.now() - recStart) / 1000); }, 250);
   });
-  async function saveTake() {
-    const ext = recBlob.type.includes('mp4') ? 'm4a' : 'webm';
-    const name = `tilt-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.${ext}`;
-    const file = new File([recBlob], name, { type: recBlob.type });
-    try {
-      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: 'Tilt' });
-      else { const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
-      recBlob = null; recBtn.textContent = 'Rec';
-    } catch (_) { /* cancelled the share sheet: keep the take so they can try again */ }
+
+  const wave = $('wave'), wctx = wave.getContext('2d');
+  function showTake(buf) {
+    take = buf; takeMp3 = null; takeOff = 0;
+    $('take').classList.add('open'); $('binBtn').classList.remove('sure'); $('binBtn').textContent = '✕';
+    label($('dlBtn'), 'MP3');
+    const dpr = Math.min(3, devicePixelRatio || 1), w = wave.clientWidth, h = wave.clientHeight;
+    wave.width = w * dpr; wave.height = h * dpr; wctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const bars = Math.max(20, Math.floor(w / 3.5)), d = buf.getChannelData(0), per = Math.floor(d.length / bars);
+    takePeaks = []; let mx = 1e-4;
+    for (let i = 0; i < bars; i++) { let p = 0; for (let j = i * per; j < (i + 1) * per; j += 8) p = Math.max(p, Math.abs(d[j])); takePeaks.push(p); mx = Math.max(mx, p); }
+    takePeaks = takePeaks.map(p => p / mx);
+    drawTake();
   }
+  function takePos() { return takeSrc ? Math.min(take.duration, takeOff + ctx.currentTime - takeAt) : takeOff; }
+  function drawTake() {
+    if (!take) return;
+    const w = wave.clientWidth, h = wave.clientHeight, n = takePeaks.length, step = w / n, pos = takePos() / take.duration;
+    wctx.clearRect(0, 0, w, h);
+    for (let i = 0; i < n; i++) {
+      const bh = Math.max(2, takePeaks[i] * (h - 4));
+      wctx.fillStyle = i / n < pos ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.3)';
+      wctx.beginPath(); wctx.roundRect ? wctx.roundRect(i * step, (h - bh) / 2, Math.max(1.5, step - 1.5), bh, 1) : wctx.rect(i * step, (h - bh) / 2, Math.max(1.5, step - 1.5), bh); wctx.fill();
+    }
+    $('takeTime').textContent = fmt(takeSrc ? takePos() : (takeOff || take.duration));
+    if (takeSrc) requestAnimationFrame(drawTake);
+  }
+  function playTake() {
+    if (!take) return;
+    if (takeOff >= take.duration - 0.05) takeOff = 0;
+    liveTrim.gain.setTargetAtTime(0, ctx.currentTime, 0.06);          // the live sound steps aside while you listen back
+    const src = ctx.createBufferSource(); src.buffer = take; src.connect(ctx.destination);
+    takeAt = ctx.currentTime + 0.05; src.start(takeAt, takeOff); takeSrc = src;
+    src.onended = () => { if (takeSrc !== src) return; takeSrc = null; takeOff = 0; liveTrim.gain.setTargetAtTime(0.8, ctx.currentTime, 0.15); setIcon(false); drawTake(); };
+    setIcon(true); drawTake();
+  }
+  function pauseTake() {
+    if (!takeSrc) return;
+    takeOff = takePos(); const s0 = takeSrc; takeSrc = null; s0.stop();
+    liveTrim.gain.setTargetAtTime(0.8, ctx.currentTime, 0.15); setIcon(false); drawTake();
+  }
+  const setIcon = playing => $('playIcon').setAttribute('d', playing ? 'M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z' : 'M4 2.5v11l9.5-5.5z');
+  $('playBtn').addEventListener('click', e => { e.stopPropagation(); if (takeSrc) pauseTake(); else playTake(); });
+  wave.addEventListener('pointerdown', e => {
+    e.stopPropagation(); if (!take) return;
+    const r = wave.getBoundingClientRect(), at = clamp01((e.clientX - r.left) / r.width) * take.duration;
+    const was = !!takeSrc; if (was) { const s0 = takeSrc; takeSrc = null; s0.stop(); }
+    takeOff = at; if (was) playTake(); else drawTake();
+  });
+
+  // mp3: encoded here on the phone, a slice at a time so nothing stutters
+  function loadLame() {
+    if (window.lamejs) return Promise.resolve();
+    return new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = '/vendor/lame.min.js'; sc.onload = ok; sc.onerror = bad; document.head.appendChild(sc); });
+  }
+  async function takeAsMp3() {
+    if (takeMp3) return takeMp3;
+    await loadLame();
+    const ch = Math.min(2, take.numberOfChannels), enc = new lamejs.Mp3Encoder(ch, take.sampleRate, 192);
+    const L = take.getChannelData(0), Rr = ch > 1 ? take.getChannelData(1) : null, B = 1152, out = [];
+    const i16 = (src, a, b) => { const o = new Int16Array(b - a); for (let i = 0; i < o.length; i++) { const v = Math.max(-1, Math.min(1, src[a + i])); o[i] = v < 0 ? v * 32768 : v * 32767; } return o; };
+    for (let i = 0, k = 0; i < L.length; i += B, k++) {
+      const e = Math.min(L.length, i + B), d = Rr ? enc.encodeBuffer(i16(L, i, e), i16(Rr, i, e)) : enc.encodeBuffer(i16(L, i, e));
+      if (d.length) out.push(new Uint8Array(d));
+      if (k % 150 === 0) { label($('dlBtn'), Math.round(i / L.length * 100) + '%'); await new Promise(r => setTimeout(r)); }
+    }
+    const f = enc.flush(); if (f.length) out.push(new Uint8Array(f));
+    label($('dlBtn'), 'MP3');
+    return (takeMp3 = new File(out, `tilt-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.mp3`, { type: 'audio/mpeg' }));
+  }
+  $('dlBtn').addEventListener('click', async e => {
+    e.stopPropagation(); if (!take) return;
+    try {
+      const file = await takeAsMp3();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+    } catch (_) { label($('dlBtn'), 'MP3'); toast('Couldn’t make the mp3'); }
+  });
+  $('shareBtn').addEventListener('click', async e => {
+    e.stopPropagation(); if (!take) return;
+    try {
+      const file = await takeAsMp3();
+      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: 'Tilt' });
+      else $('dlBtn').click();
+    } catch (_) {}
+  });
+  $('binBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    const b = $('binBtn');
+    if (!b.classList.contains('sure')) { b.classList.add('sure'); b.textContent = 'Sure?'; clearTimeout(b.t); b.t = setTimeout(() => { b.classList.remove('sure'); b.textContent = '✕'; }, 2500); return; }
+    pauseTake(); take = null; takeMp3 = null; $('take').classList.remove('open');
+  });
+
   function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 3600); }
 
   function gliss() { strings.forEach((st, k) => setTimeout(() => pluck(st, 0.8), k * 32)); }
@@ -891,6 +1174,7 @@
   function goQuiet() {
     if (!ctx || !master) return;
     if (rec && rec.state === 'recording') rec.stop();
+    if (typeof pauseTake === 'function') pauseTake();
     master.gain.cancelScheduledValues(ctx.currentTime);
     master.gain.setTargetAtTime(0, ctx.currentTime, 0.015);
     clearTimeout(leaving);
@@ -916,6 +1200,7 @@
     await ctx.resume();
     $('gate').classList.add('gone');
     $('controls').classList.add('on');
+    syncVoice();
   });
 
   const fs = `
