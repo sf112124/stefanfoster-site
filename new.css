@@ -612,11 +612,14 @@ html.splashing .cur{display:none}
 html.in-hell #hell{display:block}
 #hell .hl-bg{position:absolute;inset:0;width:100%;height:100%;display:block}
 #hell .hl-list{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0}
-#hell .hl-row{font:400 min(13vh,8.2vw)/.78 "Metal Mania",serif;color:var(--fg,#e10600);white-space:nowrap;cursor:pointer;letter-spacing:-.01em;text-shadow:0 0 .02em #000}
-#hell .hl-row.hot{color:#fff;text-shadow:0 0 .12em #e10600,0 0 .02em #000}
+#hell .hl-row{font:400 min(13vh,8.2vw)/.78 "Metal Mania",serif;color:#000;white-space:nowrap;cursor:pointer;letter-spacing:-.01em;pointer-events:none}
+#hell .hl-ch{pointer-events:auto}
+#hell.flip{background:#e10600}
+#hell.flip .hl-row{color:#e10600}
+#hell.flip .hl-row.hot{color:#000}
+#hell .hl-row.hot{color:#fff}
 #hell .hl-ch{display:inline-block;will-change:transform}
 html.in-hell .cur{display:none}
-#hell .hl-row{text-shadow:0 0 .03em #e10600}
 /* EYES (?eyes) */
 .tun-list a.eyed .t{opacity:1;color:var(--ink)}
 .tun-list .ey-ch{display:inline-block;position:relative}

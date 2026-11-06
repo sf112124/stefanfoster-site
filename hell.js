@@ -4,7 +4,9 @@
 const ON = /[?&]hell\b/.test(location.search) && matchMedia("(hover: hover) and (pointer: fine)").matches;
 if (ON) {
   const TRACK = "media/hell/hell.mp3";
-  let ac = null, buf = null, src = null, gain = null, an = null, bins = null, active = false, cur = -1, leaveT = 0, energy = 0, avg = 0, hit = 0, bar = 0;
+  let ac = null, buf = null, src = null, gain = null, an = null, bins = null, active = false, cur = -1, leaveT = 0, energy = 0, hit = 0, beat = -1, startAt = 0;
+  // the track's own grid, measured from the file: 130.7 bpm, first beat 33ms in, four beats to the bar
+  const BEAT = 60 / 130.72, PHASE = .033;
   const loadTrack = () => fetch(TRACK).then((r) => r.arrayBuffer()).then((b) => { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); return ac.decodeAudioData(b); }).then((d) => (buf = d)).catch(() => {});
   loadTrack();
   // the browser holds sound back until the first click or key on the page
@@ -67,7 +69,7 @@ if (ON) {
   }
   function footage(a) {
     if (media) { if (media.pause) media.pause(); media = null; }
-    const p = a && a.__p; if (!p) return;
+    const p = a && (a.__p || window.__tunEat?.list?.[+a.dataset.i]); if (!p) return;
     const box = document.createElement("div"); box.innerHTML = window.__tunEat?.media(p) || "";
     const v = box.querySelector("video"), im = box.querySelector("img");
     if (v) { const nv = document.createElement("video"); nv.muted = true; nv.loop = true; nv.playsInline = true; nv.crossOrigin = "anonymous"; nv.src = v.dataset.src || v.src; nv.play().catch(() => {}); media = nv; }
@@ -84,7 +86,7 @@ if (ON) {
     active = true; cur = -1; leaveT = 0; document.documentElement.classList.add("in-hell");
     swap(i);
     if (ac && buf) { unlock(); gain = ac.createGain(); gain.gain.value = 1; an = ac.createAnalyser(); an.fftSize = 1024; bins = new Uint8Array(an.frequencyBinCount);
-      src = ac.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(an); an.connect(gain); gain.connect(ac.destination); src.start(); }
+      src = ac.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(an); an.connect(gain); gain.connect(ac.destination); src.start(); startAt = ac.currentTime; }
     requestAnimationFrame(frame);
   }
   function swap(i) { if (i === cur) return; cur = i; rows.forEach((r, k) => r.el.classList.toggle("hot", k === i)); footage(LIST[i]); }
@@ -98,7 +100,7 @@ if (ON) {
   const P = { x: innerWidth / 2, y: innerHeight / 2 };
   root.addEventListener("pointermove", (e) => {
     P.x = e.clientX; P.y = e.clientY;
-    const r = e.target.closest && e.target.closest(".hl-row"), k = r ? rows.findIndex((q) => q.el === r) : -1;
+    const r = e.target.classList && e.target.classList.contains("hl-ch") && e.target.closest(".hl-row"), k = r ? rows.findIndex((q) => q.el === r) : -1;
     if (k >= 0) { leaveT = 0; swap(k); } else if (!leaveT) leaveT = performance.now();
   });
   root.addEventListener("pointerleave", exit);
@@ -109,13 +111,15 @@ if (ON) {
   function frame(now) {
     if (!active) return; requestAnimationFrame(frame);
     const dt = Math.min(.05, (now - last) / 1000); last = now;
-    if (leaveT && now - leaveT > 260) return exit();
-    // hear the kick: low-end energy jumping above its own running average
-    if (an) { an.getByteFrequencyData(bins); let e = 0; for (let b = 1; b < 7; b++) e += bins[b]; e /= 6 * 255; avg += (e - avg) * .08; if (e - avg > .045 && e > .5) { hit = 1; bar++; } energy = e; }
-    else { const s = Math.floor((now - t0) / 75); if (s !== bar) { bar = s; hit = 1; } energy = .7; }
-    hit *= Math.pow(.0009, dt);
-    const flash = bar % 16 === 0 && hit > .6, inv = hit > .55 && bar % 2 ? 1 : 0;
-    root.style.setProperty("--fg", inv ? "#e10600" : "#000"); root.style.setProperty("--bgc", flash ? "#e10600" : "#000");
+    if (leaveT && now - leaveT > 140) return exit();
+    // where we are in the music: the beat grid for the strobe, the loudness for everything else
+    const tt = src ? (ac.currentTime - startAt) % buf.duration : (now - t0) / 1000, bp = (tt - PHASE) / BEAT, b = Math.floor(bp), f = bp - b;
+    if (b !== beat) { beat = b; hit = 1; }
+    hit = Math.pow(1 - f, 3);
+    if (an) { an.getByteFrequencyData(bins); let e = 0; for (let k = 1; k < 60; k++) e += bins[k]; energy += (e / (59 * 255) - energy) * .5; } else energy = .6;
+    // strobe on the one: STROBE 2 3 4, STROBE 2 3 4, the whole screen flips for the first beat of every bar
+    const one = ((b % 4) + 4) % 4 === 0, inv = one && f < .5 ? 1 : 0;
+    root.classList.toggle("flip", !!inv);
     // the footage
     if (gl) {
       const W = cv.clientWidth, H = cv.clientHeight, d = Math.min(1, devicePixelRatio || 1);
@@ -124,17 +128,17 @@ if (ON) {
       const ready = media && ((media.readyState >= 2) || (media.complete && media.naturalWidth));
       if (ready) { try { gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, media); } catch (e) {} }
       const mw = media && (media.videoWidth || media.naturalWidth) || 16, mh = media && (media.videoHeight || media.naturalHeight) || 9;
-      gl.uniform1f(U.t, (now - t0) / 1000); gl.uniform1f(U.k, Math.min(1, hit + energy * .3)); gl.uniform1f(U.inv, inv); gl.uniform1f(U.asp, (W / H) / (mw / mh)); gl.uniform2f(U.m, P.x / W, P.y / H);
+      gl.uniform1f(U.t, (now - t0) / 1000); gl.uniform1f(U.k, Math.min(1, hit * .6 + energy * .8)); gl.uniform1f(U.inv, inv); gl.uniform1f(U.asp, (W / H) / (mw / mh)); gl.uniform2f(U.m, P.x / W, P.y / H);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     // the names: shaking on the kick, and blown apart wherever the pointer is
     const R = Math.min(innerWidth, innerHeight) * .22;
     rows.forEach((r, ri) => r.chars.forEach((c) => {
       const b = c.el.getBoundingClientRect(), cx = b.left + b.width / 2 - c.x, cy = b.top + b.height / 2 - c.y, dx = cx - P.x, dy = cy - P.y, dd = Math.hypot(dx, dy) || 1, near = Math.exp(-(dd * dd) / (R * R));
-      const j = hit * (10 + 26 * Math.random()), tx = (Math.random() - .5) * j + dx / dd * near * 90, ty = (Math.random() - .5) * j * 1.6 + dy / dd * near * 70;
+      const amp = hit * .7 + energy * .9, j = amp * (8 + 22 * Math.random()), tx = (Math.random() - .5) * j + dx / dd * near * 10, ty = (Math.random() - .5) * j * 1.5 + dy / dd * near * 46;
       c.vx += ((tx - c.x) * 260 - c.vx * 18) * dt; c.vy += ((ty - c.y) * 260 - c.vy * 18) * dt; c.x += c.vx * dt; c.y += c.vy * dt;
-      const rot = (Math.random() - .5) * 40 * hit + (dx / dd) * near * 25, sc = 1 + near * .9 + hit * Math.random() * .5, sk = (Math.random() - .5) * 30 * hit;
-      c.el.style.transform = `translate(${c.x.toFixed(1)}px,${c.y.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) skewX(${sk.toFixed(1)}deg) scale(${sc.toFixed(2)},${(sc * (1 + hit * .5 * Math.random())).toFixed(2)})`;
+      const rot = (Math.random() - .5) * 34 * amp + (dx / dd) * near * 14, sc = 1 + near * .55 + amp * Math.random() * .35, sk = (Math.random() - .5) * 26 * amp;
+      c.el.style.transform = `translate(${c.x.toFixed(1)}px,${c.y.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) skewX(${sk.toFixed(1)}deg) scale(${sc.toFixed(2)},${(sc * (1 + amp * .45 * Math.random())).toFixed(2)})`;
     }));
   }
 }

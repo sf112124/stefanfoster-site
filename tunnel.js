@@ -206,7 +206,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null, mouseX = 0, mxS = 0; const wt = new Float32Array(16).fill(.5), ofs = new Float32Array(16); let ph = 0, pa = 0, hw = 0, wgt = 0, ptX = 0, ptY = 0, ptIn = false;
   const gs = new Float32Array(16), gv = new Float32Array(16), ea = new Float32Array(16), eaT = new Float32Array(16);
   // the creature can eat a line of the list: it shrinks away, and comes back when the creature goes home
-  window.__tunEat = { eat: (i) => { eaT[i] = 1; }, uneat: (i) => { eaT[i] = 0; }, reset: () => eaT.fill(0), hideAll: () => { eaT.fill(1); hrow = -1; }, grow: (i) => gs[i] || 0, media: (p) => media(p.cover || {}) };
+  window.__tunEat = { eat: (i) => { eaT[i] = 1; }, uneat: (i) => { eaT[i] = 0; }, reset: () => eaT.fill(0), hideAll: () => { eaT.fill(1); hrow = -1; }, grow: (i) => gs[i] || 0, media: (p) => media(p.cover || {}), list: LIST };
   mount.classList.add("is-list");
   // each project's colours, from pale edge to hot core
   const hx = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255), PAL = (a, b, c) => [...hx(a), ...hx(b), ...hx(c)];
