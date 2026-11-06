@@ -16,7 +16,11 @@ if (ON) {
 
   // ---------- the layer ----------
   const root = document.createElement("div"); root.id = "hell"; root.setAttribute("aria-hidden", "true");
-  root.innerHTML = `<canvas class="hl-bg"></canvas><div class="hl-strobe"></div><div class="hl-list"></div>`;
+  root.innerHTML = `<canvas class="hl-bg"></canvas><div class="hl-strobe"></div><div class="hl-list"></div><div class="hl-grain"></div>`;
+  // film grain over everything, type included: a tile of noise that jumps to a new spot every frame
+  { const g = document.createElement("canvas"); g.width = g.height = 220; const x = g.getContext("2d"), d = x.createImageData(220, 220);
+    for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+    x.putImageData(d, 0, 0); root.querySelector(".hl-grain").style.backgroundImage = `url(${g.toDataURL()})`; }
   document.body.appendChild(root);
   const cv = root.querySelector("canvas"), listEl = root.querySelector(".hl-list"), strobe = root.querySelector(".hl-strobe");
   let rows = [], LIST = [];
@@ -119,7 +123,7 @@ if (ON) {
   function escape(i) { const a = LIST[i]; exit(true); if (a) a.click(); }
   // which name you're on is judged from where the lines sit, not from the jittering letters, so rolling between them is smooth
   const P = { x: innerWidth / 2, y: innerHeight / 2 };
-  root.addEventListener("pointermove", (e) => { P.x = e.clientX; P.y = e.clientY; });
+  addEventListener("pointermove", (e) => { P.x = e.clientX; P.y = e.clientY; }, { passive: true });
   function under() {
     let best = -1, bd = Infinity;
     rows.forEach((r, k) => { const b = r.el.getBoundingClientRect(); if (P.x < b.left - 24 || P.x > b.right + 24) return; const d = Math.abs(P.y - (b.top + b.height / 2)); if (d < b.height * .7 && d < bd) { bd = d; best = k; } });
@@ -157,6 +161,7 @@ if (ON) {
       gl.uniform1f(U.t, (now - t0) / 1000); gl.uniform1f(U.k, Math.min(1, hit * .6 + energy * .8)); gl.uniform1f(U.inv, inv); gl.uniform1f(U.asp, (W / H) / (mw / mh)); gl.uniform2f(U.m, P.x / W, P.y / H);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
+    root.querySelector(".hl-grain").style.backgroundPosition = `${(Math.random() * 220) | 0}px ${(Math.random() * 220) | 0}px`;
     // the names: shaking on the kick, and blown apart wherever the pointer is
     const R = Math.min(innerWidth, innerHeight) * .22;
     // the name you're on stays readable: its letters stay upright and in line, and the whole word punches bigger on

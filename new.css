@@ -639,7 +639,9 @@ html.in-hell .cur{display:none}
 .snd:focus-visible{outline:1px solid var(--ink)}
 body.viewing .snd{display:none}
 
-/* legibility: the hovered name is cut out of everything behind it with a hard black edge, and the rest sink back */
-#hell .hl-row.hot{-webkit-text-stroke:.07em #000;paint-order:stroke fill}
-#hell.flashing .hl-row.hot{-webkit-text-stroke:.07em #fff}
+/* legibility: the hovered name gets room between its letters, and the rest sink back */
 #hell .hl-row:not(.hot){opacity:.82}
+
+/* grain over everything */
+#hell .hl-grain{position:absolute;inset:-10px;pointer-events:none;mix-blend-mode:overlay;opacity:.38;z-index:5}
+#hell .hl-row.hot{letter-spacing:.09em}
