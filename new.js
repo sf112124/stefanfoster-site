@@ -16,7 +16,7 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const url = (slug, f) => `media/${slug}/${f}`;
 const sound = new Sound();
 // one switch for every sound on the site; it remembers your choice
-{ let off = false; try { off = localStorage.getItem("snd") === "off"; } catch (e) {}
+{ let off = true; try { off = localStorage.getItem("snd") !== "on"; } catch (e) {}   // off until you switch it on
   sound.on = !off; window.__soundOff = off;
   const b = document.createElement("button"); b.className = "snd mono"; b.type = "button";
   const label = () => { b.textContent = window.__soundOff ? "Sound off" : "Sound on"; b.setAttribute("aria-pressed", String(!window.__soundOff)); };

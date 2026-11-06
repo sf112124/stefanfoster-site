@@ -148,8 +148,7 @@ if (ON) {
     if (an) { an.getByteFrequencyData(bins); let e = 0; for (let k = 1; k < 60; k++) e += bins[k]; energy += (e / (59 * 255) - energy) * .5; } else energy = .6;
     // strobe every other beat: STROBE 2 STROBE 4. On those beats the screen flashes hard, white and red, many times a second
     const one = ((b % 2) + 2) % 2 === 0, sf = Math.floor(f * 14), inv = 0;
-    strobe.style.background = one ? (sf % 2 ? "transparent" : sf % 4 === 0 ? "#fff" : "#e10600") : "transparent";
-    root.classList.toggle("flashing", one && sf % 2 === 0);
+    // no strobe: flashing light can trigger seizures, so the beat only moves things, it never flashes the screen
     // the footage
     if (gl) {
       const W = cv.clientWidth, H = cv.clientHeight, d = Math.min(1, devicePixelRatio || 1);
