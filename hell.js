@@ -103,7 +103,7 @@ if (ON) {
     // each metal name sits on the same line as its name in the index, so whatever you hovered stays under your pointer
     const ys = LIST.map((a) => { const b = a.getBoundingClientRect(); return b.top + b.height / 2; }), pitch = ys.length > 1 ? (ys[ys.length - 1] - ys[0]) / (ys.length - 1) : 60;
     listEl.style.fontSize = Math.min(pitch * 1.7, innerWidth * .095) + "px";
-    rows.forEach((r, k) => { r.el.style.transition = r.el.style.transform = r.el.style.opacity = ""; r.el.style.top = ys[k] + "px"; r.chars.forEach((c) => { c.el.style.transition = ""; }); });
+    rows.forEach((r, k) => { r.big = 1; r.el.style.transition = r.el.style.transform = r.el.style.opacity = ""; r.el.style.top = ys[k] + "px"; r.chars.forEach((c) => { c.el.style.transition = ""; }); });
     swap(i);
     if (ac && buf && !window.__soundOff) { unlock(); gain = ac.createGain(); gain.gain.value = 1; an = ac.createAnalyser(); an.fftSize = 1024; bins = new Uint8Array(an.frequencyBinCount);
       src = ac.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(an); an.connect(gain); gain.connect(ac.destination); src.start(); startAt = ac.currentTime; }
