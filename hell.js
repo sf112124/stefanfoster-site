@@ -167,11 +167,14 @@ if (ON) {
     // the beat. Everything else goes mad around it.
     rows.forEach((r, ri) => {
       const isHot = ri === cur;
-      if (isHot) { const pump = 2 + hit * .18 + energy * .06; r.el.style.transform = `scale(${pump.toFixed(3)}) rotate(${((Math.random() - .5) * 1.6 * hit).toFixed(2)}deg)`; }
-      else if (r.el.style.transform) r.el.style.transform = "";
+      // size eases between names as you move up and down, never pops; the one you're on swells to double and pumps
+      r.big = (r.big ?? 1) + ((isHot ? 2 : 1) - (r.big ?? 1)) * (1 - Math.exp(-dt * 9));
+      const lift = r.big - 1, pump = r.big + lift * (hit * .18 + energy * .06);
+      r.el.style.transform = lift < .002 ? "" : `scale(${pump.toFixed(3)}) rotate(${((Math.random() - .5) * 3 * hit * lift).toFixed(2)}deg)`;
       r.chars.forEach((c) => {
         const b = c.el.getBoundingClientRect(), cx = b.left + b.width / 2 - c.x, cy = b.top + b.height / 2 - c.y, dx = cx - P.x, dy = cy - P.y, dd = Math.hypot(dx, dy) || 1, near = isHot ? 0 : Math.exp(-(dd * dd) / (R * R));
-        const amp = (hit * .7 + energy * .9) * (isHot ? .14 : 1), j = amp * (8 + 22 * Math.random()), tx = (Math.random() - .5) * j + dx / dd * near * 10, ty = (Math.random() - .5) * j * 1.5 + dy / dd * near * 46;
+        // the hovered name screams too: it shakes, just a bit tighter than the rest so it still reads
+        const amp = (hit * .7 + energy * .9) * (isHot ? .45 : 1), j = amp * (8 + 22 * Math.random()), tx = (Math.random() - .5) * j + dx / dd * near * 10, ty = (Math.random() - .5) * j * 1.5 + dy / dd * near * 46;
         c.vx += ((tx - c.x) * 260 - c.vx * 18) * dt; c.vy += ((ty - c.y) * 260 - c.vy * 18) * dt; c.x += c.vx * dt; c.y += c.vy * dt;
         const rot = (Math.random() - .5) * 34 * amp + (dx / dd) * near * 14, sc = 1 + near * .55 + amp * Math.random() * .35, sk = (Math.random() - .5) * 26 * amp;
         c.el.style.transform = `translate(${c.x.toFixed(1)}px,${c.y.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) skewX(${sk.toFixed(1)}deg) scale(${sc.toFixed(2)},${(sc * (1 + amp * .45 * Math.random())).toFixed(2)})`;
