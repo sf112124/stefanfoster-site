@@ -630,3 +630,10 @@ html.in-hell .cur{display:none}
 .tun-list a.eyed .t{opacity:1;color:var(--ink)}
 .tun-list .ey-ch{display:inline-block;position:relative}
 .tun-list .ey{position:absolute;pointer-events:none}
+
+/* the list/tunnel switch is gone; a sound switch sits top centre instead */
+.tun-sw{display:none!important}
+.snd{position:fixed;left:50%;top:calc(22px + env(safe-area-inset-top,0px));translate:-50% 0;z-index:60;background:none;border:0;padding:6px 4px;cursor:pointer;color:var(--ink);font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.snd[aria-pressed="false"]{opacity:.45}
+.snd:focus-visible{outline:1px solid var(--ink)}
+body.viewing .snd{display:none}

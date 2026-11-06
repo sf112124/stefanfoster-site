@@ -91,7 +91,7 @@ if (ON) {
     active = true; cur = -1; leaveT = 0; want = i; wantAt = 0; document.documentElement.classList.add("in-hell");
     rows.forEach((r) => { r.el.style.transition = r.el.style.transform = r.el.style.opacity = ""; r.chars.forEach((c) => { c.el.style.transition = ""; }); });
     swap(i);
-    if (ac && buf) { unlock(); gain = ac.createGain(); gain.gain.value = 1; an = ac.createAnalyser(); an.fftSize = 1024; bins = new Uint8Array(an.frequencyBinCount);
+    if (ac && buf && !window.__soundOff) { unlock(); gain = ac.createGain(); gain.gain.value = 1; an = ac.createAnalyser(); an.fftSize = 1024; bins = new Uint8Array(an.frequencyBinCount);
       src = ac.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(an); an.connect(gain); gain.connect(ac.destination); src.start(); startAt = ac.currentTime; }
     requestAnimationFrame(frame);
   }
@@ -123,6 +123,7 @@ if (ON) {
   }
   root.addEventListener("pointerleave", () => exit());
   addEventListener("keydown", (e) => { if (active && e.key === "Escape") exit(); });
+  addEventListener("soundswitch", (e) => { if (e.detail.off && gain) { gain.gain.setValueAtTime(0, ac.currentTime); } });
 
   // ---------- the frame ----------
   let last = performance.now(), t0 = performance.now();

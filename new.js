@@ -15,6 +15,14 @@ const touch = matchMedia("(hover: none)").matches;
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const url = (slug, f) => `media/${slug}/${f}`;
 const sound = new Sound();
+// one switch for every sound on the site; it remembers your choice
+{ let off = false; try { off = localStorage.getItem("snd") === "off"; } catch (e) {}
+  sound.on = !off; window.__soundOff = off;
+  const b = document.createElement("button"); b.className = "snd mono"; b.type = "button";
+  const label = () => { b.textContent = window.__soundOff ? "Sound off" : "Sound on"; b.setAttribute("aria-pressed", String(!window.__soundOff)); };
+  b.addEventListener("click", (e) => { e.stopPropagation(); window.__soundOff = !window.__soundOff; sound.on = !window.__soundOff; if (!sound.on) { try { sound.bed?.(false); } catch (er) {} } else sound.unlock();
+    try { localStorage.setItem("snd", window.__soundOff ? "off" : "on"); } catch (er) {} label(); dispatchEvent(new CustomEvent("soundswitch", { detail: { off: window.__soundOff } })); });
+  label(); document.body.appendChild(b); }
 addEventListener("pointerdown", () => sound.unlock(), { once: true });
 
 // ---------- the work, resolved to files (same order as projects.js) ----------
