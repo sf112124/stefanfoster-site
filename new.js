@@ -20,7 +20,7 @@ const sound = new Sound();
   sound.on = !off; window.__soundOff = off;
   const b = document.createElement("button"); b.className = "snd mono"; b.type = "button";
   const label = () => { b.textContent = window.__soundOff ? "Sound off" : "Sound on"; b.setAttribute("aria-pressed", String(!window.__soundOff)); };
-  b.addEventListener("click", (e) => { e.stopPropagation(); window.__soundOff = !window.__soundOff; sound.on = !window.__soundOff; if (!sound.on) { try { sound.bed?.(false); } catch (er) {} } else sound.unlock();
+  b.addEventListener("click", (e) => { e.stopPropagation(); window.__soundOff = !window.__soundOff; sound.on = !window.__soundOff; if (!sound.on) { sound.live = false; try { sound.bed?.(false); } catch (er) {} } else sound.unlock();
     try { localStorage.setItem("snd", window.__soundOff ? "off" : "on"); } catch (er) {} label(); dispatchEvent(new CustomEvent("soundswitch", { detail: { off: window.__soundOff } })); });
   label(); document.body.appendChild(b); }
 addEventListener("pointerdown", () => sound.unlock(), { once: true });
