@@ -206,7 +206,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   let flatK = 1, flatT = 1, hrow = -1, opening = null, mouseY = null, mouseX = 0, mxS = 0; const wt = new Float32Array(16).fill(.5), ofs = new Float32Array(16); let ph = 0, pa = 0, hw = 0, wgt = 0, ptX = 0, ptY = 0, ptIn = false;
   const gs = new Float32Array(16), gv = new Float32Array(16), ea = new Float32Array(16), eaT = new Float32Array(16);
   // the creature can eat a line of the list: it shrinks away, and comes back when the creature goes home
-  window.__tunEat = { eat: (i) => { eaT[i] = 1; }, reset: () => eaT.fill(0), hideAll: () => { eaT.fill(1); hrow = -1; } };
+  window.__tunEat = { eat: (i) => { eaT[i] = 1; }, uneat: (i) => { eaT[i] = 0; }, reset: () => eaT.fill(0), hideAll: () => { eaT.fill(1); hrow = -1; }, grow: (i) => gs[i] || 0, media: (p) => media(p.cover || {}) };
   mount.classList.add("is-list");
   // each project's colours, from pale edge to hot core
   const hx = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255), PAL = (a, b, c) => [...hx(a), ...hx(b), ...hx(c)];
@@ -331,7 +331,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
         const rr = N * .5 - (1 - 2 * ptY / H() - .05) * C1;
         if (rr >= 0 && rr < N) { const i0 = Math.floor(rr), dp = Math.min(1.5, devicePixelRatio || 1), half = (T.w ? T.w[i0] : T.widest) * S1 / dp / 2 * (1 + Math.max(0, gs[i0])) + 28;
           if (Math.abs(ptX) < half) { nh = i0; const x = Math.min(1, (1 - 2 * Math.abs(rr - i0 - .5)) / .6); wgt = x * x * (3 - 2 * x); } } }
-      if (nh !== hrow) { hrow = nh; if (nh >= 0) haunt(nh); else setTimeout(() => { if (hrow < 0) haunt(-1); }, 120); } }
+      if (nh !== hrow) { hrow = nh; if (nh >= 0) haunt(nh); else setTimeout(() => { if (hrow < 0) haunt(-1); }, 120); dispatchEvent(new CustomEvent("tunhover", { detail: { i: nh, p: LIST[nh], a: lst.children[nh] } })); } }
     // a slightly underdamped spring per line, so it swells past and settles; the magnifier trails the pointer like liquid
     for (let st = 0, n = Math.ceil(rdt / .008); st < n; st++) { const h = Math.min(.008, rdt / n); for (let i = 0; i < N; i++) { gv[i] += ((((i === hrow ? GA * wgt : 0) - gs[i]) * 340) - gv[i] * 19) * h; gs[i] += gv[i] * h; } }
     mxS += (mouseX - mxS) * (1 - Math.pow(.003, rdt));
