@@ -159,12 +159,19 @@ if (ON) {
     }
     // the names: shaking on the kick, and blown apart wherever the pointer is
     const R = Math.min(innerWidth, innerHeight) * .22;
-    rows.forEach((r, ri) => r.chars.forEach((c) => {
-      const b = c.el.getBoundingClientRect(), cx = b.left + b.width / 2 - c.x, cy = b.top + b.height / 2 - c.y, dx = cx - P.x, dy = cy - P.y, dd = Math.hypot(dx, dy) || 1, near = Math.exp(-(dd * dd) / (R * R));
-      const amp = hit * .7 + energy * .9, j = amp * (8 + 22 * Math.random()), tx = (Math.random() - .5) * j + dx / dd * near * 10, ty = (Math.random() - .5) * j * 1.5 + dy / dd * near * 46;
-      c.vx += ((tx - c.x) * 260 - c.vx * 18) * dt; c.vy += ((ty - c.y) * 260 - c.vy * 18) * dt; c.x += c.vx * dt; c.y += c.vy * dt;
-      const rot = (Math.random() - .5) * 34 * amp + (dx / dd) * near * 14, sc = 1 + near * .55 + amp * Math.random() * .35, sk = (Math.random() - .5) * 26 * amp;
-      c.el.style.transform = `translate(${c.x.toFixed(1)}px,${c.y.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) skewX(${sk.toFixed(1)}deg) scale(${sc.toFixed(2)},${(sc * (1 + amp * .45 * Math.random())).toFixed(2)})`;
-    }));
+    // the name you're on stays readable: its letters stay upright and in line, and the whole word punches bigger on
+    // the beat. Everything else goes mad around it.
+    rows.forEach((r, ri) => {
+      const isHot = ri === cur;
+      if (isHot) { const pump = 1 + hit * .12 + energy * .05; r.el.style.transform = `scale(${pump.toFixed(3)}) rotate(${((Math.random() - .5) * 1.6 * hit).toFixed(2)}deg)`; }
+      else if (r.el.style.transform) r.el.style.transform = "";
+      r.chars.forEach((c) => {
+        const b = c.el.getBoundingClientRect(), cx = b.left + b.width / 2 - c.x, cy = b.top + b.height / 2 - c.y, dx = cx - P.x, dy = cy - P.y, dd = Math.hypot(dx, dy) || 1, near = isHot ? 0 : Math.exp(-(dd * dd) / (R * R));
+        const amp = (hit * .7 + energy * .9) * (isHot ? .14 : 1), j = amp * (8 + 22 * Math.random()), tx = (Math.random() - .5) * j + dx / dd * near * 10, ty = (Math.random() - .5) * j * 1.5 + dy / dd * near * 46;
+        c.vx += ((tx - c.x) * 260 - c.vx * 18) * dt; c.vy += ((ty - c.y) * 260 - c.vy * 18) * dt; c.x += c.vx * dt; c.y += c.vy * dt;
+        const rot = (Math.random() - .5) * 34 * amp + (dx / dd) * near * 14, sc = 1 + near * .55 + amp * Math.random() * .35, sk = (Math.random() - .5) * 26 * amp;
+        c.el.style.transform = `translate(${c.x.toFixed(1)}px,${c.y.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) skewX(${sk.toFixed(1)}deg) scale(${sc.toFixed(2)},${(sc * (1 + amp * .45 * Math.random())).toFixed(2)})`;
+      });
+    });
   }
 }

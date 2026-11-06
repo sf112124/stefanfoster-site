@@ -638,3 +638,8 @@ html.in-hell .cur{display:none}
 .snd[aria-pressed="false"]{opacity:.45}
 .snd:focus-visible{outline:1px solid var(--ink)}
 body.viewing .snd{display:none}
+
+/* legibility: the hovered name is cut out of everything behind it with a hard black edge, and the rest sink back */
+#hell .hl-row.hot{-webkit-text-stroke:.07em #000;paint-order:stroke fill}
+#hell.flashing .hl-row.hot{-webkit-text-stroke:.07em #fff}
+#hell .hl-row:not(.hot){opacity:.82}
