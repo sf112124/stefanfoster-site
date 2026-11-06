@@ -25,7 +25,9 @@ if (ON) {
     LIST = [...document.querySelectorAll(".tun-list a")];
     listEl.innerHTML = "";
     rows = LIST.map((a, i) => {
-      const title = a.querySelector(".t").textContent, el = document.createElement("div"); el.className = "hl-row";
+      // the metal way: everything lower case except the first and last letter, which carry the big spikes
+      const raw = a.querySelector(".t").textContent.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(), at = [...raw].map((c, k) => (/[a-z]/.test(c) ? k : -1)).filter((k) => k >= 0);
+      const title = [...raw].map((c, k) => (k === at[0] || k === at[at.length - 1] ? c.toUpperCase() : c)).join(""), el = document.createElement("div"); el.className = "hl-row";
       el.innerHTML = [...title].map((ch) => `<span class="hl-ch">${ch === " " ? "&nbsp;" : ch.replace(/[<>&]/g, "")}</span>`).join("");
       el.addEventListener("click", (e) => { e.preventDefault(); escape(i); });
       listEl.appendChild(el);
