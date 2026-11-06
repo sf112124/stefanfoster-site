@@ -614,9 +614,15 @@ html.in-hell #hell{display:block}
 #hell .hl-list{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0}
 #hell .hl-row{font:400 min(13vh,8.2vw)/.78 "Metal Mania",serif;color:#000;white-space:nowrap;cursor:pointer;letter-spacing:-.01em;pointer-events:none}
 #hell .hl-ch{pointer-events:auto}
-#hell.flip{background:#e10600}
-#hell.flip .hl-row{color:#e10600}
-#hell.flip .hl-row.hot{color:#000}
+#hell .hl-strobe{position:absolute;inset:0;pointer-events:none}
+#hell .hl-row{position:relative;z-index:1}
+#hell .hl-row.hot{z-index:3}
+#hell.flashing .hl-row.hot{color:#000}
+#hell .hl-bg{transition:opacity .35s}
+#hell{transition:background-color .35s}
+#hell.leaving{background:transparent;pointer-events:none}
+#hell.leaving .hl-bg{opacity:0}
+#hell.leaving .hl-row,#hell.leaving .hl-row.hot{color:var(--ink)}
 #hell .hl-row.hot{color:#fff}
 #hell .hl-ch{display:inline-block;will-change:transform}
 html.in-hell .cur{display:none}

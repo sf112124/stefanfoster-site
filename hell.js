@@ -15,9 +15,9 @@ if (ON) {
 
   // ---------- the layer ----------
   const root = document.createElement("div"); root.id = "hell"; root.setAttribute("aria-hidden", "true");
-  root.innerHTML = `<canvas class="hl-bg"></canvas><div class="hl-list"></div>`;
+  root.innerHTML = `<canvas class="hl-bg"></canvas><div class="hl-strobe"></div><div class="hl-list"></div>`;
   document.body.appendChild(root);
-  const cv = root.querySelector("canvas"), listEl = root.querySelector(".hl-list");
+  const cv = root.querySelector("canvas"), listEl = root.querySelector(".hl-list"), strobe = root.querySelector(".hl-strobe");
   let rows = [], LIST = [];
 
   function build() {
@@ -77,33 +77,51 @@ if (ON) {
   }
 
   // ---------- in and out ----------
+  // it has to be meant: if the pointer is already sitting on a name when the page (or the splash) hands over, nothing
+  // happens until it has been off the names and comes back onto one
+  let armed = false, lastI = -1;
+  addEventListener("pointermove", () => { if (armed || document.getElementById("splash")) return; setTimeout(() => { if (lastI < 0 && !document.getElementById("splash")) armed = true; }, 80); }, { passive: true });
   addEventListener("tunhover", (e) => {
-    const { i, p, a } = e.detail; if (a) a.__p = p;
-    if (i >= 0 && !active && !document.documentElement.classList.contains("devouring")) enter(i);
+    const { i, p, a } = e.detail; if (a) a.__p = p; lastI = i;
+    if (i < 0) { if (!document.getElementById("splash")) armed = true; return; }
+    if (armed && !active && !leaving && !document.documentElement.classList.contains("devouring")) enter(i);
   });
   function enter(i) {
     if (!rows.length) build();
-    active = true; cur = -1; leaveT = 0; document.documentElement.classList.add("in-hell");
+    active = true; cur = -1; leaveT = 0; want = i; wantAt = 0; document.documentElement.classList.add("in-hell");
+    rows.forEach((r) => { r.el.style.transition = r.el.style.transform = r.el.style.opacity = ""; r.chars.forEach((c) => { c.el.style.transition = ""; }); });
     swap(i);
     if (ac && buf) { unlock(); gain = ac.createGain(); gain.gain.value = 1; an = ac.createAnalyser(); an.fftSize = 1024; bins = new Uint8Array(an.frequencyBinCount);
       src = ac.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(an); an.connect(gain); gain.connect(ac.destination); src.start(); startAt = ac.currentTime; }
     requestAnimationFrame(frame);
   }
+  let want = -1, wantAt = 0, leaving = false;
   function swap(i) { if (i === cur) return; cur = i; rows.forEach((r, k) => r.el.classList.toggle("hot", k === i)); footage(LIST[i]); }
-  function exit() {
-    active = false; document.documentElement.classList.remove("in-hell");
+  // out: the music cuts, the burnt footage drains away, and each huge name shrinks and slides back onto its own line
+  function exit(quick) {
+    if (!active) return; active = false; leaving = true;
     if (gain) { const t = ac.currentTime; gain.gain.setValueAtTime(gain.gain.value, t); gain.gain.linearRampToValueAtTime(0, t + .06); const s = src; setTimeout(() => { try { s.stop(); } catch (e) {} }, 120); }
     src = gain = an = null; if (media && media.pause) media.pause();
+    root.classList.add("leaving"); strobe.style.background = "transparent";
+    rows.forEach((r, i) => {
+      const t = r.a.querySelector(".t"), to = t.getBoundingClientRect(), fr = r.el.getBoundingClientRect(), sc = to.width / Math.max(1, fr.width);
+      r.chars.forEach((c) => { c.x = c.y = c.vx = c.vy = 0; c.el.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1)"; c.el.style.transform = ""; });
+      r.el.style.transition = "transform .38s cubic-bezier(.6,0,.2,1), opacity .2s ease .22s, color .3s";
+      r.el.style.transform = `translate(${(to.left + to.width / 2 - (fr.left + fr.width / 2)).toFixed(1)}px,${(to.top + to.height / 2 - (fr.top + fr.height / 2)).toFixed(1)}px) scale(${sc.toFixed(3)})`;
+      r.el.style.opacity = "0";
+    });
+    setTimeout(() => { leaving = false; root.classList.remove("leaving"); document.documentElement.classList.remove("in-hell"); }, quick ? 0 : 430);
   }
-  function escape(i) { exit(); const a = LIST[i]; if (a) a.click(); }
-  // you're in hell while you're on a name; drift off the names and it stops
+  function escape(i) { const a = LIST[i]; exit(true); if (a) a.click(); }
+  // which name you're on is judged from where the lines sit, not from the jittering letters, so rolling between them is smooth
   const P = { x: innerWidth / 2, y: innerHeight / 2 };
-  root.addEventListener("pointermove", (e) => {
-    P.x = e.clientX; P.y = e.clientY;
-    const r = e.target.classList && e.target.classList.contains("hl-ch") && e.target.closest(".hl-row"), k = r ? rows.findIndex((q) => q.el === r) : -1;
-    if (k >= 0) { leaveT = 0; swap(k); } else if (!leaveT) leaveT = performance.now();
-  });
-  root.addEventListener("pointerleave", exit);
+  root.addEventListener("pointermove", (e) => { P.x = e.clientX; P.y = e.clientY; });
+  function under() {
+    let best = -1, bd = Infinity;
+    rows.forEach((r, k) => { const b = r.el.getBoundingClientRect(); if (P.x < b.left - 24 || P.x > b.right + 24) return; const d = Math.abs(P.y - (b.top + b.height / 2)); if (d < b.height * .7 && d < bd) { bd = d; best = k; } });
+    return best;
+  }
+  root.addEventListener("pointerleave", () => exit());
   addEventListener("keydown", (e) => { if (active && e.key === "Escape") exit(); });
 
   // ---------- the frame ----------
@@ -111,15 +129,19 @@ if (ON) {
   function frame(now) {
     if (!active) return; requestAnimationFrame(frame);
     const dt = Math.min(.05, (now - last) / 1000); last = now;
-    if (leaveT && now - leaveT > 140) return exit();
+    const k = under();
+    if (k < 0) { if (!leaveT) leaveT = now; if (now - leaveT > 140) return exit(); }
+    else { leaveT = 0; if (k !== want) { want = k; wantAt = now; } if (k !== cur && now - wantAt > 90) swap(k); }
     // where we are in the music: the beat grid for the strobe, the loudness for everything else
     const tt = src ? (ac.currentTime - startAt) % buf.duration : (now - t0) / 1000, bp = (tt - PHASE) / BEAT, b = Math.floor(bp), f = bp - b;
     if (b !== beat) { beat = b; hit = 1; }
     hit = Math.pow(1 - f, 3);
     if (an) { an.getByteFrequencyData(bins); let e = 0; for (let k = 1; k < 60; k++) e += bins[k]; energy += (e / (59 * 255) - energy) * .5; } else energy = .6;
-    // strobe on the one: STROBE 2 3 4, STROBE 2 3 4, the whole screen flips for the first beat of every bar
-    const one = ((b % 4) + 4) % 4 === 0, inv = one && f < .5 ? 1 : 0;
-    root.classList.toggle("flip", !!inv);
+    // strobe on the one: STROBE 2 3 4, STROBE 2 3 4. For the whole first beat of every bar the screen flashes hard,
+    // white and red, many times a second
+    const one = ((b % 4) + 4) % 4 === 0, sf = Math.floor(f * 14), inv = 0;
+    strobe.style.background = one ? (sf % 2 ? "transparent" : sf % 4 === 0 ? "#fff" : "#e10600") : "transparent";
+    root.classList.toggle("flashing", one && sf % 2 === 0);
     // the footage
     if (gl) {
       const W = cv.clientWidth, H = cv.clientHeight, d = Math.min(1, devicePixelRatio || 1);
