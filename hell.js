@@ -102,14 +102,14 @@ if (ON) {
     active = true; cur = -1; leaveT = 0; want = i; wantAt = 0; document.documentElement.classList.add("in-hell");
     // each metal name sits on the same line as its name in the index, so whatever you hovered stays under your pointer
     const ys = LIST.map((a) => { const b = a.getBoundingClientRect(); return b.top + b.height / 2; }), pitch = ys.length > 1 ? (ys[ys.length - 1] - ys[0]) / (ys.length - 1) : 60;
-    listEl.style.fontSize = Math.min(pitch * 1.7, innerWidth * .095) + "px";
+    listEl.style.fontSize = Math.min(pitch * 1.7, innerWidth * .095) + "px"; pitchPx = pitch;
     rows.forEach((r, k) => { r.big = 1; r.el.style.transition = r.el.style.transform = r.el.style.opacity = ""; r.el.style.top = ys[k] + "px"; r.chars.forEach((c) => { c.el.style.transition = ""; }); });
     swap(i);
     if (ac && buf && !window.__soundOff) { unlock(); gain = ac.createGain(); gain.gain.value = 1; an = ac.createAnalyser(); an.fftSize = 1024; bins = new Uint8Array(an.frequencyBinCount);
       src = ac.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(an); an.connect(gain); gain.connect(ac.destination); src.start(); startAt = ac.currentTime; }
     requestAnimationFrame(frame);
   }
-  let want = -1, wantAt = 0, leaving = false;
+  let want = -1, wantAt = 0, leaving = false, pitchPx = 60;
   function swap(i) { if (i === cur) return; cur = i; rows.forEach((r, k) => r.el.classList.toggle("hot", k === i)); footage(LIST[i]); }
   // out: the music and the whole takeover cut dead
   function exit(quick) {
@@ -168,7 +168,11 @@ if (ON) {
     rows.forEach((r, ri) => {
       const isHot = ri === cur;
       // size eases between names as you move up and down, never pops; the one you're on swells to double and pumps
-      r.big = (r.big ?? 1) + ((isHot ? 2 : 1) - (r.big ?? 1)) * (1 - Math.exp(-dt * 9));
+      // continuous, not per name: each name swells by how close the pointer is to its line, so sliding up and down
+      // the list is one rolling bulge passing through it
+      const rb = r.el.getBoundingClientRect(), ry = rb.top + rb.height / 2, d = (P.y - ry) / (pitchPx * .9), want = 1 + Math.exp(-d * d);
+      r.big = (r.big ?? 1) + (want - (r.big ?? 1)) * (1 - Math.exp(-dt * 14));
+      r.el.style.zIndex = String(10 + Math.round(r.big * 20));
       const lift = r.big - 1, pump = r.big + lift * (hit * .18 + energy * .06);
       r.el.style.transform = lift < .002 ? "" : `scale(${pump.toFixed(3)}) rotate(${((Math.random() - .5) * 3 * hit * lift).toFixed(2)}deg)`;
       r.chars.forEach((c) => {
