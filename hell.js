@@ -97,20 +97,14 @@ if (ON) {
   }
   let want = -1, wantAt = 0, leaving = false;
   function swap(i) { if (i === cur) return; cur = i; rows.forEach((r, k) => r.el.classList.toggle("hot", k === i)); footage(LIST[i]); }
-  // out: the music cuts, the burnt footage drains away, and each huge name shrinks and slides back onto its own line
+  // out: the music and the whole takeover cut dead
   function exit(quick) {
     if (!active) return; active = false; leaving = true;
     if (gain) { const t = ac.currentTime; gain.gain.setValueAtTime(gain.gain.value, t); gain.gain.linearRampToValueAtTime(0, t + .06); const s = src; setTimeout(() => { try { s.stop(); } catch (e) {} }, 120); }
     src = gain = an = null; if (media && media.pause) media.pause();
-    root.classList.add("leaving"); strobe.style.background = "transparent";
-    rows.forEach((r, i) => {
-      const t = r.a.querySelector(".t"), to = t.getBoundingClientRect(), fr = r.el.getBoundingClientRect(), sc = to.width / Math.max(1, fr.width);
-      r.chars.forEach((c) => { c.x = c.y = c.vx = c.vy = 0; c.el.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1)"; c.el.style.transform = ""; });
-      r.el.style.transition = "transform .38s cubic-bezier(.6,0,.2,1), opacity .2s ease .22s, color .3s";
-      r.el.style.transform = `translate(${(to.left + to.width / 2 - (fr.left + fr.width / 2)).toFixed(1)}px,${(to.top + to.height / 2 - (fr.top + fr.height / 2)).toFixed(1)}px) scale(${sc.toFixed(3)})`;
-      r.el.style.opacity = "0";
-    });
-    setTimeout(() => { leaving = false; root.classList.remove("leaving"); document.documentElement.classList.remove("in-hell"); }, quick ? 0 : 430);
+    // straight cut back to the normal page
+    strobe.style.background = "transparent"; leaving = false; document.documentElement.classList.remove("in-hell");
+    rows.forEach((r) => r.chars.forEach((c) => { c.x = c.y = c.vx = c.vy = 0; c.el.style.transform = ""; }));
   }
   function escape(i) { const a = LIST[i]; exit(true); if (a) a.click(); }
   // which name you're on is judged from where the lines sit, not from the jittering letters, so rolling between them is smooth
