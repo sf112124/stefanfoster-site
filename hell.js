@@ -78,14 +78,18 @@ if (ON) {
   }
 
   // ---------- in and out ----------
-  // it has to be meant: if the pointer is already sitting on a name when the page (or the splash) hands over, nothing
-  // happens until it has been off the names and comes back onto one
-  let armed = false, lastI = -1;
-  addEventListener("pointermove", () => { if (armed || document.getElementById("splash")) return; setTimeout(() => { if (lastI < 0 && !document.getElementById("splash")) armed = true; }, 80); }, { passive: true });
+  // it has to be meant: the pointer just sitting there (say, where you clicked ENTER on the splash) or a tiny nudge
+  // does nothing; a proper move of the mouse, wherever it already is, sets it off
+  let armed = false, lastI = -1, moved = 0, px = null, py = null;
+  addEventListener("pointermove", (e) => {
+    if (armed) return;
+    if (document.getElementById("splash")) { px = py = null; moved = 0; return; }
+    if (px != null) moved += Math.hypot(e.clientX - px, e.clientY - py); px = e.clientX; py = e.clientY;
+    if (moved > 45) { armed = true; if (lastI >= 0 && !active && !leaving) enter(lastI); }
+  }, { passive: true });
   addEventListener("tunhover", (e) => {
     const { i, p, a } = e.detail; if (a) a.__p = p; lastI = i;
-    if (i < 0) { if (!document.getElementById("splash")) armed = true; return; }
-    if (armed && !active && !leaving && !document.documentElement.classList.contains("devouring")) enter(i);
+    if (i >= 0 && armed && !active && !leaving && !document.documentElement.classList.contains("devouring")) enter(i);
   });
   function enter(i) {
     if (!rows.length) build();
