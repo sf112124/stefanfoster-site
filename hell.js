@@ -1,7 +1,8 @@
-// HELL (try it with ?hell): hover a name on the index and you fall into thrash metal hell. The page strobes red and
+// HELL: hover a name on the index and you fall into thrash metal hell. The page strobes red and
 // black, the hovered project's footage melts behind everything in two burnt colours, every name blows up huge in a
 // metal face and shakes to the track. Move off the names and it stops dead. Click a name to escape into it.
-const ON = /[?&]hell\b/.test(location.search) && matchMedia("(hover: hover) and (pointer: fine)").matches;
+// on for everyone on a desktop; add ?nohell to the address to see the index without it
+const ON = !/[?&]nohell\b/.test(location.search) && matchMedia("(hover: hover) and (pointer: fine)").matches;
 if (ON) {
   const TRACK = "media/hell/hell.mp3";
   let ac = null, buf = null, src = null, gain = null, an = null, bins = null, active = false, cur = -1, leaveT = 0, energy = 0, hit = 0, beat = -1, startAt = 0;
