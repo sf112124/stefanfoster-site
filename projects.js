@@ -7,6 +7,8 @@ export const PROJECTS = [
     slug: "ai-experiments", title: "Ai Experiments", client: "Personal", kind: "AI film",
     blurb: "",
     items: [
+      { head: "Tough Love" },
+      { file: "tough-love.mov" },
       { head: "Anywhere" },
       { file: "anywhere.mp4" },
       { head: "Samurai Barber" },
