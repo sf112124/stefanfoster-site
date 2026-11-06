@@ -138,9 +138,8 @@ if (ON) {
     if (b !== beat) { beat = b; hit = 1; }
     hit = Math.pow(1 - f, 3);
     if (an) { an.getByteFrequencyData(bins); let e = 0; for (let k = 1; k < 60; k++) e += bins[k]; energy += (e / (59 * 255) - energy) * .5; } else energy = .6;
-    // strobe on the one: STROBE 2 3 4, STROBE 2 3 4. For the whole first beat of every bar the screen flashes hard,
-    // white and red, many times a second
-    const one = ((b % 4) + 4) % 4 === 0, sf = Math.floor(f * 14), inv = 0;
+    // strobe every other beat: STROBE 2 STROBE 4. On those beats the screen flashes hard, white and red, many times a second
+    const one = ((b % 2) + 2) % 2 === 0, sf = Math.floor(f * 14), inv = 0;
     strobe.style.background = one ? (sf % 2 ? "transparent" : sf % 4 === 0 ? "#fff" : "#e10600") : "transparent";
     root.classList.toggle("flashing", one && sf % 2 === 0);
     // the footage
