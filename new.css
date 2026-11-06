@@ -612,11 +612,11 @@ html.splashing .cur{display:none}
 #hell{display:none;position:fixed;inset:0;z-index:9000;background:var(--bgc,#000);cursor:crosshair;overflow:hidden}
 html.in-hell #hell{display:block}
 #hell .hl-bg{position:absolute;inset:0;width:100%;height:100%;display:block}
-#hell .hl-list{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0}
-#hell .hl-row{font:400 min(15vh,9.5vw)/.8 Morveth,"Metal Mania",serif;color:#000;white-space:nowrap;cursor:pointer;letter-spacing:-.01em;pointer-events:none}
+#hell .hl-list{position:absolute;inset:0}
+#hell .hl-row{position:absolute;left:50%;translate:-50% -50%;font:400 1em/.8 Morveth,"Metal Mania",serif;color:#000;white-space:nowrap;cursor:pointer;letter-spacing:-.01em;pointer-events:none}
 #hell .hl-ch{pointer-events:auto}
 #hell .hl-strobe{position:absolute;inset:0;pointer-events:none}
-#hell .hl-row{position:relative;z-index:1}
+#hell .hl-row{z-index:1}
 #hell .hl-row.hot{z-index:3}
 #hell.flashing .hl-row.hot{color:#000}
 #hell .hl-bg{transition:opacity .35s}
