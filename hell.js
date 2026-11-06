@@ -168,7 +168,7 @@ if (ON) {
     // the beat. Everything else goes mad around it.
     rows.forEach((r, ri) => {
       const isHot = ri === cur;
-      if (isHot) { const pump = 1 + hit * .12 + energy * .05; r.el.style.transform = `scale(${pump.toFixed(3)}) rotate(${((Math.random() - .5) * 1.6 * hit).toFixed(2)}deg)`; }
+      if (isHot) { const pump = 2 + hit * .18 + energy * .06; r.el.style.transform = `scale(${pump.toFixed(3)}) rotate(${((Math.random() - .5) * 1.6 * hit).toFixed(2)}deg)`; }
       else if (r.el.style.transform) r.el.style.transform = "";
       r.chars.forEach((c) => {
         const b = c.el.getBoundingClientRect(), cx = b.left + b.width / 2 - c.x, cy = b.top + b.height / 2 - c.y, dx = cx - P.x, dy = cy - P.y, dd = Math.hypot(dx, dy) || 1, near = isHot ? 0 : Math.exp(-(dd * dd) / (R * R));
