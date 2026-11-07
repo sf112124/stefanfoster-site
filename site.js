@@ -156,7 +156,7 @@ function screens(p) {
 const tag = (it) => { const k = kindOf(it); return k === "film" || k === "yt" ? `<span class="playtag"><i></i>Play</span>` : k === "play" ? `<span class="playtag open">Open →</span>` : ""; };
 const curOf = (it) => ({ film: "Play", yt: "Play", play: "Open", img: "View" })[kindOf(it)];
 function piece(it, cls = "") {
-  return `<figure class="pc ${cls} k-${kindOf(it)}" data-k="${it.k}" data-cur="${curOf(it)}" style="--a:${(it.w / it.h).toFixed(4)}"><div class="pm"><img src="${it.still}" alt="" loading="lazy" decoding="async">${tag(it)}</div></figure>`;
+  return `<figure class="pc ${cls} k-${kindOf(it)}" data-k="${it.k}" data-cur="${curOf(it)}" style="--a:${(it.w / it.h).toFixed(4)}"><i class="cm" aria-hidden="true"></i><div class="pm"><img src="${it.still}" alt="" loading="lazy" decoding="async">${tag(it)}</div></figure>`;
 }
 function slate(p, s, it) {
   // a title and a line under it, nothing else
@@ -178,18 +178,21 @@ function renderProject(p) {
     body = groups.map((g) => `<section class="grp">${g.sec ? `<div class="gh"><h2>${esc(g.sec.head)}</h2><span class="dim">${pad(g.items.length)} ${g.items.length === 1 ? "piece" : "pieces"}</span><p class="dim">${esc(g.sec.text || "")}</p></div>` : ""}
       <div class="gm">${g.items.map((it) => piece(it, "tile").replace("</figure>", `<figcaption><span class="dim">${pad(it.k + 1)}</span>${it.caption ? `<span>${esc(it.caption)}</span>` : ""}${it.stat ? `<span class="dim">${esc(it.stat)}</span>` : ""}</figcaption></figure>`)).join("")}</div></section>`).join("");
   } else {
-    body = screens(p).map((s) => {
+    const SC = screens(p), NS = SC.length;
+    // each section opens with a chapter line: its number, a rule, the project and how far through you are
+    const ch = (k) => `<div class="ch"><span>${esc(p.title)}</span><i></i><span>${pad(k + 1)} / ${pad(NS)}</span></div>`;
+    body = SC.map((s, k) => {
       if (s.row) {
         const A = s.items.reduce((t, it) => t + it.w / it.h, 0);
         // a run of pieces gets its heading on top, so it's clearly the title of what follows
         const head = s.sec?.head && s.sec.head !== p.title ? s.sec.head : p.title;
-        return `<section class="scr row${s.thumbs ? " thumbs" : ""}${s.strip ? " strip" : ""}" style="--sa:${A.toFixed(4)};--n:${s.items.length}">
+        return `<section class="scr row${s.thumbs ? " thumbs" : ""}${s.strip ? " strip" : ""}" style="--sa:${A.toFixed(4)};--n:${s.items.length}">${ch(k)}
           <div class="rh"><b>${esc(head)}</b>${s.sec?.text ? `<span class="dim">${esc(s.sec.text)}</span>` : ""}</div>
           <div class="track">${s.items.map((it) => piece(it, "cell").replace("</figure>", it.caption || it.stat ? `<figcaption><span>${esc(it.caption || "")}</span><span class="dim">${esc(it.stat || "")}</span></figcaption></figure>` : "</figure>")).join("")}</div>
           </section>`;
       }
       const it = s.items[0];
-      return `<section class="scr one">${piece(it)}${slate(p, s, it, total)}</section>`;
+      return `<section class="scr one">${ch(k)}${piece(it)}${slate(p, s, it, total)}</section>`;
     }).join("");
   }
   const nxt = `<section class="nx"><a href="${nx.page || "#" + nx.slug}" data-cur="Next"><span class="dim">Next</span><b data-vt>${esc(nx.title)}</b> <i>→</i></a></section>`;
