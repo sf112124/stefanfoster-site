@@ -8,18 +8,33 @@ if (ON) {
   // title's letters, and stays on until you leave the big metal letters, which is bigger than the old one, so it can't flicker
   const box = (els, pad) => { let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity; els.forEach((e) => { const q = e.getBoundingClientRect(); if (!q.width) return; l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom); }); return { l: l - pad, t: t - pad, r: r + pad, b: b + pad }; };
   const inside = (q) => q && P.x >= q.l && P.x <= q.r && P.y >= q.t && P.y <= q.b;
-  let pend = 0, rest = null, restFor = null;
+  let pend = 0;
   addEventListener("pointermove", (e) => { P.x = e.clientX; P.y = e.clientY; if (!pend) pend = requestAnimationFrame(check); }, { passive: true });
   addEventListener("scroll", () => { if (!pend) pend = requestAnimationFrame(check); }, { passive: true });
+  // one fixed footprint per title, measured from the letters at rest. The metal zone is that same footprint blown up by
+  // the metal's own scale, so it always contains the trigger: leaving the metal puts you outside the trigger too, and it
+  // has to be re-entered from outside before it fires again. Nothing that shakes or swells is ever measured.
+  // the resting footprint is measured only while the title is itself, in page coordinates (the metal's scale would
+  // distort any live measurement), along with the transform origin, centre and 60% down the heading
+  let armed = true, rp = null;
+  function measureRest(t) {
+    const hb = t.getBoundingClientRect(), q = box([...t.querySelectorAll(".wd")], 2), sx = scrollX, sy = scrollY;
+    rp = { l: q.l + sx, t: q.t + sy, r: q.r + sx, b: q.b + sy, ox: hb.left + hb.width / 2 + sx, oy: hb.top + hb.height * .6 + sy };
+  }
   function check() {
     pend = 0;
-    if (h1) { if (!h1.isConnected || (performance.now() - t0 > 400 && !inside(box([...h1.querySelectorAll(".c")], 14)))) stop(); return; }
+    if (h1) {
+      if (!h1.isConnected) return stop();
+      const k = parseFloat(h1.style.getPropertyValue("--ms")) || 1, pad = 14, sx = scrollX, sy = scrollY;
+      const m = { l: rp.ox + (rp.l - rp.ox) * k - pad - sx, r: rp.ox + (rp.r - rp.ox) * k + pad - sx, t: rp.oy + (rp.t - rp.oy) * k - pad - sy, b: rp.oy + (rp.b - rp.oy) * k + pad - sy };
+      if (!inside(m)) stop();
+      return;
+    }
     const t = document.querySelector("#pj .pj-t"); if (!t || t.closest(".ab")) return;
-    // the letters' resting footprint, taken once per title (the hover weight effect stretches them later, which would
-    // make the trigger area creep towards the pointer)
-    const hb = t.getBoundingClientRect();
-    if (t !== restFor) { restFor = t; const q = box([...t.querySelectorAll(".wd")], 2); rest = { l: q.l - hb.left, t: q.t - hb.top, r: q.r - hb.left, b: q.b - hb.top }; }
-    const q = { l: hb.left + rest.l, t: hb.top + rest.t, r: hb.left + rest.r, b: hb.top + rest.b }; if (inside(q)) start(t);
+    measureRest(t);
+    const q = { l: rp.l - scrollX, r: rp.r - scrollX, t: rp.t - scrollY, b: rp.b - scrollY };
+    if (!inside(q)) { armed = true; return; }
+    if (armed) { armed = false; start(t); }
   }
   function start(t) {
     h1 = t; chars = [...t.querySelectorAll(".c")].map((el) => ({ el, txt: el.textContent, x: 0, y: 0, vx: 0, vy: 0 }));
@@ -29,7 +44,7 @@ if (ON) {
     const letters = chars.filter((c) => /\p{L}/u.test(c.txt));
     letters.forEach((c, k) => { const s = c.txt.normalize("NFD").replace(/[̀-ͯ]/g, ""); c.el.textContent = k === 0 || k === letters.length - 1 ? s.toUpperCase() : s.toLowerCase(); });
     // make the metal version come out clearly bigger than the title it replaces
-    const fit = () => { if (h1 !== t) return; t.classList.add("measuring"); const w1 = span() || 1; t.classList.remove("measuring"); t.style.setProperty("--ms", Math.min(3.2, (w0 * 1.35) / w1).toFixed(3)); };
+    const fit = () => { if (h1 !== t) return; t.classList.add("measuring"); const w1 = span() || 1; t.classList.remove("measuring"); void t.offsetWidth; t.style.setProperty("--ms", Math.min(3.2, (w0 * 1.35) / w1).toFixed(3)); };
     t.classList.add("metal"); fit(); document.fonts.load("40px Morveth").then(fit);
     t0 = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
   }

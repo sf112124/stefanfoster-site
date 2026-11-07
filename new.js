@@ -244,7 +244,7 @@ function renderProject(i) {
     <a class="nxp" href="${nx.page || "#" + nx.slug}" data-cur="Next"><span class="t"><small>Next</small> ${esc(nx.title)} <i>→</i></span></a>
   </article>`;
   requestAnimationFrame(() => requestAnimationFrame(() => $("#pj").classList.add("in")));
-  watch(view); wireTiles(p); justify(); vtype(".pj-t,.nxp .t", view);
+  watch(view); wireTiles(p); justify(); 
   // carousels get arrows either side for people on a mouse
   $$(".gm.car", view).forEach((row) => {
     const wrap = document.createElement("div"); wrap.className = "carw"; row.before(wrap); wrap.appendChild(row);
