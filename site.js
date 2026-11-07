@@ -168,7 +168,9 @@ function justify() {
     const A = (t) => +t.style.getPropertyValue("--a"), hOf = (ts) => (W - gap * (ts.length - 1) - 1) / ts.reduce((a, t) => a + A(t), 0);
     if (innerWidth < 820) { tiles.forEach((t) => (t.style.width = "100%")); return; }
     const maxH = innerHeight * .78;
-    for (let k = 0; k < tiles.length;) {
+    // the first picture leads on a row of its own, as big as the page allows
+    if (tiles.length > 1 && row === $(".gm", view)) { const t0 = tiles[0]; t0.style.width = `${(A(t0) * Math.min(hOf([t0]), innerHeight * .9)).toFixed(1)}px`; }
+    for (let k = tiles.length > 1 && row === $(".gm", view) ? 1 : 0; k < tiles.length;) {
       const line = [tiles[k++]];
       while (k < tiles.length && hOf(line) > maxH && hOf([...line, tiles[k]]) >= maxH * .6) line.push(tiles[k++]);
       const h = Math.min(hOf(line), maxH); line.forEach((t) => (t.style.width = `${(A(t) * h).toFixed(1)}px`));
