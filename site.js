@@ -99,12 +99,13 @@ if (SHEETED) {
   sheet.innerHTML = SHEET.map((f, k) => { const i = idxOf[f.p], p = LIST[i]; if (!p) return ""; count[i] = (count[i] || 0) + 1;
     return `<a class="fr" href="${p.page || "#" + p.slug}" data-p="${i}" data-k="${k}" data-cur="${esc(p.title)}"><span class="im"><img src="${f.i}" alt="" loading="lazy" decoding="async"></span><span class="no">${pad(i + 1)}.${pad(count[i])}</span></a>`; }).join("");
   names.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-p="${i}" data-cur="Open"><span class="n">${pad(i + 1)}</span>${esc(p.title)}</a>`).join("");
-  home.appendChild(sheet); home.appendChild(names);
+  home.appendChild(sheet);
   let hot = -1, live = null;
   const light = (i) => {
     if (i === hot) return; hot = i;
     sheet.classList.toggle("hot", i >= 0);
     $$(".fr", sheet).forEach((f) => f.classList.toggle("lit", +f.dataset.p === i));
+    $$(".fr", sheet).forEach((f) => f.classList.toggle("at", f === cur_));
     $$("a", names).forEach((a) => a.classList.toggle("on", +a.dataset.p === i));
     const p = LIST[i]; info.innerHTML = p ? `<span>${esc(p.client)}</span><span>${esc(p.kind || "")}</span>` : "";
   };
@@ -114,13 +115,14 @@ if (SHEETED) {
     const v = document.createElement("video"); v.muted = true; v.loop = true; v.playsInline = true; v.src = f.v; v.poster = f.i;
     $(".im", fr).appendChild(v); v.play().catch(() => {}); live = { fr, v };
   };
-  sheet.addEventListener("pointerover", (e) => { const fr = e.target.closest(".fr"); if (!fr) return; light(+fr.dataset.p); play(fr); });
-  sheet.addEventListener("pointerleave", () => { light(-1); if (live) { live.v.remove(); live = null; } });
+  let cur_ = null;
+  sheet.addEventListener("pointerover", (e) => { const fr = e.target.closest(".fr"); if (!fr) return; cur_ = fr; $$(".fr.at", sheet).forEach((f) => f !== fr && f.classList.remove("at")); fr.classList.add("at"); light(+fr.dataset.p); play(fr); });
+  sheet.addEventListener("pointerleave", () => { cur_ = null; $$(".fr.at", sheet).forEach((f) => f.classList.remove("at")); light(-1); if (live) { live.v.remove(); live = null; } });
   names.addEventListener("pointerover", (e) => { const a = e.target.closest("a"); if (a) light(+a.dataset.p); });
   names.addEventListener("pointerleave", () => light(-1));
   // the sheet is sized so every frame fits on the one screen
   const lay = () => {
-    const n = $$(".fr", sheet).length, top = 96, bot = 70, side = 30, gap = 10, lab = 16, W = innerWidth - side * 2, H = innerHeight - top - bot;
+    const n = $$(".fr", sheet).length, top = 78, bot = 62, side = 30, gap = 12, lab = 16, W = innerWidth - side * 2, H = innerHeight - top - bot;
     let best = { w: 0 };
     for (let c = 4; c <= 16; c++) { const r = Math.ceil(n / c), w = Math.min((W - gap * (c - 1)) / c, ((H - gap * (r - 1)) / r - lab) * 1.5); if (w > best.w) best = { w, c, r }; }
     sheet.style.gridTemplateColumns = `repeat(${best.c}, ${best.w.toFixed(1)}px)`; sheet.style.columnGap = gap + "px"; sheet.style.rowGap = gap + "px";
