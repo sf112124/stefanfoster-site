@@ -69,19 +69,16 @@ function cue(i) {
   cueV = $("video", layers[i]);
   $$("a", list).forEach((a, k) => a.classList.toggle("on", k === i));
   const p = LIST[i], n = p.pieces.length;
-  info.innerHTML = `<span>${esc(p.client)}</span><span class="dim">${esc(p.kind || "")}</span><span class="dim">${n ? pad(n) + (n === 1 ? " piece" : " pieces") : "Film"}</span>`;
+  info.innerHTML = `<span>${esc(p.client)}</span><span class="dim">${esc(p.kind || "")}${n ? ` · ${pad(n)} ${n === 1 ? "piece" : "pieces"}` : ""}</span>`;
   place(i);
 }
 // on a desktop the clip pops up right beside the name you're on, at its own shape
 function place(i) {
-  const l = layers[i];
-  if (innerWidth <= 820) { l.style.cssText = l.style.cssText.replace(/(left|top|width|height):[^;]+;?/g, ""); info.style.left = info.style.top = tcEl.style.left = tcEl.style.top = ""; return; }
-  const a = LIST[i].cover?.a || 16 / 9, row = $$("a", list)[i].getBoundingClientRect(), lr = Math.max(...$$(".list .t").map((t) => t.getBoundingClientRect().right));
-  const w = a >= 1 ? Math.min(innerWidth * .3, 560) : Math.min(innerHeight * .44, 420) * a, h = w / a;
-  const x = lr + Math.max(40, innerWidth * .04), y = Math.max(80, Math.min(innerHeight - h - 90, row.top + row.height / 2 - h / 2));
-  Object.assign(l.style, { left: x + "px", top: y + "px", width: w + "px", height: h + "px" });
-  Object.assign(info.style, { left: x + "px", top: y + h + 10 + "px" });
-  Object.assign(tcEl.style, { left: x + w + "px", top: y + h + 10 + "px" });
+  // wide films fill the screen; tall phone films stand in the middle of it at their own shape
+  const l = layers[i], a = LIST[i].cover?.a || 16 / 9;
+  if (innerWidth <= 820 || a >= 1) { Object.assign(l.style, { left: "0px", top: "0px", width: "100%", height: "100%" }); return; }
+  const h = innerHeight * .76, w = h * a;
+  Object.assign(l.style, { left: (innerWidth - w) / 2 + "px", top: (innerHeight - h) / 2 + "px", width: w + "px", height: h + "px" });
 }
 $$("a", list).forEach((a) => { a.addEventListener("pointerenter", () => { cue(+a.dataset.i); sound.tick?.(.5, .015); }); a.dataset.cur = "Open"; });
 cue(0);
@@ -120,12 +117,14 @@ function slate(p, s, it, total) {
 function renderProject(p) {
   p.pieces.forEach((it, k) => (it.k = k));
   const total = p.pieces.length, nx = LIST[(LIST.indexOf(p) + 1) % LIST.length], gal = GALLERY.includes(p.slug);
-  const head = `<header class="pj-h"><h1 data-vt>${esc(p.title)}</h1><div class="pj-m"><span>${esc(p.client)}</span><span class="dim">${esc(p.kind || "")}</span></div>${p.blurb ? `<p>${esc(p.blurb)}</p>` : ""}</header>`;
+  const head = `<header class="pj-h"><h1 data-vt>${esc(p.title)}</h1>
+    <div class="f"><span class="dim">Client</span><span>${esc(p.client)}</span></div><div class="f"><span class="dim">Type</span><span>${esc(p.kind || "")}</span></div><div class="f"><span class="dim">Pieces</span><span>${pad(total)}</span></div>
+    <p>${esc(p.blurb || "")}</p></header>`;
   let body;
   if (gal) {
     // the old layout: sections, and rows of pictures at their own shapes, as tall as the screen allows
     const groups = []; p.pieces.forEach((it) => { const g = groups[groups.length - 1]; if (!g || g.sec !== it.sec) groups.push({ sec: it.sec, items: [it] }); else g.items.push(it); });
-    body = groups.map((g) => `<section class="grp">${g.sec ? `<div class="gh"><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p class="dim">${esc(g.sec.text)}</p>` : ""}</div>` : ""}
+    body = groups.map((g) => `<section class="grp">${g.sec ? `<div class="gh"><h2>${esc(g.sec.head)}</h2><span class="dim">${pad(g.items.length)} ${g.items.length === 1 ? "piece" : "pieces"}</span><p class="dim">${esc(g.sec.text || "")}</p></div>` : ""}
       <div class="gm">${g.items.map((it) => piece(it, "tile").replace("</figure>", `<figcaption><span class="dim">${pad(it.k + 1)}</span>${it.caption ? `<span>${esc(it.caption)}</span>` : ""}${it.stat ? `<span class="dim">${esc(it.stat)}</span>` : ""}</figcaption></figure>`)).join("")}</div></section>`).join("");
   } else {
     body = screens(p).map((s) => {
