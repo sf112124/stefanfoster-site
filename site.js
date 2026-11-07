@@ -2,6 +2,7 @@ import { PROJECTS } from "./projects.js";
 import MEDIA from "./media.js";
 import { Crawler } from "./crawler.js";
 import { Sound } from "./sound.js";
+import SHEET from "./sheet.js";
 
 // Stefan Foster. Black page, small type, the work full screen.
 const $ = (s, r = document) => r.querySelector(s);
@@ -81,11 +82,51 @@ function place(i) {
   Object.assign(l.style, { left: (innerWidth - w) / 2 + "px", top: (innerHeight - h) / 2 + "px", width: w + "px", height: h + "px" });
 }
 $$("a", list).forEach((a) => { a.addEventListener("pointerenter", () => { cue(+a.dataset.i); sound.tick?.(.5, .015); }); a.dataset.cur = "Open"; });
-cue(0);
+// desktops get the contact sheet; phones keep the menu over the work
+const SHEETED = !touch && innerWidth > 820;
+if (!SHEETED) cue(0);
 bg.addEventListener("click", () => { const p = LIST[cueI]; if (p) location.href = p.page ? p.page : "#" + p.slug; });
 bg.dataset.cur = "Open";
 // phones: the reel turns over on its own
 if (touch) setInterval(() => { if (!home.hidden) cue((cueI + 1) % LIST.length); }, 4200);
+
+// ---------- the contact sheet: every project laid out frame by frame. Touch one and its whole roll lights up ----------
+if (SHEETED) {
+  document.body.classList.add("sheeted");
+  const sheet = document.createElement("div"); sheet.className = "sheet";
+  const names = document.createElement("nav"); names.className = "names";
+  const idxOf = Object.fromEntries(LIST.map((p, i) => [p.slug, i])), count = {};
+  sheet.innerHTML = SHEET.map((f, k) => { const i = idxOf[f.p], p = LIST[i]; if (!p) return ""; count[i] = (count[i] || 0) + 1;
+    return `<a class="fr" href="${p.page || "#" + p.slug}" data-p="${i}" data-k="${k}" data-cur="${esc(p.title)}"><span class="im"><img src="${f.i}" alt="" loading="lazy" decoding="async"></span><span class="no">${pad(i + 1)}.${pad(count[i])}</span></a>`; }).join("");
+  names.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-p="${i}" data-cur="Open"><span class="n">${pad(i + 1)}</span>${esc(p.title)}</a>`).join("");
+  home.appendChild(sheet); home.appendChild(names);
+  let hot = -1, live = null;
+  const light = (i) => {
+    if (i === hot) return; hot = i;
+    sheet.classList.toggle("hot", i >= 0);
+    $$(".fr", sheet).forEach((f) => f.classList.toggle("lit", +f.dataset.p === i));
+    $$("a", names).forEach((a) => a.classList.toggle("on", +a.dataset.p === i));
+    const p = LIST[i]; info.innerHTML = p ? `<span>${esc(p.client)}</span><span>${esc(p.kind || "")}</span>` : "";
+  };
+  const play = (fr) => {
+    if (live && live.fr !== fr) { live.v.remove(); live = null; }
+    const f = SHEET[+fr.dataset.k]; if (!f?.v || live) return;
+    const v = document.createElement("video"); v.muted = true; v.loop = true; v.playsInline = true; v.src = f.v; v.poster = f.i;
+    $(".im", fr).appendChild(v); v.play().catch(() => {}); live = { fr, v };
+  };
+  sheet.addEventListener("pointerover", (e) => { const fr = e.target.closest(".fr"); if (!fr) return; light(+fr.dataset.p); play(fr); });
+  sheet.addEventListener("pointerleave", () => { light(-1); if (live) { live.v.remove(); live = null; } });
+  names.addEventListener("pointerover", (e) => { const a = e.target.closest("a"); if (a) light(+a.dataset.p); });
+  names.addEventListener("pointerleave", () => light(-1));
+  // the sheet is sized so every frame fits on the one screen
+  const lay = () => {
+    const n = $$(".fr", sheet).length, top = 96, bot = 70, side = 30, gap = 10, lab = 16, W = innerWidth - side * 2, H = innerHeight - top - bot;
+    let best = { w: 0 };
+    for (let c = 4; c <= 16; c++) { const r = Math.ceil(n / c), w = Math.min((W - gap * (c - 1)) / c, ((H - gap * (r - 1)) / r - lab) * 1.5); if (w > best.w) best = { w, c, r }; }
+    sheet.style.gridTemplateColumns = `repeat(${best.c}, ${best.w.toFixed(1)}px)`; sheet.style.columnGap = gap + "px"; sheet.style.rowGap = gap + "px";
+  };
+  lay(); addEventListener("resize", lay);
+}
 
 // ---------- project pages ----------
 let homeY = 0;
@@ -257,7 +298,7 @@ function route() {
     renderProject(p);
   } else {
     view.hidden = true; view.innerHTML = ""; home.hidden = false; document.body.classList.remove("viewing");
-    const i = cueI; cueI = -1; cue(Math.max(0, i)); vtMeasure();
+    if (!SHEETED) { const i = cueI; cueI = -1; cue(Math.max(0, i)); } vtMeasure();
   }
 }
 addEventListener("hashchange", route);

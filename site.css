@@ -253,3 +253,16 @@ body:not(.viewing) .dim,body:not(.viewing) .nav a,body:not(.viewing) .nav button
   .list{left:50%;translate:-50% -50%;align-items:center}
   .list a{margin-left:0}
 }
+/* the contact sheet (desktop) */
+body.sheeted .bg,body.sheeted .list{display:none}
+.sheet{position:absolute;left:50%;top:calc(50% + 13px);translate:-50% -50%;display:grid;z-index:3}
+.fr{display:flex;flex-direction:column;gap:4px;transition:opacity .35s ease}
+.fr .im{position:relative;aspect-ratio:3/2;overflow:hidden;background:#0d0d0d}
+.fr img,.fr video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.fr .no{font-size:9px;letter-spacing:.08em;line-height:12px;font-variant-numeric:tabular-nums}
+.sheet.hot .fr:not(.lit){opacity:.1}
+.names{position:absolute;left:50%;top:calc(var(--gut) + 4px);translate:-50% 0;z-index:62;display:flex;gap:4px;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 520px)}
+.names a{padding:3px 7px;display:inline-flex;gap:8px;white-space:nowrap}
+.names a .n{font-size:.85em}
+.names a.on{background:#fff;color:#000}
+body.sheeted .info{bottom:calc(var(--gut) + env(safe-area-inset-bottom,0px))}
