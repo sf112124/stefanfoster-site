@@ -298,3 +298,8 @@ body.sheeted .info{bottom:calc(var(--gut) + env(safe-area-inset-bottom,0px))}
 .scr.one .pc::after{left:-9px;bottom:-9px;border-left-width:1px;border-bottom-width:1px}
 .row .pc .cm,.tile .cm{display:none}
 .pj-h + .scr .ch{display:none}
+/* project pages: no name block in the header, and the first piece sits right under the title, whole on screen */
+body.viewing .who{display:none}
+.pj-h{padding-top:calc(var(--top) + 2px)}
+.pj-h + .scr.one{height:auto;padding-top:24px;padding-bottom:7vh}
+.pj-h + .scr.one .pc{height:min(calc(100svh - 250px),calc((100vw - 2 * var(--side)) / var(--a)))}
