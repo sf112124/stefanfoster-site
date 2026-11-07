@@ -142,7 +142,7 @@ body.viewing .to-idx{display:inline}
 .gh h2{font:inherit;font-weight:500}
 .gh span{grid-column:2}
 .gh p{grid-column:3;max-width:44ch}
-.gm{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.gm{display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(10px,1.2vw,18px)}
 .tile{flex:none}
 .tile .pm{aspect-ratio:var(--a);height:auto}
 /* next */
@@ -237,3 +237,6 @@ body:not(.viewing) .dim{color:#fff}
 .row:not(.thumbs) .cell .pm{transition:opacity var(--t) var(--ease)}
 .row:not(.thumbs) .track:hover .cell:not(:hover) .pm,.strip .cell.out .pm{opacity:.32}
 .strip .track:hover .cell:hover .pm{opacity:1}
+/* picture layouts: each picture opens up as it arrives, as on the original site */
+.tile .pm{clip-path:inset(12% 6% 0 6%);transition:clip-path 1.2s var(--ease)}
+.tile.shown .pm{clip-path:inset(0)}

@@ -117,7 +117,7 @@ function screens(p) {
 const tag = (it) => { const k = kindOf(it); return k === "film" || k === "yt" ? `<span class="playtag"><i></i>Play</span>` : k === "play" ? `<span class="playtag open">Open →</span>` : ""; };
 const curOf = (it) => ((kindOf(it) === "film" && !it.gif) || kindOf(it) === "yt" ? "Play" : "");
 function piece(it, cls = "") {
-  return `<figure class="pc ${cls} k-${kindOf(it)}" data-k="${it.k}"${curOf(it) ? ` data-cur="${curOf(it)}"` : ""} style="--a:${(it.w / it.h).toFixed(4)}"><i class="cm" aria-hidden="true"></i><div class="pm">${it.gif ? `<video src="${it.loop}" poster="${it.still}" autoplay muted loop playsinline preload="metadata"></video>` : `<img src="${cls && it.smu ? it.smu : it.still}" alt="" loading="lazy" decoding="async">`}${it.gif ? "" : tag(it)}</div></figure>`;
+  return `<figure class="pc ${cls} k-${kindOf(it)}" data-k="${it.k}"${curOf(it) ? ` data-cur="${curOf(it)}"` : ""} style="--a:${(it.w / it.h).toFixed(4)}"><i class="cm" aria-hidden="true"></i><div class="pm">${it.gif ? `<video src="${it.loop}" poster="${it.still}" autoplay muted loop playsinline preload="metadata"></video>` : `<img src="${it.still}" alt="" loading="lazy" decoding="async">`}${it.gif ? "" : tag(it)}</div></figure>`;
 }
 function slate(p, s, it) {
   // a title and a line under it, nothing else
@@ -164,10 +164,10 @@ function renderProject(p) {
 // gallery rows: pictures at their own shapes, edges flush, never taller than most of the screen
 function justify() {
   $$(".gm", view).forEach((row) => {
-    const tiles = [...row.children], W = row.clientWidth, gap = 10;
+    const tiles = [...row.children], W = row.clientWidth, gap = parseFloat(getComputedStyle(row).columnGap) || 12;
     const A = (t) => +t.style.getPropertyValue("--a"), hOf = (ts) => (W - gap * (ts.length - 1) - 1) / ts.reduce((a, t) => a + A(t), 0);
     if (innerWidth < 820) { tiles.forEach((t) => (t.style.width = "100%")); return; }
-    const maxH = innerHeight * .74;
+    const maxH = innerHeight * .78;
     for (let k = 0; k < tiles.length;) {
       const line = [tiles[k++]];
       while (k < tiles.length && hOf(line) > maxH && hOf([...line, tiles[k]]) >= maxH * .6) line.push(tiles[k++]);
@@ -176,7 +176,9 @@ function justify() {
   });
 }
 addEventListener("resize", () => { if (!view.hidden) justify(); else { const i = cueI; cueI = -1; cue(Math.max(0, i)); } });
+const tio = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("shown"); tio.unobserve(e.target); } }), { threshold: .12 });
 function wire(p) {
+  $$(".tile", view).forEach((t) => tio.observe(t));
   $$(".pc", view).forEach((el) => el.addEventListener("click", () => { const it = p.pieces[+el.dataset.k]; if (!it) return; if (it.play) { location.href = it.play; return; } plOpen(p, it.k); }));
   // strips: the page scrolls on down as normal; arrows (or a sideways swipe) move along the strip
   $$(".strip", view).forEach((st) => { const tr = $(".track", st);
