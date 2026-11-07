@@ -26,7 +26,7 @@ const HI = ["ai-experiments", "la-croisiere", "summer-of-sport", "relax", "coca-
 const STILL = { "coca-cola": "media/coca-cola/still-1.webp", gumtree: "media/gumtree/hover-1.jpg" };
 LIST.forEach((p) => {
   const lib = MEDIA[p.slug] || {}; let sec = null; p.pieces = [];
-  (p.youtube || []).forEach((y) => p.pieces.push({ yt: y, w: 16, h: 9, caption: y.title, stat: y.note, still: y.thumb ? url(p.slug, y.thumb) : `https://i.ytimg.com/vi/${y.id}/hqdefault.jpg` }));
+  (p.youtube || []).forEach((y) => p.pieces.push({ yt: y, w: 16, h: 9, caption: y.title, stat: y.note, still: y.thumb ? url(p.slug, y.thumb) : `https://i.ytimg.com/vi/${y.id}/maxresdefault.jpg` }));
   p.items.forEach((it) => {
     if (it.head) { sec = it; return; }
     if (it.play) { p.pieces.push({ sec, play: it.play, w: 16, h: 10, caption: it.caption, stat: it.note, still: url(p.slug, it.img), smu: it.sm ? url(p.slug, it.sm) : null }); return; }
@@ -46,6 +46,7 @@ LIST.forEach((p) => {
 
 // pictures fade up once they've arrived, never pop in
 document.addEventListener("load", (e) => { if (e.target.tagName === "IMG") e.target.classList.add("in"); }, true);
+document.addEventListener("error", (e) => { const i = e.target; if (i.tagName === "IMG" && /maxresdefault/.test(i.src)) i.src = i.src.replace("maxresdefault", "hqdefault"); }, true);
 const settle = (root) => $$("img", root).forEach((i) => { if (i.complete && i.naturalWidth) i.classList.add("in"); });
 
 // ---------- the dot ----------
