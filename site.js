@@ -66,6 +66,8 @@ list.innerHTML = LIST.map((p, i) => `<li><a href="${p.page ? p.page : "#" + p.sl
 let cueI = -1, cueV = null;
 function cue(i) {
   if (i === cueI) return; cueI = i;
+  // a focus pull onto the new one, like racking a lens
+  layers.forEach((l) => l.classList.remove("sharp")); void layers[i].offsetWidth; layers[i].classList.add("sharp");
   layers.forEach((l, k) => { l.classList.toggle("on", k === i); const v = $("video", l); if (!v) return; if (k === i) { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); } else setTimeout(() => { if (cueI !== k) v.pause(); }, 400); });
   cueV = $("video", layers[i]);
   $$("a", list).forEach((a, k) => a.classList.toggle("on", k === i));
@@ -87,6 +89,7 @@ const SHEETED = false; // contact sheet parked: set to (!touch && innerWidth > 8
 if (!SHEETED) cue(0);
 bg.addEventListener("click", () => { const p = LIST[cueI]; if (p) location.href = p.page ? p.page : "#" + p.slug; });
 bg.dataset.cur = "Open";
+{ let px = 0, py = 0; const drift = () => { if (!home.hidden) { const tx = (mx / innerWidth - .5) * -2.2, ty = (my / innerHeight - .5) * -2.2; px += (tx - px) * .05; py += (ty - py) * .05; bg.style.setProperty("--px", px.toFixed(3) + "%"); bg.style.setProperty("--py", py.toFixed(3) + "%"); } requestAnimationFrame(drift); }; if (!touch) requestAnimationFrame(drift); }
 // phones: the reel turns over on its own
 if (touch) setInterval(() => { if (!home.hidden) cue((cueI + 1) % LIST.length); }, 4200);
 
@@ -282,7 +285,10 @@ if (!touch) {
   const vtLoop = () => {
     const sy = view.hidden ? 0 : view.scrollTop, R = 150;
     for (const L of VT) { const y = L.fixed ? L.y : L.y - sy, d = Math.hypot(L.x - cx, y - cy), t = Math.max(0, 1 - d / R), e = t * t * (3 - 2 * t);
-      L.k += (e - L.k) * .2; const w = Math.round(400 + L.k * 190); if (L._w !== w) { L._w = w; L.l.style.fontVariationSettings = `"wght" ${w}`; } }
+      // in the menu the name you're on runs heavy and the rest run light; elsewhere titles sit at regular
+      if (L.a === undefined) L.a = L.l.closest(".list a") || null;
+      const base = L.a ? (L.a.classList.contains("on") ? 780 : 300) : 400; L.b = L.b == null ? base : L.b + (base - L.b) * .18;
+      L.k += (e - L.k) * .2; const w = Math.round(L.b + L.k * (L.a ? 120 : 190)); if (L._w !== w) { L._w = w; L.l.style.fontVariationSettings = `"wght" ${w}`; } }
     requestAnimationFrame(vtLoop);
   };
   requestAnimationFrame(vtLoop);
