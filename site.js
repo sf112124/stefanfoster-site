@@ -316,7 +316,7 @@ if (!touch) {
       const B = M.box, near = mx > B.l - 180 && mx < B.r + 180 && my > B.t - 90 && my < B.b + 90;
       // read everything first, then write, so the page lays out once a frame
       M.rows.forEach((R, i) => {
-        const d = (my - R.y) / R.h, t = near ? Math.exp(-d * d / 1.8) : 0; R.g += (t - R.g) * .32;
+        const d = (my - R.y) / R.h, t = near ? Math.exp(-d * d / .4) : 0; R.g += (t - R.g) * .32;
         const fs = M.base * (1 + .95 * R.g); if (Math.abs((R._fs || 0) - fs) > .02) { R._fs = fs; R.a.style.fontSize = fs.toFixed(2) + "px"; }
         const wRow = Math.max(R.a.classList.contains("on") ? 780 : 300, 300 + 420 * R.g);
         R.ls.forEach((L, j) => {
