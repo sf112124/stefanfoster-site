@@ -72,6 +72,7 @@ export const PROJECTS = [
     slug: "summer-of-sport", title: "Summer of Sport", client: "Apple", kind: "iPad, out of home", layout: "gallery-2",
     blurb: "23 illustrations across 1200+ sites in Paris and Marseille. Each drawn on iPad, bespoke to its format.",
     items: [
+      { file: "sos.mov" },
       { file: "hf_20260315_124256_821de3fd-7883-444a-a46e-fa7f0a94c083.jpg" },
       { file: "image-copy-copy.jpg" },
       { file: "Layer-0.png" },

@@ -48,23 +48,22 @@ body.viewing .to-idx{display:inline}
 /* index */
 #home{position:fixed;inset:0}
 /* the clip: pops up on the right at its own shape */
-.bg{position:absolute;inset:0;pointer-events:none}
-.layer{position:absolute;opacity:0;clip-path:inset(50% 0 50% 0);transform:scale(.96);transition:opacity .2s,clip-path .5s var(--ease),transform .6s var(--ease)}
-.layer.on{opacity:1;clip-path:inset(0 0 0 0);transform:none}
+.bg{position:absolute;inset:0;cursor:pointer}
+.layer{position:absolute;opacity:0}
+.layer.on{opacity:1}
 .layer video,.layer img{width:100%;height:100%;object-fit:cover}
 .layer{filter:none}
 .layer video,.layer img{filter:brightness(.88)}
 /* the list reads like a camera menu: small caps in mono, the one you're on lit up as a bar */
-.list{position:absolute;left:calc(var(--gut) + 6px);top:50%;translate:0 -50%;list-style:none;z-index:5;display:flex;flex-direction:column;gap:2px}
-.list a{display:flex;align-items:center;gap:18px;padding:5px 12px 5px 8px;margin-left:-8px;width:max-content;font-size:clamp(14px,1.15vw,18px);letter-spacing:.06em;color:#fff;transition:background .15s,color .15s}
-.list a .n{font-size:.78em;opacity:.55;width:auto;font-variant-numeric:tabular-nums}
+.list{position:absolute;pointer-events:none;left:calc(var(--gut) + 6px);top:50%;translate:0 -50%;list-style:none;z-index:5;display:flex;flex-direction:column;gap:2px}
+.list a{pointer-events:auto;display:flex;align-items:center;gap:18px;padding:5px 12px 5px 8px;margin-left:-8px;width:max-content;font-size:clamp(12px,.92vw,14px);letter-spacing:.06em;color:#fff;transition:background .15s,color .15s}
+.list a .n{font-size:.85em;width:auto;font-variant-numeric:tabular-nums}
 .list a .t{font:inherit;letter-spacing:inherit;text-transform:uppercase}
-.list a:not(.on){background:rgba(0,0,0,.32);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-.list a:not(.on) .t{opacity:.85}
+
 .list a.on{background:#fff;color:#000}
-.list a.on .n{opacity:.5}
-.info{position:absolute;right:calc(var(--gut) + 6px);bottom:calc(var(--gut) + 22px + env(safe-area-inset-bottom,0px));z-index:5;display:flex;flex-direction:column;align-items:flex-end;text-align:right;gap:1px}
-.tc{position:absolute;right:calc(var(--gut) + 6px);bottom:calc(var(--gut) + env(safe-area-inset-bottom,0px));z-index:5;color:#fff;opacity:.7;font-variant-numeric:tabular-nums}
+
+.info{position:absolute;right:calc(var(--gut) + 6px);bottom:calc(var(--gut) + env(safe-area-inset-bottom,0px));pointer-events:none;z-index:5;display:flex;flex-direction:column;align-items:flex-end;text-align:right;gap:1px}
+.tc{display:none;font-variant-numeric:tabular-nums}
 .tc::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:#ff3b30;margin-right:8px;vertical-align:1px;animation:rec 1.6s steps(1) infinite}
 .tc:empty::before{display:none}
 @keyframes rec{50%{opacity:0}}
@@ -75,7 +74,7 @@ body.viewing .to-idx{display:inline}
 #view{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;overscroll-behavior-x:auto;scrollbar-width:none}
 #view::-webkit-scrollbar{display:none}
 .pj{--top:84px;--bot:88px;--side:calc(var(--gut) + 6px)}
-.pj-h{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,.62fr)) minmax(0,1.5fr);gap:24px;align-items:start;margin:0 var(--side);padding:calc(var(--top) + 22px) 0 18px;border-bottom:1px solid var(--line)}
+.pj-h{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) minmax(0,1.5fr);gap:24px;align-items:start;margin:0 var(--side);padding:calc(var(--top) + 22px) 0 18px;border-bottom:1px solid var(--line)}
 .pj-h h1{font:500 clamp(20px,1.85vw,30px)/1.05 var(--mono);letter-spacing:.01em;text-transform:uppercase;color:#fff}
 .pj-h .f{display:flex;flex-direction:column;gap:2px;padding-top:4px}
 .pj-h p{padding-top:4px;text-transform:none;letter-spacing:0;font:400 13px/1.5 "Geist",ui-sans-serif,system-ui,sans-serif;color:rgba(255,255,255,.75);max-width:44ch}
@@ -114,9 +113,9 @@ body.viewing .to-idx{display:inline}
 .thumbs .cell .pm img{filter:brightness(.92)}
 /* the picture layouts: rows at their own shapes */
 .pj.gal .grp{padding:0 var(--side) 9vh}
-.gh{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,.62fr)) minmax(0,1.5fr);gap:24px;padding:12px 0 18px;border-top:1px solid var(--line);margin-top:4vh}
-.gh span{grid-column:4}
-.gh p{grid-column:5;max-width:44ch}
+.gh{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) minmax(0,1.5fr);gap:24px;padding:12px 0 18px;border-top:1px solid var(--line);margin-top:4vh}
+.gh span{grid-column:2}
+.gh p{grid-column:3;max-width:44ch}
 .pj.gal .pj-h + .grp .gh{border-top:0;margin-top:0;padding-top:0}
 .gh h2{font:inherit;color:#fff}
 .gh p{text-transform:none;letter-spacing:.01em}
@@ -239,8 +238,13 @@ body.viewing .top::before{content:"";position:absolute;inset:0 0 -34px;backgroun
   .pj-h{grid-template-columns:1fr 1fr;gap:14px 16px}
   .pj-h h1{grid-column:1 / -1;font-size:22px}
   .pj-h p{grid-column:1 / -1}
-  .pj-h .f:nth-of-type(3){display:none}
   .gh{grid-template-columns:1fr auto}
   .gh span{grid-column:2}
   .gh p{grid-column:1 / -1}
 }
+.scr.one{flex-direction:column;gap:12px;padding-bottom:28px}
+.scr.one .pc{height:min(calc(100% - 64px),calc((100vw - 2 * var(--side)) / var(--a)))}
+.scr.one .slate{position:static;translate:none;width:auto}
+.scr.row .slate{bottom:22px}
+/* the index is all white type: nothing greyed or see-through */
+body:not(.viewing) .dim,body:not(.viewing) .nav a,body:not(.viewing) .nav button,body:not(.viewing) .corner,body:not(.viewing) .corner button,body:not(.viewing) .corner .vs,body:not(.viewing) .corner .sep{color:#fff;opacity:1}

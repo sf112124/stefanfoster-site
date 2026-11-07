@@ -22,7 +22,7 @@ const sound = new Sound();
 const ORDER = ["ai-experiments", "la-croisiere", "les-benjamins", "relax", "summer-of-sport", "3d-explorations", "coca-cola", "gumtree"];
 const LIST = [...PROJECTS].sort((a, b) => (ORDER.indexOf(a.slug) + 1 || 99) - (ORDER.indexOf(b.slug) + 1 || 99));
 // full-quality loops made for the index background
-const HI = ["ai-experiments"];
+const HI = ["ai-experiments", "summer-of-sport"];
 const STILL = { "coca-cola": "media/coca-cola/still-1.webp", gumtree: "media/gumtree/hover-1.jpg" };
 LIST.forEach((p) => {
   const lib = MEDIA[p.slug] || {}; let sec = null; p.pieces = [];
@@ -69,7 +69,7 @@ function cue(i) {
   cueV = $("video", layers[i]);
   $$("a", list).forEach((a, k) => a.classList.toggle("on", k === i));
   const p = LIST[i], n = p.pieces.length;
-  info.innerHTML = `<span>${esc(p.client)}</span><span class="dim">${esc(p.kind || "")}${n ? ` · ${pad(n)} ${n === 1 ? "piece" : "pieces"}` : ""}</span>`;
+  info.innerHTML = `<span>${esc(p.client)}</span><span>${esc(p.kind || "")}</span>`;
   place(i);
 }
 // on a desktop the clip pops up right beside the name you're on, at its own shape
@@ -82,6 +82,8 @@ function place(i) {
 }
 $$("a", list).forEach((a) => { a.addEventListener("pointerenter", () => { cue(+a.dataset.i); sound.tick?.(.5, .015); }); a.dataset.cur = "Open"; });
 cue(0);
+bg.addEventListener("click", () => { const p = LIST[cueI]; if (p) location.href = p.page ? p.page : "#" + p.slug; });
+bg.dataset.cur = "Open";
 // phones: the reel turns over on its own
 if (touch) setInterval(() => { if (!home.hidden) cue((cueI + 1) % LIST.length); }, 4200);
 
@@ -112,13 +114,13 @@ function piece(it, cls = "") {
 function slate(p, s, it, total) {
   const sec = s.sec?.head && s.sec.head !== p.title ? s.sec.head : "";
   return `<div class="slate"><div class="sl-l"><span>${esc(p.title)}${sec ? ` <span class="dim">/</span> ${esc(sec)}` : ""}</span>${s.sec?.text ? `<span class="dim">${esc(s.sec.text)}</span>` : ""}${it?.caption ? `<span class="dim">${esc(it.caption)}</span>` : ""}${it?.stat ? `<span class="dim">${esc(it.stat)}</span>` : ""}</div>
-    <div class="sl-r">${it ? `<span>${pad(it.k + 1)} <span class="dim">/ ${pad(total)}</span></span>${it.w && !it.play && !it.yt ? `<span class="dim">${it.w}×${it.h}</span>` : ""}${it.dur && it.film ? `<span class="dim">${dur(it.dur)}</span>` : ""}` : `<span class="dim">${pad(total)} pieces</span>`}</div></div>`;
+    <div class="sl-r">${it ? `<span>${pad(it.k + 1)} <span class="dim">/ ${pad(total)}</span></span>${it.dur && it.film ? `<span class="dim">${dur(it.dur)}</span>` : ""}` : `<span class="dim">${pad(total)} pieces</span>`}</div></div>`;
 }
 function renderProject(p) {
   p.pieces.forEach((it, k) => (it.k = k));
   const total = p.pieces.length, nx = LIST[(LIST.indexOf(p) + 1) % LIST.length], gal = GALLERY.includes(p.slug);
   const head = `<header class="pj-h"><h1 data-vt>${esc(p.title)}</h1>
-    <div class="f"><span class="dim">Client</span><span>${esc(p.client)}</span></div><div class="f"><span class="dim">Type</span><span>${esc(p.kind || "")}</span></div><div class="f"><span class="dim">Pieces</span><span>${pad(total)}</span></div>
+    <div class="f"><span class="dim">Client</span><span>${esc(p.client)}</span></div>
     <p>${esc(p.blurb || "")}</p></header>`;
   let body;
   if (gal) {
@@ -211,7 +213,7 @@ addEventListener("keydown", (e) => {
 
 // timecodes run off the films themselves
 function ticker() {
-  if (!home.hidden) tcEl.textContent = cueV ? `TC ${tc(cueV.currentTime)}` : "";
+  
   if (!pl.hidden && plV) { $(".pl-tc", pl).innerHTML = `${tc(plV.currentTime)} <span class="dim">/ ${tc(plV.duration)}</span>`; if (plV.duration) $(".pl-bar b", pl).style.transform = `scaleX(${(plV.currentTime / plV.duration).toFixed(4)})`; }
   requestAnimationFrame(ticker);
 }
