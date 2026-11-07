@@ -23,7 +23,7 @@ export const PROJECTS = [
       { file: "barbershop-chop--aigeneratedart--animefyp--nujabes--seedance--7630960936584498454.mp4" },
       { head: "Zombie Cowboys", text: "A trailer for a zombie cowboy movie that one day I’ll have enough AI credits to make." },
       { file: "zombie-movie_compressed.mp4" },
-      { head: "Toys", text: "Things I built to play with.", thumbs: true },
+      { head: "Ai toys", text: "Things I built to play with.", thumbs: true },
       { play: "rpg", img: "pokefolio-v4.webp", sm: "pokefolio-v4-sm.webp", caption: "Poké-folio", note: "Press start" },
       { play: "tilt", img: "play-tilt.webp", sm: "play-tilt-sm.webp", caption: "Tilt", note: "Phone only" },
       { play: "synth", img: "play-synth.webp", sm: "play-synth-sm.webp", caption: "Synth-folio", note: "A jungle sampler" },

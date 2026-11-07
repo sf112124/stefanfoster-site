@@ -171,7 +171,7 @@ function renderProject(p) {
   p.pieces.forEach((it, k) => (it.k = k));
   const total = p.pieces.length, nx = LIST[(LIST.indexOf(p) + 1) % LIST.length], gal = GALLERY.includes(p.slug);
   const head = `<header class="pj-h"><h1 data-vt>${esc(p.title)}</h1>
-    <div class="f"><span class="dim">Client</span><span>${esc(p.client)}</span></div>
+    ${p.client && p.client !== "Personal" ? `<div class="f"><span class="dim">Client</span><span>${esc(p.client)}</span></div>` : "<div></div>"}
     <p>${esc(p.blurb || "")}</p></header>`;
   let body;
   if (gal) {
@@ -183,9 +183,12 @@ function renderProject(p) {
     body = screens(p).map((s) => {
       if (s.row) {
         const A = s.items.reduce((t, it) => t + it.w / it.h, 0);
+        // a run of pieces gets its heading on top, so it's clearly the title of what follows
+        const head = s.sec?.head && s.sec.head !== p.title ? s.sec.head : p.title;
         return `<section class="scr row${s.thumbs ? " thumbs" : ""}${s.strip ? " strip" : ""}" style="--sa:${A.toFixed(4)};--n:${s.items.length}">
+          <div class="rh"><b>${esc(head)}</b>${s.sec?.text ? `<span class="dim">${esc(s.sec.text)}</span>` : ""}</div>
           <div class="track">${s.items.map((it) => piece(it, "cell").replace("</figure>", it.caption || it.stat ? `<figcaption><span>${esc(it.caption || "")}</span><span class="dim">${esc(it.stat || "")}</span></figcaption></figure>` : "</figure>")).join("")}</div>
-          ${slate(p, s, null, total)}</section>`;
+          </section>`;
       }
       const it = s.items[0];
       return `<section class="scr one">${piece(it)}${slate(p, s, it, total)}</section>`;
