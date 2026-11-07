@@ -148,7 +148,7 @@ function renderProject(p) {
         // a run of pieces gets its heading on top, so it's clearly the title of what follows
         const head = s.sec?.head && s.sec.head !== p.title ? s.sec.head : p.title;
         return `<section class="scr row${s.thumbs ? " thumbs" : ""}${s.strip ? " strip" : ""}" style="--sa:${A.toFixed(4)};--n:${s.items.length}" data-n="${k + 1}">${ch(k)}
-          <div class="rh"><b>${esc(head)}</b>${s.sec?.text ? `<span class="dim prose">${esc(s.sec.text)}</span>` : ""}</div>
+          ${head !== p.title || s.sec?.text ? `<div class="rh">${head !== p.title ? `<b>${esc(head)}</b>` : ""}${s.sec?.text ? `<span class="dim prose">${esc(s.sec.text)}</span>` : ""}</div>` : ""}
           <div class="track">${s.items.map((it) => piece(it, "cell").replace("</figure>", it.caption || it.stat ? `<figcaption><span>${esc(it.caption || "")}</span><span class="dim">${esc(it.stat || "")}</span></figcaption></figure>` : "</figure>")).join("")}</div>
           </section>`;
       }
