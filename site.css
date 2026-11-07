@@ -56,7 +56,7 @@ body.viewing .to-idx{display:inline}
 .layer video,.layer img{filter:brightness(.88)}
 /* the list reads like a camera menu: small caps in mono, the one you're on lit up as a bar */
 .list{position:absolute;pointer-events:none;left:calc(var(--gut) + 6px);top:50%;translate:0 -50%;list-style:none;z-index:5;display:flex;flex-direction:column;gap:2px}
-.list a{pointer-events:auto;display:flex;align-items:center;gap:18px;padding:5px 12px 5px 8px;margin-left:-8px;width:max-content;font-size:clamp(12px,.92vw,14px);letter-spacing:.06em;color:#fff;transition:background .15s,color .15s}
+.list a{pointer-events:auto;display:flex;align-items:baseline;gap:18px;padding:5px 12px 5px 8px;margin-left:-8px;width:max-content;font-size:clamp(12px,.92vw,14px);letter-spacing:.06em;color:#fff;transition:background .15s,color .15s}
 .list a .n{font-size:.85em;width:auto;font-variant-numeric:tabular-nums}
 .list a .t{font:inherit;letter-spacing:inherit;text-transform:uppercase}
 
@@ -248,3 +248,8 @@ body.viewing .top::before{content:"";position:absolute;inset:0 0 -34px;backgroun
 .scr.row .slate{bottom:22px}
 /* the index is all white type: nothing greyed or see-through */
 body:not(.viewing) .dim,body:not(.viewing) .nav a,body:not(.viewing) .nav button,body:not(.viewing) .corner,body:not(.viewing) .corner button,body:not(.viewing) .corner .vs,body:not(.viewing) .corner .sep{color:#fff;opacity:1}
+/* the menu down the centre line */
+@media (min-width:821px){
+  .list{left:50%;translate:-50% -50%;align-items:center}
+  .list a{margin-left:0}
+}
