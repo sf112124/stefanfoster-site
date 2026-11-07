@@ -4,13 +4,21 @@
 
 export const PROJECTS = [
   {
-    slug: "ai-experiments", title: "Ai Experiments", client: "Personal", kind: "AI film",
+    slug: "ai-experiments", title: "Ai Work", client: "Personal", kind: "AI film",
     blurb: "",
     items: [
       { head: "Tough Love" },
       { file: "tough-love.mov" },
       { head: "Anywhere" },
       { file: "anywhere.mp4" },
+      { head: "Jacquemus", text: "Commissioned work for Jacquemus' TikTok.", carousel: true },
+      { from: "ai-commissions", file: "TRUCK-WITH-AUDIO.mov", caption: "Ibiza, we are here", stat: "3.9M views" },
+      { from: "ai-commissions", file: "ICE-CREAM-5_1.mp4", caption: "The process of making « Plage » Popsicles", stat: "4.1M views" },
+      { from: "ai-commissions", file: "boat-rider-final.mp4", caption: "On our way to « Plage »", stat: "5.9M views" },
+      { from: "ai-commissions", file: "4e03a731-6491-428d-bce0-eea8105e10d6.mp4", caption: "Guys, St Tropez never stops surprising me 😭🐐", stat: "5M views" },
+      { from: "ai-commissions", file: "tikmate.app_7506517951919426838_hd.mp4", caption: "Just another day at the Jacquemus Los Angeles boutique 😭🐐", stat: "8.7M views" },
+      { from: "ai-commissions", file: "Titanique.mp4", caption: "On my way to « Le Bonheur »", stat: "1.4M views" },
+      { from: "ai-commissions", file: "Horsey-2.mp4", caption: "On my way to the Le Paysan show", stat: "1.3M views" },
       { head: "Samurai Barber" },
       { file: "barbershop-chop--aigeneratedart--animefyp--nujabes--seedance--7630960936584498454.mp4" },
       { head: "Zombie Cowboys", text: "Trailers for a zombie cowboy movie that one day I’ll have enough AI credits to make." },
@@ -45,19 +53,6 @@ export const PROJECTS = [
       { file: "JACQUEMUS_TABLEAU_916_VFX_GRADE_250204_STEN_1.mp4", caption: "Dolling around 🤳" },
       { file: "2PRANKPHONE_R4.mp4", caption: "Shhhh 👉🏼👈🏼" },
       { file: "FRFR_MAKINGOF_DIGITAL_916AR_31s_IPHN_CMR_NA_WM_AMXcode_v01_METAS.mp4", caption: "Just a normal day at the #Jacquemus atelier 🪡🧵" },
-    ],
-  },
-  {
-    slug: "ai-commissions", title: "Ai Commissions", client: "Jacquemus", kind: "AI social films",
-    blurb: "Working with The Butter Service.",
-    items: [
-      { file: "TRUCK-WITH-AUDIO.mov", caption: "Ibiza, we are here", stat: "3.9M views" },
-      { file: "ICE-CREAM-5_1.mp4", caption: "The process of making « Plage » Popsicles", stat: "4.1M views" },
-      { file: "boat-rider-final.mp4", caption: "On our way to « Plage »", stat: "5.9M views" },
-      { file: "4e03a731-6491-428d-bce0-eea8105e10d6.mp4", caption: "Guys, St Tropez never stops surprising me 😭🐐", stat: "5M views" },
-      { file: "tikmate.app_7506517951919426838_hd.mp4", caption: "Just another day at the Jacquemus Los Angeles boutique 😭🐐", stat: "8.7M views" },
-      { file: "Titanique.mp4", caption: "On my way to « Le Bonheur »", stat: "1.4M views" },
-      { file: "Horsey-2.mp4", caption: "On my way to the Le Paysan show", stat: "1.3M views" },
     ],
   },
   {

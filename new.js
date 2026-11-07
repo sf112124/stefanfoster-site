@@ -34,11 +34,12 @@ PROJECTS.forEach((p, pi) => {
   p.items.forEach((it) => {
     if (it.head) { sec = it; return; }
     if (it.play) { p.pieces.push({ pi, sec, play: it.play, w: 16, h: 10, caption: it.caption, stat: `${it.note} →`, thumb: url(p.slug, it.img) }); return; }
-    const m = lib[it.file]; if (!m) return;
+    // a piece can live in another project's folder (from: "slug")
+    const fs = it.from || p.slug, m = (it.from ? MEDIA[it.from] || {} : lib)[it.file]; if (!m) return;
     const x = { ...m, ...it, pi, sec };
-    x.thumb = url(p.slug, m.type === "video" ? m.poster : m.sm);
-    x.still = url(p.slug, m.type === "video" ? m.poster : m.src || m.sm);
-    if (m.type === "video") { x.loop = url(p.slug, m.loop); x.film = url(p.slug, m.full || m.loop); }
+    x.thumb = url(fs, m.type === "video" ? m.poster : m.sm);
+    x.still = url(fs, m.type === "video" ? m.poster : m.src || m.sm);
+    if (m.type === "video") { x.loop = url(fs, m.loop); x.film = url(fs, m.full || m.loop); }
     p.pieces.push(x);
   });
   // one moving picture to stand for the project
@@ -69,7 +70,7 @@ if (!touch) {
 const idx = $("#idx");
 const media = (x) => x && (x.v ? `<video muted loop playsinline preload="none" poster="${x.i}" data-src="${x.v}"></video>` : `<img src="${x.i}" alt="" loading="lazy"${x.pos ? ` style="object-position:${x.pos}"` : ""}>`);
 // favourites in the middle, fanning out to the top and bottom
-const ORDER = ["ai-experiments", "la-croisiere", "les-benjamins", "ai-commissions", "3d-explorations", "summer-of-sport", "relax", "coca-cola", "gumtree"];
+const ORDER = ["ai-experiments", "la-croisiere", "les-benjamins", "3d-explorations", "summer-of-sport", "relax", "coca-cola", "gumtree"];
 const LIST = [...PROJECTS].sort((x, y) => (ORDER.indexOf(x.slug) + 1 || 99) - (ORDER.indexOf(y.slug) + 1 || 99));
 const TUN = document.body.dataset.tunnel != null;
 const FLOW = !TUN && document.body.dataset.flow != null;
@@ -231,7 +232,7 @@ function renderProject(i) {
     const solo = g.items.length === 1, even = !solo && p.layout === "gallery-2", cols = !solo && g.items.every((x) => x.w / x.h < .8);
     return `<section class="grp">
       ${g.sec ? `<div class="gh"><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p>${esc(g.sec.text)}</p>` : ""}</div>` : ""}
-      <div class="gm big">${g.items.map((it) => tileHTML(it, n++)).join("")}</div></section>`;
+      ${g.sec && g.sec.carousel ? `<div class="gm car">${g.items.map((it) => tileHTML(it, n++)).join("")}</div>` : `<div class="gm big">${g.items.map((it) => tileHTML(it, n++)).join("")}</div>`}</section>`;
   }).join("");
   view.innerHTML = `<article class="pj" id="pj">
     <div class="pj-meta mono"><span>${esc(p.client)}</span></div>
@@ -242,6 +243,14 @@ function renderProject(i) {
   </article>`;
   requestAnimationFrame(() => requestAnimationFrame(() => $("#pj").classList.add("in")));
   watch(view); wireTiles(p); justify(); vtype(".pj-t,.nxp .t", view);
+  // carousels get arrows either side for people on a mouse
+  $$(".gm.car", view).forEach((row) => {
+    const wrap = document.createElement("div"); wrap.className = "carw"; row.before(wrap); wrap.appendChild(row);
+    ["prev", "next"].forEach((d) => { const b = document.createElement("button"); b.type = "button"; b.className = "car-" + d; b.setAttribute("aria-label", d === "next" ? "More" : "Back"); b.textContent = d === "next" ? "→" : "←";
+      b.addEventListener("click", () => row.scrollBy({ left: (d === "next" ? 1 : -1) * row.clientWidth * .8, behavior: "smooth" })); wrap.appendChild(b); });
+    const upd = () => { wrap.classList.toggle("at-start", row.scrollLeft < 8); wrap.classList.toggle("at-end", row.scrollLeft + row.clientWidth > row.scrollWidth - 8); };
+    row.addEventListener("scroll", upd, { passive: true }); upd();
+  });
 }
 const tio = new IntersectionObserver((es) => es.forEach((e) => {
   const v = $("video", e.target);
