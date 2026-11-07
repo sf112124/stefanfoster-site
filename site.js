@@ -26,7 +26,7 @@ const HI = ["ai-experiments", "la-croisiere", "relax"];
 const STILL = { "coca-cola": "media/coca-cola/hover-1.jpg", gumtree: "media/gumtree/hover-1.jpg" };
 LIST.forEach((p) => {
   const lib = MEDIA[p.slug] || {}; let sec = null; p.pieces = [];
-  (p.youtube || []).forEach((y) => p.pieces.push({ yt: y, w: 16, h: 9, caption: y.title, stat: y.note, still: y.thumb ? url(p.slug, y.thumb) : `https://i.ytimg.com/vi/${y.id}/maxresdefault.jpg` }));
+  (p.youtube || []).forEach((y) => p.pieces.push({ yt: y, w: 16, h: 9, caption: y.title, stat: y.note, still: y.thumb ? url(p.slug, y.thumb) : `https://i.ytimg.com/vi/${y.id}/hqdefault.jpg` }));
   p.items.forEach((it) => {
     if (it.head) { sec = it; return; }
     if (it.play) { p.pieces.push({ sec, play: it.play, w: 16, h: 10, caption: it.caption, stat: it.note, still: url(p.slug, it.img) }); return; }
@@ -75,102 +75,128 @@ cue(0);
 // phones: the reel turns over on its own
 if (touch) setInterval(() => { if (!home.hidden) cue((cueI + 1) % LIST.length); }, 4200);
 
-// ---------- project pages: one thing per screen, scroll to the next ----------
+// ---------- project pages ----------
 let homeY = 0;
 const kindOf = (it) => (it.yt ? "yt" : it.play ? "play" : it.film ? "film" : "img");
 const portrait = (it) => it.w / it.h < .9;
+const dur = (t) => t ? `${pad(Math.floor(t / 60))}:${pad(Math.round(t) % 60)}` : "";
+// these keep their picture layouts: rows of work at their own shapes
+const GALLERY = ["summer-of-sport", "3d-explorations", "la-croisiere"];
 function screens(p) {
-  // things side by side when they're tall and come together (a section of phone films); otherwise one per screen
+  // tall things that come together sit side by side (phone films, the toys); otherwise one per screen
   const out = []; let run = null;
-  p.pieces.forEach((it, k) => {
-    it.k = k;
-    const together = (it.sec?.thumbs) || (portrait(it) && (it.sec?.carousel || p.pieces.filter((q) => q.sec === it.sec && portrait(q)).length > 1));
+  p.pieces.forEach((it) => {
+    const together = it.sec?.thumbs || (portrait(it) && (it.sec?.carousel || p.pieces.filter((q) => q.sec === it.sec && portrait(q)).length > 1));
     if (together && run && run.sec === it.sec) { run.items.push(it); return; }
-    run = together ? { sec: it.sec, items: [it], row: true, thumbs: !!it.sec?.thumbs } : null;
+    run = together ? { sec: it.sec, items: [it], row: true, thumbs: !!it.sec?.thumbs, strip: !it.sec?.thumbs && (it.sec?.carousel || false) } : null;
     out.push(run || { sec: it.sec, items: [it] });
   });
+  out.forEach((s) => { if (s.row && !s.thumbs && s.items.length > 3) s.strip = true; });
   return out;
 }
-function mediaHTML(it, big) {
-  const k = kindOf(it);
-  if (k === "film") return `<video muted loop playsinline preload="none" poster="${it.still}" data-src="${big ? it.film : it.film}"></video>`;
-  return `<img src="${it.still}" alt="" loading="lazy" decoding="async">`;
+const tag = (it) => { const k = kindOf(it); return k === "film" || k === "yt" ? `<span class="playtag"><i></i>Play${it.dur ? ` <span>${dur(it.dur)}</span>` : ""}</span>` : k === "play" ? `<span class="playtag open">Open →</span>` : ""; };
+const curOf = (it) => ({ film: "Play", yt: "Play", play: "Open", img: "View" })[kindOf(it)];
+function piece(it, cls = "") {
+  return `<figure class="pc ${cls} k-${kindOf(it)}" data-k="${it.k}" data-cur="${curOf(it)}" style="--a:${(it.w / it.h).toFixed(4)}"><div class="pm"><img src="${it.still}" alt="" loading="lazy" decoding="async">${tag(it)}</div></figure>`;
 }
-function slateHTML(p, s, it, n, total) {
+function slate(p, s, it, total) {
   const sec = s.sec?.head && s.sec.head !== p.title ? s.sec.head : "";
-  return `<div class="slate">
-    <div class="sl-l"><span>${esc(p.title)}${sec ? ` <span class="dim">/</span> ${esc(sec)}` : ""}</span>${s.sec?.text && (!s.row || (it === s.items[0] && !s.thumbs && !s.sec.carousel && s.items.length <= 3)) ? `<span class="dim">${esc(s.sec.text)}</span>` : ""}${it.caption ? `<span class="dim">${esc(it.caption)}</span>` : ""}${it.stat ? `<span class="dim">${esc(it.stat)}</span>` : ""}</div>
-    <div class="sl-r"><span class="cnt">${pad(n)} <span class="dim">/ ${pad(total)}</span></span><span class="dim fmt">${it.w && it.h && !it.play && !it.yt ? `${it.w}×${it.h}` : ""}</span>${kindOf(it) === "film" ? `<span class="tcv dim">${tc(0)}</span>` : ""}</div>
-  </div>`;
+  return `<div class="slate"><div class="sl-l"><span>${esc(p.title)}${sec ? ` <span class="dim">/</span> ${esc(sec)}` : ""}</span>${s.sec?.text ? `<span class="dim">${esc(s.sec.text)}</span>` : ""}${it?.caption ? `<span class="dim">${esc(it.caption)}</span>` : ""}${it?.stat ? `<span class="dim">${esc(it.stat)}</span>` : ""}</div>
+    <div class="sl-r">${it ? `<span>${pad(it.k + 1)} <span class="dim">/ ${pad(total)}</span></span>${it.w && !it.play && !it.yt ? `<span class="dim">${it.w}×${it.h}</span>` : ""}${it.dur && it.film ? `<span class="dim">${dur(it.dur)}</span>` : ""}` : `<span class="dim">${pad(total)} pieces</span>`}</div></div>`;
 }
 function renderProject(p) {
-  const S = screens(p), total = p.pieces.length, nx = LIST[(LIST.indexOf(p) + 1) % LIST.length];
-  // the opening screen: the first film itself when it's a wide one (click for sound), otherwise the cover behind the title
-  const f0 = p.pieces[0], lead = f0?.film && !portrait(f0) ? f0 : null, skip = lead ? 1 : 0;
-  const first = `<section class="scr open${lead ? " one k-film" : ""}"${lead ? ` data-k="0" style="--a:${(lead.w / lead.h).toFixed(4)}"${lead.audio ? ' data-cur="Sound on"' : ""}` : ""}><div class="fill">${lead ? mediaHTML(lead) : p.cover ? (p.cover.v ? `<video muted loop playsinline preload="none" poster="${p.cover.i}" data-src="${p.cover.v}"></video>` : `<img src="${p.cover.i}" alt="">`) : ""}</div>
-    <div class="title"><h1>${esc(p.title)}</h1><span class="dim">${esc(p.client)}${lead?.sec?.head ? ` / ${esc(lead.sec.head)}` : ""}</span>${p.blurb ? `<p>${esc(p.blurb)}</p>` : ""}</div>
-    ${lead ? `<div class="slate"><div class="sl-l"></div><div class="sl-r"><span class="cnt">01 <span class="dim">/ ${pad(total)}</span></span><span class="dim fmt">${lead.w}×${lead.h}</span><span class="tcv dim">${tc(0)}</span></div></div><i class="prog"><b></b></i>` : ""}
-    <div class="scroll-cue dim">Scroll ↓</div></section>`;
-  const body = S.map((s) => {
-    if (s.row) return `<section class="scr row${s.thumbs ? " thumbs" : s.items.length > 3 || s.sec?.carousel ? " strip" : ""}">${(s.thumbs || s.items.length > 3 || s.sec?.carousel) && (s.sec?.text || s.sec?.head) ? `<div class="row-h"><span>${esc(s.sec?.head || "")}</span>${s.sec?.text ? `<span class="dim">${esc(s.sec.text)}</span>` : ""}</div>` : ""}
-      <div class="track">${s.items.map((it) => `<figure class="cell k-${kindOf(it)}" data-k="${it.k}" style="--a:${(it.w / it.h).toFixed(4)}" data-cur="${kindOf(it) === "film" && it.audio ? "Sound on" : kindOf(it) === "play" ? "Open" : ""}">${mediaHTML(it)}${slateHTML(p, s, it, it.k + 1, total).replace('class="slate"', 'class="slate mini"')}<i class="prog"><b></b></i></figure>`).join("")}</div></section>`;
-    const it = s.items[0]; if (it.k < skip) return "";
-    const fit = it.w / it.h; const k = kindOf(it);
-    const label = k === "yt" ? "Play" : k === "play" ? "Open" : k === "film" && it.audio ? "Sound on" : "";
-    return `<section class="scr one k-${k}" data-k="${it.k}" style="--a:${fit.toFixed(4)}"${label ? ` data-cur="${label}"` : ""}><div class="fill">${mediaHTML(it, true)}</div>${slateHTML(p, s, it, it.k + 1, total)}${k === "play" ? `<div class="go">${esc(it.stat || "Open")} →</div>` : ""}<i class="prog"><b></b></i></section>`;
-  }).join("");
-  const nxt = `<section class="scr next"><a href="${nx.page || "#" + nx.slug}" data-cur="Next"><div class="fill">${nx.cover ? (nx.cover.v ? `<video muted loop playsinline preload="none" poster="${nx.cover.i}" data-src="${nx.cover.v}"></video>` : `<img src="${nx.cover.i}" alt="" loading="lazy">`) : ""}</div>
-    <div class="title"><span class="dim">Next</span><h1>${esc(nx.title)}</h1><span class="dim">${esc(nx.client)}</span></div></a></section>`;
-  view.innerHTML = `<article class="pj" data-slug="${p.slug}">${first}${body}${nxt}</article>`;
-  view.scrollTop = 0; fitAll(); wire(p);
+  p.pieces.forEach((it, k) => (it.k = k));
+  const total = p.pieces.length, nx = LIST[(LIST.indexOf(p) + 1) % LIST.length], gal = GALLERY.includes(p.slug);
+  const head = `<header class="pj-h"><h1>${esc(p.title)}</h1><div class="pj-m"><span>${esc(p.client)}</span><span class="dim">${esc(p.kind || "")}</span></div>${p.blurb ? `<p>${esc(p.blurb)}</p>` : ""}</header>`;
+  let body;
+  if (gal) {
+    // the old layout: sections, and rows of pictures at their own shapes, as tall as the screen allows
+    const groups = []; p.pieces.forEach((it) => { const g = groups[groups.length - 1]; if (!g || g.sec !== it.sec) groups.push({ sec: it.sec, items: [it] }); else g.items.push(it); });
+    body = groups.map((g) => `<section class="grp">${g.sec ? `<div class="gh"><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p class="dim">${esc(g.sec.text)}</p>` : ""}</div>` : ""}
+      <div class="gm">${g.items.map((it) => piece(it, "tile").replace("</figure>", `<figcaption><span class="dim">${pad(it.k + 1)}</span>${it.caption ? `<span>${esc(it.caption)}</span>` : ""}${it.stat ? `<span class="dim">${esc(it.stat)}</span>` : ""}</figcaption></figure>`)).join("")}</div></section>`).join("");
+  } else {
+    body = screens(p).map((s) => {
+      if (s.row) {
+        const A = s.items.reduce((t, it) => t + it.w / it.h, 0);
+        return `<section class="scr row${s.thumbs ? " thumbs" : ""}${s.strip ? " strip" : ""}" style="--sa:${A.toFixed(4)};--n:${s.items.length}">
+          <div class="track">${s.items.map((it) => piece(it, "cell").replace("</figure>", s.thumbs || s.strip ? `<figcaption><span>${esc(it.caption || "")}</span><span class="dim">${esc(it.stat || "")}</span></figcaption></figure>` : "</figure>")).join("")}</div>
+          ${slate(p, s, s.thumbs || s.strip ? null : s.items[0], total)}</section>`;
+      }
+      const it = s.items[0];
+      return `<section class="scr one">${piece(it)}${slate(p, s, it, total)}</section>`;
+    }).join("");
+  }
+  const nxt = `<section class="nx"><a href="${nx.page || "#" + nx.slug}" data-cur="Next"><span class="dim">Next</span><b>${esc(nx.title)} →</b></a></section>`;
+  view.innerHTML = `<article class="pj${gal ? " gal" : ""}" data-slug="${p.slug}">${head}${body}${nxt}</article>`;
+  view.classList.toggle("snap", !gal);
+  view.scrollTop = 0; justify(); wire(p);
 }
-// pictures fill the screen when they're close to its shape; otherwise they sit whole on black
-function fitAll() {
-  const sa = innerWidth / innerHeight;
-  $$(".scr.one, .scr.open, .scr.next", view).forEach((s) => { const a = +s.style.getPropertyValue("--a"); s.classList.toggle("cover", !a || Math.abs(Math.log(a / sa)) < .22); });
-  // rows: as tall as the screen allows without running off the sides (thumbnails sit smaller, with room around them)
-  if (innerWidth > 820) $$(".row:not(.strip) .track", view).forEach((tr) => {
-    const cells = $$(".cell", tr), A = cells.reduce((t, c) => t + (+c.style.getPropertyValue("--a")), 0), th = tr.closest(".thumbs");
-    const gap = th ? 16 : 2, avail = innerWidth - 2 * (th ? 280 : 30) - gap * (cells.length - 1);
-    const h = Math.min(innerHeight * (th ? .5 : 1), avail / A); cells.forEach((c) => (c.style.height = h.toFixed(1) + "px"));
+// gallery rows: pictures at their own shapes, edges flush, never taller than most of the screen
+function justify() {
+  $$(".gm", view).forEach((row) => {
+    const tiles = [...row.children], W = row.clientWidth, gap = 10;
+    const A = (t) => +t.style.getPropertyValue("--a"), hOf = (ts) => (W - gap * (ts.length - 1) - 1) / ts.reduce((a, t) => a + A(t), 0);
+    if (innerWidth < 820) { tiles.forEach((t) => (t.style.width = "100%")); return; }
+    const maxH = innerHeight * .74;
+    for (let k = 0; k < tiles.length;) {
+      const line = [tiles[k++]];
+      while (k < tiles.length && hOf(line) > maxH && hOf([...line, tiles[k]]) >= maxH * .6) line.push(tiles[k++]);
+      const h = Math.min(hOf(line), maxH); line.forEach((t) => (t.style.width = `${(A(t) * h).toFixed(1)}px`));
+    }
   });
 }
-addEventListener("resize", () => { if (!view.hidden) fitAll(); });
-
-let playing = null;   // the film that's playing with sound
+addEventListener("resize", () => { if (!view.hidden) justify(); });
 function wire(p) {
-  const vis = new IntersectionObserver((es) => es.forEach((e) => {
-    const v = $("video", e.target); if (!v) return;
-    if (e.isIntersecting && e.intersectionRatio > .55) { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); }
-    else { v.pause(); if (v === playing?.v && e.intersectionRatio < .2) stopSound(); }
-  }), { root: view, threshold: [0, .2, .55, .9] });
-  $$(".scr.one, .scr.open, .scr.next, .cell", view).forEach((el) => { if (!el.closest(".strip")) vis.observe(el); });
-  // strips scroll sideways: the ones in view play
-  $$(".strip .track", view).forEach((tr) => {
-    const io = new IntersectionObserver((es) => es.forEach((e) => { const v = $("video", e.target); if (!v) return; if (e.isIntersecting && e.intersectionRatio > .6) { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); } else v.pause(); }), { root: tr, threshold: [0, .6] });
-    $$(".cell", tr).forEach((c) => io.observe(c));
-    // a mouse wheel moves the strip sideways until it reaches the end, then the page carries on
-    tr.addEventListener("wheel", (e) => { if (Math.abs(e.deltaY) < Math.abs(e.deltaX)) return; const max = tr.scrollWidth - tr.clientWidth; if ((e.deltaY > 0 && tr.scrollLeft < max - 2) || (e.deltaY < 0 && tr.scrollLeft > 2)) { e.preventDefault(); tr.scrollLeft += e.deltaY; } }, { passive: false });
-  });
-  $$(".scr.one, .cell", view).forEach((el) => el.addEventListener("click", () => {
-    const it = p.pieces[+el.dataset.k]; if (!it) return;
-    if (it.play) { location.href = it.play; return; }
-    if (it.yt) { const f = $(".fill", el) || el; f.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${it.yt.id}?autoplay=1&rel=0&modestbranding=1" allow="autoplay; fullscreen" allowfullscreen></iframe>`; el.removeAttribute("data-cur"); return; }
-    const v = $("video", el); if (!v || !it.audio) return;
-    if (playing?.v === v) { stopSound(); return; }
-    stopSound(); if (!v.src) v.src = v.dataset.src; v.currentTime = 0; v.muted = false; v.loop = false; v.play().catch(() => {});
-    playing = { v, el }; el.classList.add("live"); el.dataset.cur = "Sound off"; curl.textContent = "Sound off";
-    v.onended = () => { stopSound(); v.loop = true; v.play().catch(() => {}); };
-  }));
-  // scrub: click the line along the bottom
-  $$(".prog", view).forEach((pr) => pr.addEventListener("click", (e) => { e.stopPropagation(); const v = $("video", pr.parentElement); if (!v?.duration) return; const r = pr.getBoundingClientRect(); v.currentTime = (e.clientX - r.left) / r.width * v.duration; }));
+  $$(".pc", view).forEach((el) => el.addEventListener("click", () => { const it = p.pieces[+el.dataset.k]; if (!it) return; if (it.play) { location.href = it.play; return; } plOpen(p, it.k); }));
+  // a mouse wheel moves a strip sideways until it reaches the end, then the page carries on
+  $$(".strip .track", view).forEach((tr) => tr.addEventListener("wheel", (e) => { if (Math.abs(e.deltaY) < Math.abs(e.deltaX)) return; const max = tr.scrollWidth - tr.clientWidth; if ((e.deltaY > 0 && tr.scrollLeft < max - 2) || (e.deltaY < 0 && tr.scrollLeft > 2)) { e.preventDefault(); tr.scrollLeft += e.deltaY; } }, { passive: false }));
 }
-function stopSound() { if (!playing) return; const { v, el } = playing; playing = null; v.muted = true; v.loop = true; el.classList.remove("live"); el.dataset.cur = "Sound on"; if (curl.textContent === "Sound off") curl.textContent = "Sound on"; }
 
-// timecodes and progress lines run off the films themselves
+// ---------- the player: click a piece and it opens full screen, with its own controls ----------
+const pl = document.createElement("div"); pl.className = "pl"; pl.hidden = true;
+pl.innerHTML = `<div class="pl-st"></div>
+  <div class="pl-top"><div class="pl-t"></div><button type="button" class="pl-x">Close</button></div>
+  <div class="pl-bot"><button type="button" class="pl-pp">Pause</button><span class="pl-tc"></span><div class="pl-bar"><b></b></div><button type="button" class="pl-snd">Sound on</button><button type="button" class="pl-fs">Full screen</button><span class="pl-nav"><button type="button" class="pl-pv">Prev</button><button type="button" class="pl-nx">Next</button></span></div>`;
+document.body.appendChild(pl);
+const plSt = $(".pl-st", pl); let plP = null, plK = -1, plV = null, idle = 0;
+const plList = () => plP.pieces.filter((x) => !x.play);
+function plOpen(p, k) { plP = p; plK = k; pl.hidden = false; document.documentElement.classList.add("playing"); plShow(); history.pushState({ pl: 1 }, "", location.href); }
+function plShow() {
+  const it = plP.pieces[plK], L = plList(), n = L.indexOf(it);
+  plV = null; pl.classList.toggle("img", kindOf(it) === "img"); pl.classList.toggle("yt", kindOf(it) === "yt");
+  plSt.innerHTML = it.yt ? `<iframe src="https://www.youtube-nocookie.com/embed/${it.yt.id}?autoplay=1&rel=0&modestbranding=1" allow="autoplay; fullscreen" allowfullscreen></iframe>`
+    : it.film ? `<video src="${it.film}" poster="${it.still}" autoplay playsinline></video>` : `<img src="${it.still}" alt="">`;
+  $(".pl-t", pl).innerHTML = `<span>${esc(plP.title)}${it.sec?.head && it.sec.head !== plP.title ? ` <span class="dim">/</span> ${esc(it.sec.head)}` : ""}</span>${it.caption ? `<span class="dim">${esc(it.caption)}</span>` : ""}<span class="dim">${pad(n + 1)} / ${pad(L.length)}</span>`;
+  plV = $("video", plSt);
+  if (plV) { plV.addEventListener("click", plToggle); plV.addEventListener("play", plUI); plV.addEventListener("pause", plUI); plV.addEventListener("ended", () => { plV.currentTime = 0; plUI(); }); plV.muted = false; plV.play().catch(() => { plV.muted = true; plV.play().catch(() => {}); plUI(); }); }
+  plUI(); wake();
+}
+function plUI() { if (!plV) return; $(".pl-pp", pl).textContent = plV.paused ? "Play" : "Pause"; $(".pl-snd", pl).textContent = plV.muted ? "Sound off" : "Sound on"; pl.classList.toggle("paused", plV.paused); }
+const plToggle = () => { if (!plV) return; plV.paused ? plV.play() : plV.pause(); };
+const plHide = () => { pl.hidden = true; plSt.innerHTML = ""; plV = null; document.documentElement.classList.remove("playing"); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); };
+const plClose = () => { if (pl.hidden) return; if (history.state?.pl) history.back(); else plHide(); };
+const plStep = (d) => { const L = plList(), n = L.indexOf(plP.pieces[plK]); plK = L[(n + d + L.length) % L.length].k; plShow(); };
+addEventListener("popstate", () => { if (!pl.hidden) plHide(); });
+$(".pl-x", pl).onclick = plClose; $(".pl-pp", pl).onclick = plToggle; $(".pl-pv", pl).onclick = () => plStep(-1); $(".pl-nx", pl).onclick = () => plStep(1);
+$(".pl-snd", pl).onclick = () => { if (!plV) return; plV.muted = !plV.muted; plUI(); };
+$(".pl-fs", pl).onclick = () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else if (pl.requestFullscreen) pl.requestFullscreen().catch(() => {}); else plV?.webkitEnterFullscreen?.(); };
+$(".pl-bar", pl).addEventListener("pointerdown", (e) => { if (!plV?.duration) return; const r = e.currentTarget.getBoundingClientRect(), seek = (x) => (plV.currentTime = Math.max(0, Math.min(1, (x - r.left) / r.width)) * plV.duration); seek(e.clientX);
+  const mv = (ev) => seek(ev.clientX), up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); }; addEventListener("pointermove", mv); addEventListener("pointerup", up); });
+// the controls step back while the film plays and you're not moving
+function wake() { pl.classList.remove("idle"); clearTimeout(idle); idle = setTimeout(() => { if (plV && !plV.paused) pl.classList.add("idle"); }, 2400); }
+pl.addEventListener("pointermove", wake);
+addEventListener("keydown", (e) => {
+  if (pl.hidden) return;
+  if (e.key === "Escape") { if (!document.fullscreenElement) plClose(); return; }
+  if (e.key === " ") { e.preventDefault(); plToggle(); wake(); }
+  if (e.key === "ArrowRight") { if (plV && !e.shiftKey) plV.currentTime += 5; else plStep(1); }
+  if (e.key === "ArrowLeft") { if (plV && !e.shiftKey) plV.currentTime -= 5; else plStep(-1); }
+});
+
+// timecodes run off the films themselves
 function ticker() {
   if (!home.hidden && cueV) tcEl.textContent = `TC ${tc(cueV.currentTime)}`;
-  if (!view.hidden) $$("video", view).forEach((v) => { if (v.paused && v !== playing?.v) return; const box = v.closest(".scr, .cell"); if (!box) return; const t = $(".tcv", box); if (t) t.textContent = tc(v.currentTime); const b = $(".prog b", box); if (b && v.duration) b.style.transform = `scaleX(${(v.currentTime / v.duration).toFixed(4)})`; });
+  if (!pl.hidden && plV) { $(".pl-tc", pl).innerHTML = `${tc(plV.currentTime)} <span class="dim">/ ${tc(plV.duration)}</span>`; if (plV.duration) $(".pl-bar b", pl).style.transform = `scaleX(${(plV.currentTime / plV.duration).toFixed(4)})`; }
   requestAnimationFrame(ticker);
 }
 requestAnimationFrame(ticker);
@@ -182,7 +208,7 @@ function route() {
   const p = LIST.find((q) => q.slug === h);
   if (p && p.page) { location.href = p.page; return; }
   if (h === "about") { history.replaceState(null, "", location.pathname); ctOpen(); return; }
-  stopSound();
+  if (!pl.hidden) plHide();
   if (p) {
     if (!home.hidden) homeY = scrollY;
     home.hidden = true; view.hidden = false; document.body.classList.add("viewing");
@@ -197,7 +223,7 @@ addEventListener("hashchange", route);
 document.addEventListener("click", (e) => { const a = e.target.closest("a[data-home]"); if (!a) return; e.preventDefault(); if (location.hash) { history.pushState(null, "", location.pathname); route(); } });
 // keys: up and down step through the screens, space plays with sound
 addEventListener("keydown", (e) => {
-  if (view.hidden || e.metaKey || e.ctrlKey || document.documentElement.matches(".flying,.devouring")) return;
+  if (view.hidden || !pl.hidden || e.metaKey || e.ctrlKey || document.documentElement.matches(".flying,.devouring")) return;
   if (e.key === "Escape" && !ctOn) { history.pushState(null, "", location.pathname); route(); }
 });
 
@@ -213,11 +239,11 @@ addEventListener("keydown", (e) => { if (e.key === "Escape" && ctOn) ctClose(); 
 const crawler = new Crawler({
   holes: [$("#hole")], pads: [$("#pad")], eats: [$("#eat")], reduce: matchMedia("(prefers-reduced-motion: reduce)").matches,
   sfx: (k, a, b) => sound.critter(k, a, b),
-  sel: ".list a .t,.list a .n,.list a .k,.info span,.tc,.who,.nav a,.nav button,.brand,.slate span,.title h1,.title span,.title p,.cell,.scr.one .fill",
+  sel: ".list a .t,.list a .n,.list a .k,.info span,.tc,.who,.nav a,.nav button,.brand,.slate span,.pj-h h1,.pj-m span,.pj-h p,.pc,.gh h2,.nx b",
   letter: ".list a .n",
   loose: ",.list a .k,.slate span,.info span",
   gentle: true,
-  anchors: () => { const out = []; $$(".list a .t,.title h1,.cell,.scr.one .fill").forEach((el) => { const q = el.getBoundingClientRect(); if (q.bottom < 0 || q.top > innerHeight || !q.width) return; out.push([q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]); }); return out; },
+  anchors: () => { const out = []; $$(".list a .t,.pj-h h1,.pc").forEach((el) => { const q = el.getBoundingClientRect(); if (q.bottom < 0 || q.top > innerHeight || !q.width) return; out.push([q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]); }); return out; },
 });
 { let ly = 0; view.addEventListener("scroll", () => { const dy = view.scrollTop - ly; ly = view.scrollTop; if (dy) crawler.shift(0, -dy); }, { passive: true }); }
 addEventListener("hashchange", () => { if (!touch) setTimeout(() => crawler.leap("bottom"), 60); });
