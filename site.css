@@ -217,7 +217,6 @@ html.crawling,html.crawling *{cursor:auto!important}
 .thumbs .slate.mini .sl-l span{color:var(--ink)}
 .thumbs .slate.mini .sl-l span+span+span{color:var(--dim)}
 /* on project pages the header sits over a soft fall of black, so the work scrolls away under it */
-body.viewing .top::before{content:"";position:absolute;inset:0 0 -34px;background:linear-gradient(#000 0,rgba(0,0,0,.85) 45%,rgba(0,0,0,0));z-index:-1;pointer-events:none}
 /* strip arrows */
 .strip .st-prev,.strip .st-next{position:absolute;top:50%;translate:0 -50%;z-index:3;width:38px;height:38px;color:#fff;background:rgba(0,0,0,.45);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.25);transition:opacity .25s,background .2s,color .2s}
 .strip .st-prev{left:var(--side)}.strip .st-next{right:var(--side)}
