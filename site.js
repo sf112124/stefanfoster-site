@@ -106,15 +106,17 @@ function screens(p) {
   out.forEach((s) => { if (s.row && !s.thumbs && s.items.length > 3) s.strip = true; });
   return out;
 }
-const tag = (it) => { const k = kindOf(it); return k === "film" || k === "yt" ? `<span class="playtag"><i></i>Play${it.dur ? ` <span>${dur(it.dur)}</span>` : ""}</span>` : k === "play" ? `<span class="playtag open">Open →</span>` : ""; };
+const tag = (it) => { const k = kindOf(it); return k === "film" || k === "yt" ? `<span class="playtag"><i></i>Play</span>` : k === "play" ? `<span class="playtag open">Open →</span>` : ""; };
 const curOf = (it) => ({ film: "Play", yt: "Play", play: "Open", img: "View" })[kindOf(it)];
 function piece(it, cls = "") {
   return `<figure class="pc ${cls} k-${kindOf(it)}" data-k="${it.k}" data-cur="${curOf(it)}" style="--a:${(it.w / it.h).toFixed(4)}"><div class="pm"><img src="${it.still}" alt="" loading="lazy" decoding="async">${tag(it)}</div></figure>`;
 }
-function slate(p, s, it, total) {
-  const sec = s.sec?.head && s.sec.head !== p.title ? s.sec.head : "";
-  return `<div class="slate"><div class="sl-l"><span>${esc(p.title)}${sec ? ` <span class="dim">/</span> ${esc(sec)}` : ""}</span>${s.sec?.text ? `<span class="dim">${esc(s.sec.text)}</span>` : ""}${it?.caption ? `<span class="dim">${esc(it.caption)}</span>` : ""}${it?.stat ? `<span class="dim">${esc(it.stat)}</span>` : ""}</div>
-    <div class="sl-r">${it ? `<span>${pad(it.k + 1)} <span class="dim">/ ${pad(total)}</span></span>${it.dur && it.film ? `<span class="dim">${dur(it.dur)}</span>` : ""}` : `<span class="dim">${pad(total)} pieces</span>`}</div></div>`;
+function slate(p, s, it) {
+  // a title and a line under it, nothing else
+  const head = s.sec?.head && s.sec.head !== p.title ? s.sec.head : "";
+  const title = head || it?.caption || p.title;
+  const sub = [s.sec?.text, head ? it?.caption : "", it?.stat].filter(Boolean);
+  return `<div class="slate"><div class="sl-l"><span>${esc(title)}</span>${sub.map((x) => `<span class="dim">${esc(x)}</span>`).join("")}</div></div>`;
 }
 function renderProject(p) {
   p.pieces.forEach((it, k) => (it.k = k));
