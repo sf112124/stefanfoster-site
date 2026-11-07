@@ -66,8 +66,6 @@ list.innerHTML = LIST.map((p, i) => `<li><a href="${p.page ? p.page : "#" + p.sl
 let cueI = -1, cueV = null;
 function cue(i) {
   if (i === cueI) return; cueI = i;
-  // a focus pull onto the new one, like racking a lens
-  layers.forEach((l) => l.classList.remove("sharp")); void layers[i].offsetWidth; layers[i].classList.add("sharp");
   layers.forEach((l, k) => { l.classList.toggle("on", k === i); const v = $("video", l); if (!v) return; if (k === i) { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); } else setTimeout(() => { if (cueI !== k) v.pause(); }, 400); });
   cueV = $("video", layers[i]);
   $$("a", list).forEach((a, k) => a.classList.toggle("on", k === i));
@@ -80,7 +78,7 @@ function place(i) {
   // wide films fill the screen; tall phone films stand in the middle of it at their own shape
   const l = layers[i], a = LIST[i].cover?.a || 16 / 9;
   if (innerWidth <= 820 || a >= 1) { Object.assign(l.style, { left: "0px", top: "0px", width: "100%", height: "100%" }); return; }
-  const h = innerHeight * .76, w = h * a;
+  const h = innerHeight, w = h * a;
   Object.assign(l.style, { left: (innerWidth - w) / 2 + "px", top: (innerHeight - h) / 2 + "px", width: w + "px", height: h + "px" });
 }
 $$("a", list).forEach((a) => { a.addEventListener("pointerenter", () => { cue(+a.dataset.i); sound.tick?.(.5, .015); }); a.dataset.cur = "Open"; });
