@@ -83,7 +83,7 @@ function place(i) {
 }
 $$("a", list).forEach((a) => { a.addEventListener("pointerenter", () => { cue(+a.dataset.i); sound.tick?.(.5, .015); }); a.dataset.cur = "Open"; });
 // desktops get the contact sheet; phones keep the menu over the work
-const SHEETED = !touch && innerWidth > 820;
+const SHEETED = false; // contact sheet parked: set to (!touch && innerWidth > 820) to bring it back
 if (!SHEETED) cue(0);
 bg.addEventListener("click", () => { const p = LIST[cueI]; if (p) location.href = p.page ? p.page : "#" + p.slug; });
 bg.dataset.cur = "Open";
