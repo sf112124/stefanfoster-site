@@ -192,7 +192,9 @@ requestAnimationFrame(frame);
 const home = $("#home"), view = $("#view");
 let homeY = 0;
 function route() {
-  const h = decodeURIComponent(location.hash.slice(1));
+  let h = decodeURIComponent(location.hash.slice(1));
+  // old links to Ai Commissions land on Ai Work, where the Jacquemus pieces now live
+  if (h === "ai-commissions") { h = "ai-experiments"; history.replaceState(null, "", "#ai-experiments"); }
   const p = PROJECTS.find((q) => q.slug === h);
   if (p && p.page) { location.href = p.page; return; }
   if (h === "about") { history.replaceState(null, "", location.pathname); ctOpen(); return; }
