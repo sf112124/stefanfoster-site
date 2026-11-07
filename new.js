@@ -250,8 +250,14 @@ function renderProject(i) {
     const wrap = document.createElement("div"); wrap.className = "carw"; row.before(wrap); wrap.appendChild(row);
     ["prev", "next"].forEach((d) => { const b = document.createElement("button"); b.type = "button"; b.className = "car-" + d; b.setAttribute("aria-label", d === "next" ? "More" : "Back"); b.textContent = d === "next" ? "→" : "←";
       b.addEventListener("click", () => row.scrollBy({ left: (d === "next" ? 1 : -1) * row.clientWidth * .8, behavior: "smooth" })); wrap.appendChild(b); });
-    const upd = () => { wrap.classList.toggle("at-start", row.scrollLeft < 8); wrap.classList.toggle("at-end", row.scrollLeft + row.clientWidth > row.scrollWidth - 8); };
-    row.addEventListener("scroll", upd, { passive: true }); upd();
+    // the row runs right out to the edges of the screen; whatever sits outside the page's margins is faded,
+    // so you can see there's more waiting off to the side
+    const bleed = () => { row.style.marginLeft = row.style.width = row.style.paddingLeft = row.style.paddingRight = ""; const r = wrap.getBoundingClientRect(), L = Math.max(0, r.left), R = Math.max(0, innerWidth - r.right);
+      Object.assign(row.style, { marginLeft: -L + "px", width: innerWidth + "px", paddingLeft: L + "px", paddingRight: R + "px", scrollPaddingLeft: L + "px" }); row._L = L; row._R = R; };
+    const upd = () => { wrap.classList.toggle("at-start", row.scrollLeft < 8); wrap.classList.toggle("at-end", row.scrollLeft + row.clientWidth > row.scrollWidth - 8);
+      const l0 = row._L || 0, r0 = innerWidth - (row._R || 0);
+      [...row.children].forEach((t) => { const b = t.getBoundingClientRect(), vis = Math.max(0, Math.min(b.right, r0) - Math.max(b.left, l0)) / Math.max(1, b.width); t.classList.toggle("out", vis < .7); }); };
+    bleed(); row.addEventListener("scroll", upd, { passive: true }); addEventListener("resize", () => { bleed(); upd(); }); upd();
   });
 }
 const tio = new IntersectionObserver((es) => es.forEach((e) => {
