@@ -20,7 +20,7 @@ function tick() {
     let e = 0;
     if (mx >= tr.left - 20 && mx <= tr.right + 20 && my >= tr.top - 10 && my <= tr.bottom + 10) { const r = o.el.getBoundingClientRect(), R = Math.max(90, tr.height * 2.2), d = Math.hypot(r.left + r.width / 2 - mx, r.top + r.height / 2 - my), t = Math.max(0, 1 - d / R); e = t * t * (3 - 2 * t); }
     o.k += (e - o.k) * .22; const w = Math.round(o.k * 100);
-    if (o.w !== w) { o.w = w; o.el.style.fontVariationSettings = w ? `"wght" ${Math.round(620 + w * 2.8)}` : ""; }
+    if (o.w !== w) { o.w = w; o.el.style.fontVariationSettings = w ? `"wght" ${Math.round(500 + w * 2.6)}` : ""; }
   }
   requestAnimationFrame(tick);
 }

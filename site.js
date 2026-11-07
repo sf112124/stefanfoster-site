@@ -22,7 +22,7 @@ const sound = new Sound();
 const ORDER = ["ai-experiments", "la-croisiere", "les-benjamins", "relax", "summer-of-sport", "3d-explorations", "coca-cola", "gumtree"];
 const LIST = [...PROJECTS].sort((a, b) => (ORDER.indexOf(a.slug) + 1 || 99) - (ORDER.indexOf(b.slug) + 1 || 99));
 // full-quality loops made for the index background
-const HI = ["ai-experiments", "la-croisiere", "relax"];
+const HI = ["ai-experiments"];
 const STILL = { "coca-cola": "media/coca-cola/hover-1.jpg", gumtree: "media/gumtree/hover-1.jpg" };
 LIST.forEach((p) => {
   const lib = MEDIA[p.slug] || {}; let sec = null; p.pieces = [];
@@ -36,10 +36,10 @@ LIST.forEach((p) => {
     if (m.type === "video") { x.loop = url(fs, m.loop); x.film = url(fs, m.full || m.loop); }
     p.pieces.push(x);
   });
-  if (HI.includes(p.slug)) p.cover = { v: url(p.slug, "cover.mp4"), i: url(p.slug, "cover.webp") };
-  else if (p.slug === "les-benjamins") p.cover = { v: "media/les-benjamins/banner.mp4", i: "media/les-benjamins/banner-poster.jpg" };
-  else if (STILL[p.slug]) p.cover = { i: STILL[p.slug] };
-  else { const c = p.pieces.find((x) => x.loop) || p.pieces[0]; if (c) p.cover = { v: c.loop, i: c.still }; }
+  if (HI.includes(p.slug)) p.cover = { v: url(p.slug, "cover.mp4"), i: url(p.slug, "cover.webp"), a: 16 / 9 };
+  else if (p.slug === "les-benjamins") p.cover = { v: "media/les-benjamins/banner.mp4", i: "media/les-benjamins/banner-poster.jpg", a: 16 / 9 };
+  else if (STILL[p.slug]) p.cover = { i: STILL[p.slug], a: 16 / 9 };
+  else { const c = p.pieces.find((x) => x.loop) || p.pieces[0]; if (c) p.cover = { v: c.loop, i: c.still, a: c.w / c.h }; }
 });
 
 // ---------- the dot ----------
@@ -49,7 +49,7 @@ if (!touch) {
   document.documentElement.classList.add("dotc");
   addEventListener("pointermove", (e) => { mx = e.clientX; my = e.clientY; }, { passive: true });
   document.addEventListener("pointerover", (e) => { const big = e.target.closest?.("[data-cur]"); cur.classList.toggle("big", !!big); curl.textContent = big ? big.dataset.cur : ""; });
-  const loop = () => { cx += (mx - cx) * .35; cy += (my - cy) * .35; cur.style.transform = `translate3d(${cx.toFixed(1)}px,${cy.toFixed(1)}px,0)`; requestAnimationFrame(loop); };
+  const loop = () => { cx += (mx - cx) * .72; cy += (my - cy) * .72; cur.style.transform = `translate3d(${cx.toFixed(1)}px,${cy.toFixed(1)}px,0)`; requestAnimationFrame(loop); };
   requestAnimationFrame(loop);
 }
 
@@ -57,10 +57,11 @@ if (!touch) {
 const home = $("#home"), view = $("#view"), bg = $("#bg"), list = $("#list"), info = $("#info"), tcEl = $("#tc");
 const layers = LIST.map((p) => {
   const d = document.createElement("div"); d.className = "layer";
+  d.style.setProperty("--a", (p.cover?.a || 16 / 9).toFixed(4)); d.classList.toggle("tall", (p.cover?.a || 1.7) < 1);
   d.innerHTML = p.cover?.v ? `<video muted loop playsinline preload="none" poster="${p.cover.i}" data-src="${p.cover.v}"></video>` : `<img src="${p.cover?.i || ""}" alt="" loading="lazy">`;
   bg.appendChild(d); return d;
 });
-list.innerHTML = LIST.map((p, i) => `<li><a href="${p.page ? p.page : "#" + p.slug}" data-i="${i}"><span class="n">${pad(i + 1)}</span><span class="t">${esc(p.title)}</span><span class="k">${esc(p.client)}</span></a></li>`).join("");
+list.innerHTML = LIST.map((p, i) => `<li><a href="${p.page ? p.page : "#" + p.slug}" data-i="${i}"><span class="n">${pad(i + 1)}</span><span class="t" data-vt>${esc(p.title)}</span><span class="k">${esc(p.client)}</span></a></li>`).join("");
 let cueI = -1, cueV = null;
 function cue(i) {
   if (i === cueI) return; cueI = i;
@@ -68,6 +69,7 @@ function cue(i) {
   cueV = $("video", layers[i]);
   $$("a", list).forEach((a, k) => a.classList.toggle("on", k === i));
   const p = LIST[i], n = p.pieces.length;
+  if (innerWidth > 820) info.style.left = bg.offsetLeft + layers[i].offsetLeft + "px"; else info.style.left = "";
   info.innerHTML = `<span>${esc(p.kind || "")}</span><span class="dim">${n ? pad(n) + (n === 1 ? " piece" : " pieces") : "Film"}</span>`;
 }
 $$("a", list).forEach((a) => { a.addEventListener("pointerenter", () => { cue(+a.dataset.i); sound.tick?.(.5, .015); }); a.dataset.cur = "Open"; });
@@ -107,7 +109,7 @@ function slate(p, s, it, total) {
 function renderProject(p) {
   p.pieces.forEach((it, k) => (it.k = k));
   const total = p.pieces.length, nx = LIST[(LIST.indexOf(p) + 1) % LIST.length], gal = GALLERY.includes(p.slug);
-  const head = `<header class="pj-h"><h1>${esc(p.title)}</h1><div class="pj-m"><span>${esc(p.client)}</span><span class="dim">${esc(p.kind || "")}</span></div>${p.blurb ? `<p>${esc(p.blurb)}</p>` : ""}</header>`;
+  const head = `<header class="pj-h"><h1 data-vt>${esc(p.title)}</h1><div class="pj-m"><span>${esc(p.client)}</span><span class="dim">${esc(p.kind || "")}</span></div>${p.blurb ? `<p>${esc(p.blurb)}</p>` : ""}</header>`;
   let body;
   if (gal) {
     // the old layout: sections, and rows of pictures at their own shapes, as tall as the screen allows
@@ -126,9 +128,8 @@ function renderProject(p) {
       return `<section class="scr one">${piece(it)}${slate(p, s, it, total)}</section>`;
     }).join("");
   }
-  const nxt = `<section class="nx"><a href="${nx.page || "#" + nx.slug}" data-cur="Next"><span class="dim">Next</span><b>${esc(nx.title)} →</b></a></section>`;
+  const nxt = `<section class="nx"><a href="${nx.page || "#" + nx.slug}" data-cur="Next"><span class="dim">Next</span><b data-vt>${esc(nx.title)}</b> <i>→</i></a></section>`;
   view.innerHTML = `<article class="pj${gal ? " gal" : ""}" data-slug="${p.slug}">${head}${body}${nxt}</article>`;
-  view.classList.toggle("snap", !gal);
   view.scrollTop = 0; justify(); wire(p);
 }
 // gallery rows: pictures at their own shapes, edges flush, never taller than most of the screen
@@ -145,11 +146,16 @@ function justify() {
     }
   });
 }
-addEventListener("resize", () => { if (!view.hidden) justify(); });
+addEventListener("resize", () => { if (!view.hidden) justify(); else { const i = cueI; cueI = -1; cue(Math.max(0, i)); } });
 function wire(p) {
   $$(".pc", view).forEach((el) => el.addEventListener("click", () => { const it = p.pieces[+el.dataset.k]; if (!it) return; if (it.play) { location.href = it.play; return; } plOpen(p, it.k); }));
-  // a mouse wheel moves a strip sideways until it reaches the end, then the page carries on
-  $$(".strip .track", view).forEach((tr) => tr.addEventListener("wheel", (e) => { if (Math.abs(e.deltaY) < Math.abs(e.deltaX)) return; const max = tr.scrollWidth - tr.clientWidth; if ((e.deltaY > 0 && tr.scrollLeft < max - 2) || (e.deltaY < 0 && tr.scrollLeft > 2)) { e.preventDefault(); tr.scrollLeft += e.deltaY; } }, { passive: false }));
+  // strips: the page scrolls on down as normal; arrows (or a sideways swipe) move along the strip
+  $$(".strip", view).forEach((st) => { const tr = $(".track", st);
+    ["prev", "next"].forEach((d) => { const b = document.createElement("button"); b.type = "button"; b.className = "st-" + d; b.textContent = d === "next" ? "→" : "←"; b.setAttribute("aria-label", d);
+      b.addEventListener("click", () => tr.scrollBy({ left: (d === "next" ? 1 : -1) * tr.clientWidth * .7, behavior: "smooth" })); st.appendChild(b); });
+    const upd = () => { st.classList.toggle("at-start", tr.scrollLeft < 8); st.classList.toggle("at-end", tr.scrollLeft + tr.clientWidth > tr.scrollWidth - 8); };
+    tr.addEventListener("scroll", upd, { passive: true }); upd(); });
+  vtMeasure();
 }
 
 // ---------- the player: click a piece and it opens full screen, with its own controls ----------
@@ -201,6 +207,27 @@ function ticker() {
 }
 requestAnimationFrame(ticker);
 
+// ---------- reactive type: letters thicken a little as the pointer passes, then thin back ----------
+let VT = [];
+function vtWrap(el) { if (el.dataset.vtDone) return; el.dataset.vtDone = 1; const t = el.textContent; el.setAttribute("aria-label", t);
+  el.innerHTML = t.split(" ").map((w) => `<span class="vw">${[...w].map((c) => `<span class="vl">${esc(c)}</span>`).join("")}</span>`).join(" "); }
+function vtMeasure() {
+  VT = []; $$("[data-vt]").forEach((el) => { if (el.closest("[hidden]")) return; vtWrap(el);
+    $$(".vl", el).forEach((l) => { l.style.fontVariationSettings = ""; l._w = null; }); });
+  const sy = view.hidden ? 0 : view.scrollTop;
+  $$("[data-vt] .vl").forEach((l) => { if (l.closest("[hidden]")) return; const r = l.getBoundingClientRect(); VT.push({ l, x: r.left + r.width / 2, y: r.top + r.height / 2 + sy, fixed: !l.closest("#view"), k: 0 }); });
+}
+if (!touch) {
+  document.fonts.ready.then(vtMeasure); addEventListener("resize", () => vtMeasure());
+  const vtLoop = () => {
+    const sy = view.hidden ? 0 : view.scrollTop, R = 150;
+    for (const L of VT) { const y = L.fixed ? L.y : L.y - sy, d = Math.hypot(L.x - cx, y - cy), t = Math.max(0, 1 - d / R), e = t * t * (3 - 2 * t);
+      L.k += (e - L.k) * .2; const w = Math.round(500 + L.k * 260); if (L._w !== w) { L._w = w; L.l.style.fontVariationSettings = `"wght" ${w}`; } }
+    requestAnimationFrame(vtLoop);
+  };
+  requestAnimationFrame(vtLoop);
+}
+
 // ---------- routes ----------
 function route() {
   let h = decodeURIComponent(location.hash.slice(1));
@@ -216,7 +243,7 @@ function route() {
     renderProject(p);
   } else {
     view.hidden = true; view.innerHTML = ""; home.hidden = false; document.body.classList.remove("viewing");
-    const i = cueI; cueI = -1; cue(Math.max(0, i));
+    const i = cueI; cueI = -1; cue(Math.max(0, i)); vtMeasure();
   }
 }
 addEventListener("hashchange", route);

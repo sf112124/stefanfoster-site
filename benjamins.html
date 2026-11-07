@@ -322,6 +322,34 @@ body{counter-reset:sec}
 .nav b{font-family:"Anybody",sans-serif;font-stretch:150%;font-weight:620;text-transform:uppercase;font-size:13px;letter-spacing:-.01em}
 .vt{display:inline-block}
 .vw{display:inline-block;white-space:nowrap}
+
+/* matched to the main site: same type voice (big Geist caps, small mono), square controls, no orange, no grain */
+:root{--bg:#fff;--alt:#f4f4f2;--ink:#0a0a0a;--acc:#0a0a0a;--line:rgba(10,10,10,.12)}
+::selection{background:#0a0a0a;color:#fff}
+.grain{display:none}
+.cur{width:6px;height:6px;margin:-3px 0 0 -3px}
+.cur::before{background:#0a0a0a}
+.t-hero,.t-head,.hero .t-hero,.sec .t-head,.sec .t-hero{font-family:"Geist",sans-serif;font-stretch:100%;font-weight:500;letter-spacing:-.045em;text-transform:uppercase}
+.hero .t-hero{font-size:clamp(40px,6.4vw,112px);line-height:.92}
+.sec .t-head,.sec .t-hero{font-size:clamp(28px,3.6vw,58px);line-height:.95}
+.t-sub,.story p{font-family:"Geist",sans-serif}
+.nav{background:rgba(255,255,255,.88);border-bottom:0;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.nav b{font-family:var(--mono);font-stretch:100%;font-weight:400;font-size:11px!important;letter-spacing:.04em;border-left:0}
+.nav a,.nav .home span{font-family:var(--mono);font-size:11px!important;letter-spacing:.04em}
+.nav .cta{background:#0a0a0a;color:#fff;border-radius:0}
+.nav .home{border-radius:0}
+.pill{border-radius:0;font:400 11px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:11px 14px;border:1px solid rgba(255,255,255,.35)}
+.pill:hover{transform:none}
+.pill.w{background:#fff;color:#0a0a0a;border-color:#fff}
+.pill.w:hover{background:#0a0a0a;color:#fff;border-color:#0a0a0a}
+.ui button{border-radius:0;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.25)}
+.ui .time{font-family:var(--mono);font-size:11px;letter-spacing:.04em}
+.ui .bar i{height:1px;border-radius:0}
+.ui .bar:hover i{height:1px}
+.ui .bar b{border-radius:0}
+.car .bar h3{font-family:var(--mono);font-weight:400;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.m,.m img,.m video,.flower img,.gal img,.gal video,.open .kv,.duo .m,#gate input,#gate button{border-radius:0!important}
+:root{--r:0}
 </style>
 </head>
 <body>
