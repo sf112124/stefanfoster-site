@@ -6,16 +6,22 @@ if (ON) {
   let h1 = null, chars = [], P = { x: 0, y: 0 }, t0 = 0, raf = 0;
   addEventListener("pointermove", (e) => { P.x = e.clientX; P.y = e.clientY; }, { passive: true });
   document.addEventListener("pointerover", (e) => {
-    const t = e.target.closest && e.target.closest("#pj .pj-t");
+    // only the words themselves set it off, not the empty width of the heading either side
+    const w = e.target.closest && e.target.closest("#pj .pj-t .wd, #pj .pj-t .sp"), t = w && w.closest(".pj-t");
     if (t && t !== h1 && !t.closest(".ab")) start(t);
   });
-  document.addEventListener("pointerout", (e) => { if (h1 && !h1.contains(e.relatedTarget)) stop(); });
+  document.addEventListener("pointerout", (e) => { if (h1 && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".wd, .sp") && h1.contains(e.relatedTarget))) stop(); });
   function start(t) {
     h1 = t; chars = [...t.querySelectorAll(".c")].map((el) => ({ el, txt: el.textContent, x: 0, y: 0, vx: 0, vy: 0 }));
+    const span = () => { let l = Infinity, r = -Infinity; t.querySelectorAll(".wd").forEach((w) => { const b = w.getBoundingClientRect(); l = Math.min(l, b.left); r = Math.max(r, b.right); }); return r - l; };
+    t.style.setProperty("--ms", 1); const w0 = span();
     // lower case, except the first and last letter, which carry the big spikes
     const letters = chars.filter((c) => /\p{L}/u.test(c.txt));
     letters.forEach((c, k) => { const s = c.txt.normalize("NFD").replace(/[̀-ͯ]/g, ""); c.el.textContent = k === 0 || k === letters.length - 1 ? s.toUpperCase() : s.toLowerCase(); });
-    t.classList.add("metal"); t0 = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
+    // make the metal version come out clearly bigger than the title it replaces
+    const fit = () => { if (h1 !== t) return; t.classList.add("measuring"); const w1 = span() || 1; t.classList.remove("measuring"); t.style.setProperty("--ms", Math.min(3.2, (w0 * 1.35) / w1).toFixed(3)); };
+    t.classList.add("metal"); fit(); document.fonts.load("40px Morveth").then(fit);
+    t0 = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
   }
   function stop() {
     const t = h1; h1 = null; cancelAnimationFrame(raf); if (!t) return;
@@ -28,11 +34,11 @@ if (ON) {
     const bp = (now - t0) / 1000 / BEAT, hit = Math.pow(1 - (bp % 1), 3), R = 160;
     chars.forEach((c) => {
       const b = c.el.getBoundingClientRect(), cx = b.left + b.width / 2 - c.x, cy = b.top + b.height / 2 - c.y, dx = cx - P.x, dy = cy - P.y, dd = Math.hypot(dx, dy) || 1, near = Math.exp(-(dd * dd) / (R * R));
-      const amp = hit * .8 + .35, j = amp * (6 + 16 * Math.random());
-      const tx = (Math.random() - .5) * j + dx / dd * near * 8, ty = (Math.random() - .5) * j * 1.4 + dy / dd * near * 34;
+      const amp = hit * .35 + .1, j = amp * (3 + 7 * Math.random());
+      const tx = (Math.random() - .5) * j, ty = (Math.random() - .5) * j * 1.3 + dy / dd * near * 8;
       c.vx += ((tx - c.x) * 260 - c.vx * 18) * dt; c.vy += ((ty - c.y) * 260 - c.vy * 18) * dt; c.x += c.vx * dt; c.y += c.vy * dt;
-      const rot = (Math.random() - .5) * 26 * amp, sk = (Math.random() - .5) * 20 * amp, sc = 1 + near * .45 + amp * Math.random() * .25;
-      c.el.style.transform = `translate(${c.x.toFixed(1)}px,${c.y.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) skewX(${sk.toFixed(1)}deg) scale(${sc.toFixed(2)},${(sc * (1 + amp * .35 * Math.random())).toFixed(2)})`;
+      const rot = (Math.random() - .5) * 10 * amp, sk = (Math.random() - .5) * 8 * amp, sc = 1 + near * .08 + amp * Math.random() * .08;
+      c.el.style.transform = `translate(${c.x.toFixed(1)}px,${c.y.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) skewX(${sk.toFixed(1)}deg) scale(${sc.toFixed(2)},${(sc * (1 + amp * .12 * Math.random())).toFixed(2)})`;
     });
   }
   addEventListener("hashchange", stop);
