@@ -291,11 +291,45 @@ if (!touch) {
     for (const L of VT) { const y = L.fixed ? L.y : L.y - sy, d = Math.hypot(L.x - cx, y - cy), t = Math.max(0, 1 - d / R), e = t * t * (3 - 2 * t);
       // in the menu the name you're on runs heavy and the rest run light; elsewhere titles sit at regular
       if (L.a === undefined) L.a = L.l.closest(".list a") || null;
+      if (L.a) continue;   // the menu has its own engine below
       const base = L.a ? (L.a.classList.contains("on") ? 780 : 300) : 400; L.b = L.b == null ? base : L.b + (base - L.b) * .18;
       L.k += (e - L.k) * .2; const w = Math.round(L.b + L.k * (L.a ? 120 : 190)); if (L._w !== w) { L._w = w; L.l.style.fontVariationSettings = `"wght" ${w}`; } }
     requestAnimationFrame(vtLoop);
   };
   requestAnimationFrame(vtLoop);
+
+  // ---------- the menu breathes like the old index: the names near the pointer swell, gradually, with no steps between
+  // rows; letters lean away from the pointer and thicken as it passes ----------
+  const M = { rows: null, base: 14, box: null };
+  const menuMeasure = () => {
+    const rows = $$("a", list); if (home.hidden || !rows.length) return;
+    rows.forEach((a) => { a.style.fontSize = ""; $$(".vl", a).forEach((l) => { l.style.transform = ""; }); });
+    M.base = parseFloat(getComputedStyle(rows[0]).fontSize) || 14;
+    M.rows = rows.map((a) => { const r = a.getBoundingClientRect(); return { a, y: r.top + r.height / 2, h: r.height, g: 0, ls: $$(".vl", a).map((l) => ({ l, k: 0, x: 0 })) }; });
+    const q = list.getBoundingClientRect(); M.box = { l: q.left, r: q.right, t: q.top, b: q.bottom };
+  };
+  document.fonts.ready.then(() => setTimeout(menuMeasure, 50)); addEventListener("resize", () => setTimeout(menuMeasure, 50));
+  addEventListener("hashchange", () => setTimeout(menuMeasure, 80));
+  const menuLoop = () => {
+    if (!home.hidden && M.rows) {
+      const B = M.box, near = cx > B.l - 180 && cx < B.r + 180 && cy > B.t - 90 && cy < B.b + 90, lr = list.getBoundingClientRect();
+      // read everything first, then write, so the page lays out once a frame
+      const reads = M.rows.map((R) => R.ls.map((L) => lr.left + L.l.offsetLeft + L.l.offsetWidth / 2));
+      M.rows.forEach((R, i) => {
+        const d = (cy - R.y) / R.h, t = near ? Math.exp(-d * d / 1.8) : 0; R.g += (t - R.g) * .12;
+        const fs = M.base * (1 + .95 * R.g); if (Math.abs((R._fs || 0) - fs) > .02) { R._fs = fs; R.a.style.fontSize = fs.toFixed(2) + "px"; }
+        const wRow = Math.max(R.a.classList.contains("on") ? 780 : 300, 300 + 420 * R.g);
+        R.ls.forEach((L, j) => {
+          const dx = reads[i][j] - cx, f = Math.exp(-(dx * dx) / (90 * 90)) * R.g;
+          L.k += (f - L.k) * .18; const push = Math.sign(dx) * 9 * L.k, w = Math.round(Math.min(900, wRow + 160 * L.k));
+          if (Math.abs(L.x - push) > .05) { L.x = push; L.l.style.transform = `translateX(${push.toFixed(2)}px)`; }
+          if (L._w !== w) { L._w = w; L.l.style.fontVariationSettings = `"wght" ${w}`; }
+        });
+      });
+    }
+    requestAnimationFrame(menuLoop);
+  };
+  requestAnimationFrame(menuLoop);
 }
 
 // ---------- routes ----------
