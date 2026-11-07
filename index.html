@@ -7,8 +7,14 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Stefan Foster</title>
-<meta name="description" content="Stefan Foster, creative art director in London. Film, AI and 3D.">
+<meta name="description" content="Stefan Foster, creative in London. Film, AI and 3D.">
 <meta name="theme-color" content="#000000">
+<meta property="og:title" content="Stefan Foster">
+<meta property="og:description" content="Stefan Foster, creative in London. Film, AI and 3D.">
+<meta property="og:image" content="https://stefanfoster.com/media/ai-experiments/cover.webp">
+<meta property="og:url" content="https://stefanfoster.com/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap">
@@ -26,15 +32,14 @@
 <main id="home">
   <div class="bg" id="bg" aria-hidden="true"></div>
   <ol class="list" id="list"></ol>
-  <div class="info" id="info" aria-live="polite"></div>
-  <div class="tc" id="tc" aria-hidden="true"></div>
 </main>
 
 <main id="view" hidden></main>
 
-<i class="mark tl" aria-hidden="true"></i><i class="mark tr" aria-hidden="true"></i><i class="mark bl" aria-hidden="true"></i><i class="mark br" aria-hidden="true"></i>
 
 <div class="corner">
+  <button class="playbtn" id="playBtn" type="button" aria-expanded="false">Play</button>
+  <span class="toys" id="toys" hidden>
   <button class="hole" id="hole" type="button" aria-label="Let the spider out"><i></i><span>SPIDER</span></button>
   <em class="vs" aria-hidden="true">vs</em>
   <button class="pad" id="pad" type="button" aria-label="Fight it with the ship"><svg viewBox="0 0 22 22" width="12" height="12" aria-hidden="true"><path d="M11 2.5 17.5 18.5 11 15 4.5 18.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="11" cy="11.5" r="1.6" fill="currentColor"/></svg><span>SPACESHIP</span></button>
@@ -42,6 +47,7 @@
   <button class="pad eatb" id="eat" type="button" aria-label="Become the creature and eat the page"><span>FEED ME</span></button>
   <span class="sep" aria-hidden="true">/</span>
   <button class="pball" id="pball" type="button" aria-label="Play Poké-folio"><span>PRESS START</span></button>
+  </span>
 </div>
 
 <div class="ct" id="ct" hidden>

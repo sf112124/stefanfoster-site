@@ -2,7 +2,6 @@ import { PROJECTS } from "./projects.js";
 import MEDIA from "./media.js";
 import { Crawler } from "./crawler.js";
 import { Sound } from "./sound.js";
-import SHEET from "./sheet.js";
 
 // Stefan Foster. Black page, small type, the work full screen.
 const $ = (s, r = document) => r.querySelector(s);
@@ -43,6 +42,10 @@ LIST.forEach((p) => {
   else { const c = p.pieces.find((x) => x.loop) || p.pieces[0]; if (c) p.cover = { v: c.loop, i: c.still, a: c.w / c.h }; }
 });
 
+// pictures fade up once they've arrived, never pop in
+document.addEventListener("load", (e) => { if (e.target.tagName === "IMG") e.target.classList.add("in"); }, true);
+const settle = (root) => $$("img", root).forEach((i) => { if (i.complete && i.naturalWidth) i.classList.add("in"); });
+
 // ---------- the dot ----------
 const cur = $("#cur"), curl = $("#curl");
 let mx = innerWidth / 2, my = innerHeight / 2, cx = mx, cy = my;
@@ -55,7 +58,7 @@ if (!touch) {
 }
 
 // ---------- index: the list sits quietly at the edge, the work plays behind it ----------
-const home = $("#home"), view = $("#view"), bg = $("#bg"), list = $("#list"), info = $("#info"), tcEl = $("#tc");
+const home = $("#home"), view = $("#view"), bg = $("#bg"), list = $("#list");
 const layers = LIST.map((p) => {
   const d = document.createElement("div"); d.className = "layer";
   d.style.setProperty("--a", (p.cover?.a || 16 / 9).toFixed(4)); d.classList.toggle("tall", (p.cover?.a || 1.7) < 1);
@@ -70,7 +73,6 @@ function cue(i) {
   cueV = $("video", layers[i]);
   $$("a", list).forEach((a, k) => a.classList.toggle("on", k === i));
   const p = LIST[i], n = p.pieces.length;
-  info.innerHTML = `<span>${esc(p.client)}</span><span>${esc(p.kind || "")}</span>`;
   place(i);
 }
 // on a desktop the clip pops up right beside the name you're on, at its own shape
@@ -81,58 +83,15 @@ function place(i) {
   const h = innerHeight, w = h * a;
   Object.assign(l.style, { left: (innerWidth - w) / 2 + "px", top: (innerHeight - h) / 2 + "px", width: w + "px", height: h + "px" });
 }
-$$("a", list).forEach((a) => { a.addEventListener("pointerenter", () => { cue(+a.dataset.i); sound.tick?.(.5, .015); }); a.dataset.cur = "Open"; });
+$$("a", list).forEach((a) => { a.addEventListener("pointerenter", () => { cue(+a.dataset.i); sound.tick?.(.5, .015); }); });
 // desktops get the contact sheet; phones keep the menu over the work
-const SHEETED = false; // contact sheet parked: set to (!touch && innerWidth > 820) to bring it back
-if (!SHEETED) cue(0);
+cue(0);
 bg.addEventListener("click", () => { const p = LIST[cueI]; if (p) location.href = p.page ? p.page : "#" + p.slug; });
-bg.dataset.cur = "Open";
 { let px = 0, py = 0; const drift = () => { if (!home.hidden) { const tx = (mx / innerWidth - .5) * -2.2, ty = (my / innerHeight - .5) * -2.2; px += (tx - px) * .05; py += (ty - py) * .05; bg.style.setProperty("--px", px.toFixed(3) + "%"); bg.style.setProperty("--py", py.toFixed(3) + "%"); } requestAnimationFrame(drift); }; if (!touch) requestAnimationFrame(drift); }
 // phones: the reel turns over on its own
 if (touch) setInterval(() => { if (!home.hidden) cue((cueI + 1) % LIST.length); }, 4200);
 
-// ---------- the contact sheet: every project laid out frame by frame. Touch one and its whole roll lights up ----------
-if (SHEETED) {
-  document.body.classList.add("sheeted");
-  const sheet = document.createElement("div"); sheet.className = "sheet";
-  const names = document.createElement("nav"); names.className = "names";
-  const idxOf = Object.fromEntries(LIST.map((p, i) => [p.slug, i])), count = {};
-  sheet.innerHTML = SHEET.map((f, k) => { const i = idxOf[f.p], p = LIST[i]; if (!p) return ""; count[i] = (count[i] || 0) + 1;
-    return `<a class="fr" href="${p.page || "#" + p.slug}" data-p="${i}" data-k="${k}" style="grid-column:span ${f.f.length}"><span class="im">${f.f.map((src) => `<img src="${src}" alt="" loading="lazy" decoding="async">`).join("")}<span class="tag"><b>${esc(f.t)}</b><span>${esc(f.c)}</span></span></span><span class="no">${pad(i + 1)}.${pad(count[i])}</span></a>`; }).join("");
-  names.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-p="${i}" data-cur="Open"><span class="n">${pad(i + 1)}</span>${esc(p.title)}</a>`).join("");
-  home.appendChild(sheet);
-  let hot = -1, live = null;
-  const light = (i) => {
-    if (i === hot) return; hot = i;
-    sheet.classList.toggle("hot", i >= 0);
-    $$(".fr", sheet).forEach((f) => f.classList.toggle("lit", +f.dataset.p === i));
-    $$(".fr", sheet).forEach((f) => f.classList.toggle("at", f === cur_));
-    $$("a", names).forEach((a) => a.classList.toggle("on", +a.dataset.p === i));
-    const p = LIST[i]; info.innerHTML = p ? `<span>${esc(p.client)}</span><span>${esc(p.kind || "")}</span>` : "";
-  };
-  const play = (fr) => {
-    if (live && live.fr !== fr) { live.v.remove(); live = null; }
-    const f = SHEET[+fr.dataset.k]; if (!f?.v || live) return;
-    const v = document.createElement("video"); v.muted = true; v.loop = true; v.playsInline = true; v.src = f.v;
-    $(".im", fr).appendChild(v); v.play().catch(() => {}); live = { fr, v };
-  };
-  let cur_ = null;
-  sheet.addEventListener("pointerover", (e) => { const fr = e.target.closest(".fr"); if (!fr) return; cur_ = fr; $$(".fr.at", sheet).forEach((f) => f !== fr && f.classList.remove("at")); fr.classList.add("at"); light(+fr.dataset.p); play(fr); });
-  sheet.addEventListener("pointerleave", () => { cur_ = null; $$(".fr.at", sheet).forEach((f) => f.classList.remove("at")); light(-1); if (live) { live.v.remove(); live = null; } });
-  names.addEventListener("pointerover", (e) => { const a = e.target.closest("a"); if (a) light(+a.dataset.p); });
-  names.addEventListener("pointerleave", () => light(-1));
-  // the sheet is sized so every frame fits on the one screen
-  const lay = () => {
-    const n = SHEET.reduce((t, f) => t + f.f.length, 0), top = 78, bot = 62, side = 30, gap = 12, lab = 16, W = innerWidth - side * 2, H = innerHeight - top - bot;
-    let best = { w: 0 };
-    for (let c = 6; c <= 18; c++) { const r = Math.ceil(n / c) + (n % c ? 0 : 0), w = Math.min((W - gap * (c - 1)) / c, ((H - gap * (r - 1)) / r - lab) * 1.5); if (w > best.w) best = { w, c, r }; }
-    sheet.style.gridTemplateColumns = `repeat(${best.c}, ${best.w.toFixed(1)}px)`; sheet.style.columnGap = gap + "px"; sheet.style.rowGap = gap + "px";
-    sheet.style.setProperty("--ch", (best.w / 1.5).toFixed(1) + "px");
-    // if the packing ran onto an extra row, step the frames down until it fits
-    requestAnimationFrame(() => { const r = sheet.getBoundingClientRect(); if (r.height > H + 4 && best.w > 40) { const k = H / r.height; const w = best.w * k; sheet.style.gridTemplateColumns = `repeat(${best.c}, ${w.toFixed(1)}px)`; sheet.style.setProperty("--ch", (w / 1.5).toFixed(1) + "px"); } });
-  };
-  lay(); addEventListener("resize", lay);
-}
+
 
 // ---------- project pages ----------
 let homeY = 0;
@@ -154,16 +113,16 @@ function screens(p) {
   return out;
 }
 const tag = (it) => { const k = kindOf(it); return k === "film" || k === "yt" ? `<span class="playtag"><i></i>Play</span>` : k === "play" ? `<span class="playtag open">Open →</span>` : ""; };
-const curOf = (it) => ({ film: "Play", yt: "Play", play: "Open", img: "View" })[kindOf(it)];
+const curOf = (it) => (kindOf(it) === "film" || kindOf(it) === "yt" ? "Play" : "");
 function piece(it, cls = "") {
-  return `<figure class="pc ${cls} k-${kindOf(it)}" data-k="${it.k}" data-cur="${curOf(it)}" style="--a:${(it.w / it.h).toFixed(4)}"><i class="cm" aria-hidden="true"></i><div class="pm"><img src="${it.still}" alt="" loading="lazy" decoding="async">${tag(it)}</div></figure>`;
+  return `<figure class="pc ${cls} k-${kindOf(it)}" data-k="${it.k}"${curOf(it) ? ` data-cur="${curOf(it)}"` : ""} style="--a:${(it.w / it.h).toFixed(4)}"><i class="cm" aria-hidden="true"></i><div class="pm"><img src="${cls && it.sm ? it.sm : it.still}" alt="" loading="lazy" decoding="async">${tag(it)}</div></figure>`;
 }
 function slate(p, s, it) {
   // a title and a line under it, nothing else
   const head = s.sec?.head && s.sec.head !== p.title ? s.sec.head : "";
   const title = head || it?.caption || p.title;
   const sub = [s.sec?.text, head ? it?.caption : "", it?.stat].filter(Boolean);
-  return `<div class="slate"><div class="sl-l"><span>${esc(title)}</span>${sub.map((x) => `<span class="dim">${esc(x)}</span>`).join("")}</div></div>`;
+  return `<div class="slate"><div class="sl-l"><span>${esc(title)}</span>${sub.map((x) => `<span class="dim${x.length > 46 ? " prose" : ""}">${esc(x)}</span>`).join("")}</div></div>`;
 }
 function renderProject(p) {
   p.pieces.forEach((it, k) => (it.k = k));
@@ -175,8 +134,8 @@ function renderProject(p) {
   if (gal) {
     // the old layout: sections, and rows of pictures at their own shapes, as tall as the screen allows
     const groups = []; p.pieces.forEach((it) => { const g = groups[groups.length - 1]; if (!g || g.sec !== it.sec) groups.push({ sec: it.sec, items: [it] }); else g.items.push(it); });
-    body = groups.map((g) => `<section class="grp">${g.sec ? `<div class="gh"><h2>${esc(g.sec.head)}</h2><span class="dim">${pad(g.items.length)} ${g.items.length === 1 ? "piece" : "pieces"}</span><p class="dim">${esc(g.sec.text || "")}</p></div>` : ""}
-      <div class="gm">${g.items.map((it) => piece(it, "tile").replace("</figure>", `<figcaption><span class="dim">${pad(it.k + 1)}</span>${it.caption ? `<span>${esc(it.caption)}</span>` : ""}${it.stat ? `<span class="dim">${esc(it.stat)}</span>` : ""}</figcaption></figure>`)).join("")}</div></section>`).join("");
+    body = groups.map((g, k) => `<section class="grp" data-n="${k + 1}">${g.sec ? `<div class="gh"><h2>${esc(g.sec.head)}</h2><span class="dim">${pad(g.items.length)} ${g.items.length === 1 ? "piece" : "pieces"}</span><p class="dim prose">${esc(g.sec.text || "")}</p></div>` : ""}
+      <div class="gm">${g.items.map((it) => piece(it, "tile").replace("</figure>", `<figcaption>${it.caption ? `<span>${esc(it.caption)}</span>` : ""}${it.stat ? `<span class="dim">${esc(it.stat)}</span>` : ""}</figcaption></figure>`)).join("")}</div></section>`).join("");
   } else {
     const SC = screens(p), NS = SC.length;
     // each section opens with a chapter line: its number, a rule, the project and how far through you are
@@ -186,18 +145,19 @@ function renderProject(p) {
         const A = s.items.reduce((t, it) => t + it.w / it.h, 0);
         // a run of pieces gets its heading on top, so it's clearly the title of what follows
         const head = s.sec?.head && s.sec.head !== p.title ? s.sec.head : p.title;
-        return `<section class="scr row${s.thumbs ? " thumbs" : ""}${s.strip ? " strip" : ""}" style="--sa:${A.toFixed(4)};--n:${s.items.length}">${ch(k)}
-          <div class="rh"><b>${esc(head)}</b>${s.sec?.text ? `<span class="dim">${esc(s.sec.text)}</span>` : ""}</div>
+        return `<section class="scr row${s.thumbs ? " thumbs" : ""}${s.strip ? " strip" : ""}" style="--sa:${A.toFixed(4)};--n:${s.items.length}" data-n="${k + 1}">${ch(k)}
+          <div class="rh"><b>${esc(head)}</b>${s.sec?.text ? `<span class="dim prose">${esc(s.sec.text)}</span>` : ""}</div>
           <div class="track">${s.items.map((it) => piece(it, "cell").replace("</figure>", it.caption || it.stat ? `<figcaption><span>${esc(it.caption || "")}</span><span class="dim">${esc(it.stat || "")}</span></figcaption></figure>` : "</figure>")).join("")}</div>
           </section>`;
       }
       const it = s.items[0];
-      return `<section class="scr one">${ch(k)}${piece(it)}${slate(p, s, it, total)}</section>`;
+      return `<section class="scr one${portrait(it) ? " tall" : ""}" data-n="${k + 1}">${ch(k)}${piece(it)}${slate(p, s, it, total)}</section>`;
     }).join("");
   }
-  const nxt = `<section class="nx"><a href="${nx.page || "#" + nx.slug}" data-cur="Next"><span class="dim">Next</span><b data-vt>${esc(nx.title)}</b> <i>→</i></a></section>`;
+  const nxt = `<section class="nx"><a href="${nx.page || "#" + nx.slug}"><span class="dim">Next</span><b data-vt>${esc(nx.title)}</b><i>→</i></a></section>`;
   view.innerHTML = `<article class="pj${gal ? " gal" : ""}" data-slug="${p.slug}">${head}${body}${nxt}</article>`;
-  view.scrollTop = 0; justify(); wire(p);
+  view.scrollTop = 0; justify(); wire(p); settle(view); where(p);
+  document.title = `${p.title} — Stefan Foster`;
 }
 // gallery rows: pictures at their own shapes, edges flush, never taller than most of the screen
 function justify() {
@@ -310,7 +270,7 @@ if (!touch) {
     M.rows = rows.map((a) => { const r = a.getBoundingClientRect(); return { a, y: r.top + r.height / 2, h: r.height, g: 0, ls: $$(".vl", a).map((l) => { const b = l.getBoundingClientRect(); return { l, k: 0, rx: b.left + b.width / 2 - M.cx }; }) }; });
   };
   document.fonts.ready.then(() => setTimeout(menuMeasure, 50)); addEventListener("resize", () => setTimeout(menuMeasure, 50));
-  addEventListener("hashchange", () => setTimeout(menuMeasure, 80));
+  addEventListener("routed", () => setTimeout(menuMeasure, 30));
   const menuLoop = () => {
     if (!home.hidden && M.rows) {
       const B = M.box, near = mx > B.l - 180 && mx < B.r + 180 && my > B.t - 90 && my < B.b + 90;
@@ -333,6 +293,23 @@ if (!touch) {
   requestAnimationFrame(menuLoop);
 }
 
+// ---------- where you are: the project and section show small in the header once the title has scrolled away ----------
+const whereEl = document.createElement("div"); whereEl.className = "where"; $(".top").insertBefore(whereEl, $(".nav"));
+let whereIO = null;
+function where(p) {
+  whereIO?.disconnect(); whereEl.innerHTML = ""; document.body.classList.remove("past");
+  const secs = $$("[data-n]", view), N = secs.length, head = $(".pj-h", view); let n = 1;
+  const paint = () => { whereEl.innerHTML = `<span>${esc(p.title)}</span>${N > 1 ? `<span class="dim">${pad(n)} / ${pad(N)}</span>` : ""}`; };
+  whereIO = new IntersectionObserver((es) => {
+    es.forEach((e) => { if (e.target === head) document.body.classList.toggle("past", !e.isIntersecting); else if (e.isIntersecting) { n = +e.target.dataset.n; paint(); } });
+  }, { root: view, rootMargin: "-45% 0px -45% 0px" });
+  if (head) new IntersectionObserver(([e]) => document.body.classList.toggle("past", !e.isIntersecting), { root: view }).observe(head);
+  secs.forEach((x) => whereIO.observe(x)); paint();
+}
+// the header steps aside while you scroll down through the work, and comes back as soon as you scroll up
+{ let ly = 0; view.addEventListener("scroll", () => { const y = view.scrollTop, dy = y - ly; ly = y;
+    if (y < 120 || dy < -3) document.body.classList.remove("hdr-off"); else if (dy > 3) document.body.classList.add("hdr-off"); }, { passive: true }); }
+
 // ---------- routes ----------
 function route() {
   let h = decodeURIComponent(location.hash.slice(1));
@@ -341,6 +318,13 @@ function route() {
   if (p && p.page) { location.href = p.page; return; }
   if (h === "about") { history.replaceState(null, "", location.pathname); ctOpen(); return; }
   if (!pl.hidden) plHide();
+  // one short fade carries you between the index and a project, both ways
+  if (booted) { document.body.classList.add("swap"); clearTimeout(swapT); swapT = setTimeout(() => { apply(p); requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove("swap"))); }, 240); }
+  else { booted = true; apply(p); }
+}
+let booted = false, swapT = 0;
+function apply(p) {
+  document.body.classList.remove("hdr-off");
   if (p) {
     if (!home.hidden) homeY = scrollY;
     home.hidden = true; view.hidden = false; document.body.classList.add("viewing");
@@ -348,8 +332,10 @@ function route() {
     renderProject(p);
   } else {
     view.hidden = true; view.innerHTML = ""; home.hidden = false; document.body.classList.remove("viewing");
-    if (!SHEETED) { const i = cueI; cueI = -1; cue(Math.max(0, i)); } vtMeasure();
+    { const i = cueI; cueI = -1; cue(Math.max(0, i)); } vtMeasure();
+    document.title = "Stefan Foster";
   }
+  dispatchEvent(new Event("routed"));
 }
 addEventListener("hashchange", route);
 document.addEventListener("click", (e) => { const a = e.target.closest("a[data-home]"); if (!a) return; e.preventDefault(); if (location.hash) { history.pushState(null, "", location.pathname); route(); } });
@@ -371,9 +357,9 @@ addEventListener("keydown", (e) => { if (e.key === "Escape" && ctOn) ctClose(); 
 const crawler = new Crawler({
   holes: [$("#hole")], pads: [$("#pad")], eats: [$("#eat")], reduce: matchMedia("(prefers-reduced-motion: reduce)").matches,
   sfx: (k, a, b) => sound.critter(k, a, b),
-  sel: ".list a .t,.list a .n,.list a .k,.info span,.tc,.who,.nav a,.nav button,.brand,.slate span,.pj-h h1,.pj-m span,.pj-h p,.pc,.gh h2,.nx b",
+  sel: ".list a .t,.list a .n,.who,.nav a,.nav button,.brand,.slate span,.pj-h h1,.pj-h p,.pc,.gh h2,.nx b,.rh b",
   letter: ".list a .n",
-  loose: ",.list a .k,.slate span,.info span",
+  loose: ",.slate span",
   gentle: true,
   anchors: () => { const out = []; $$(".list a .t,.pj-h h1,.pc").forEach((el) => { const q = el.getBoundingClientRect(); if (q.bottom < 0 || q.top > innerHeight || !q.width) return; out.push([q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]); }); return out; },
 });
@@ -404,7 +390,10 @@ addEventListener("hashchange", () => { if (!touch) setTimeout(() => crawler.leap
   brand.addEventListener("mouseenter", () => (want = 16)); brand.addEventListener("mouseleave", () => (want = 1));
   v.play().catch(() => {}); draw(); }
 
+// the toys live behind one quiet "Play"
+{ const pb = $("#playBtn"), ty = $("#toys"); pb?.addEventListener("click", () => { const on = ty.hidden; ty.hidden = !on; pb.classList.toggle("open", on); pb.setAttribute("aria-expanded", on); }); }
 // the game
 { const b = $("#pball"); b?.addEventListener("click", () => { sound.tick?.(.9, .04); const f = document.createElement("div"); f.className = "flash"; document.body.appendChild(f); setTimeout(() => (location.href = "rpg"), 420); }); }
 
 route();
+settle(document);
