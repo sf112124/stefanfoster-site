@@ -12,7 +12,7 @@
   --fs-p:13px;          /* sentences */
   --fs-h:clamp(22px,2vw,30px); /* page titles */
   --s1:8px;--s2:16px;--s3:32px;--s4:64px;--s5:128px;
-  --gut:clamp(16px,1.8vw,28px);--side:var(--gut);
+  --gut:clamp(16px,1.8vw,28px);--side:var(--gut);--gap-tall:var(--s2);
   --ease:cubic-bezier(.22,.61,.24,1);--t:.35s;--t-slow:.7s;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -92,7 +92,7 @@ body.viewing .to-idx{display:inline}
 /* a piece: the still, whole, with a play tag on it; click and it opens full screen */
 .pc{position:relative;margin:0}
 .pm{position:relative;width:100%;height:100%;overflow:hidden;background:#0b0b0b}
-.pm img{width:100%;height:100%;object-fit:cover}
+.pm img,.pm video{width:100%;height:100%;object-fit:cover;display:block}
 .pc[data-cur],.pc.k-play,.pc.k-img{cursor:pointer}
 .playtag{position:absolute;left:50%;top:50%;translate:-50% -50%;display:inline-flex;align-items:center;gap:9px;padding:var(--s1) 12px;color:#fff;background:rgba(0,0,0,.42);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.28);white-space:nowrap;pointer-events:none;transition:background var(--t) var(--ease),color var(--t) var(--ease),border-color var(--t) var(--ease)}
 .playtag i{width:0;height:0;border-left:7px solid currentColor;border-top:4.5px solid transparent;border-bottom:4.5px solid transparent}
@@ -124,7 +124,7 @@ body.viewing .to-idx{display:inline}
 .rh{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;margin-bottom:var(--s1)}
 .rh b{font-weight:500}
 .rh .prose{max-width:56ch}
-.row .track{display:flex;gap:6px;height:min(calc(100svh - 230px),calc((100vw - 2 * var(--side) - (var(--n) - 1) * 6px) / var(--sa) + 56px))}
+.row .track{display:flex;gap:var(--gap-tall);height:min(calc(100svh - 230px),calc((100vw - 2 * var(--side) - (var(--n) - 1) * var(--gap-tall)) / var(--sa) + 56px))}
 .row .cell{height:calc(100% - 56px);aspect-ratio:var(--a);flex:none;scroll-snap-align:center}
 .row.strip{align-items:stretch}
 .row.strip .track{height:calc(100svh - 200px);overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scrollbar-width:none;margin:0 calc(-1 * var(--side));padding:0 var(--side);width:100vw}
@@ -154,7 +154,7 @@ body.viewing .to-idx{display:inline}
 /* ---------- the player ---------- */
 .pl{position:fixed;inset:0;z-index:110;background:#000}
 .pl-st{position:absolute;inset:0;display:grid;place-items:center}
-.pl-st video,.pl-st img{width:100%;height:100%;object-fit:contain}
+.pl-st video,.pl-st img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .pl-st iframe{width:min(100vw,calc((100svh - 120px) * 16 / 9));aspect-ratio:16/9;border:0}
 .pl-top,.pl-bot{position:absolute;left:var(--gut);right:var(--gut);display:flex;gap:var(--s3);align-items:flex-start;transition:opacity var(--t) var(--ease)}
 .pl-top{top:calc(var(--gut) + env(safe-area-inset-top,0px));justify-content:space-between}
@@ -233,3 +233,7 @@ html.crawling,html.crawling *{cursor:auto!important}
 @media (prefers-reduced-motion:reduce){ *{transition-duration:.01s!important;animation-duration:.01s!important} }
 /* the index is all white type */
 body:not(.viewing) .dim{color:#fff}
+/* side-by-side films: one gap everywhere; the one you're on stays lit, the rest sit back; ones running off the strip sit back too */
+.row:not(.thumbs) .cell .pm{transition:opacity var(--t) var(--ease)}
+.row:not(.thumbs) .track:hover .cell:not(:hover) .pm,.strip .cell.out .pm{opacity:.32}
+.strip .track:hover .cell:hover .pm{opacity:1}

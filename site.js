@@ -29,10 +29,12 @@ LIST.forEach((p) => {
   (p.youtube || []).forEach((y) => p.pieces.push({ yt: y, w: 16, h: 9, caption: y.title, stat: y.note, still: y.thumb ? url(p.slug, y.thumb) : `https://i.ytimg.com/vi/${y.id}/hqdefault.jpg` }));
   p.items.forEach((it) => {
     if (it.head) { sec = it; return; }
-    if (it.play) { p.pieces.push({ sec, play: it.play, w: 16, h: 10, caption: it.caption, stat: it.note, still: url(p.slug, it.img) }); return; }
+    if (it.play) { p.pieces.push({ sec, play: it.play, w: 16, h: 10, caption: it.caption, stat: it.note, still: url(p.slug, it.img), smu: it.sm ? url(p.slug, it.sm) : null }); return; }
     const fs = it.from || p.slug, m = (it.from ? MEDIA[it.from] || {} : lib)[it.file]; if (!m) return;
     const x = { ...m, ...it, sec };
     x.still = url(fs, m.type === "video" ? m.poster : m.src || m.sm);
+    x.smu = m.type !== "video" && m.sm ? url(fs, m.sm) : null;
+    x.gif = m.type === "video" && !m.audio && !m.full;   // short silent loops play on their own, like gifs
     if (m.type === "video") { x.loop = url(fs, m.loop); x.film = url(fs, m.full || m.loop); }
     p.pieces.push(x);
   });
@@ -113,9 +115,9 @@ function screens(p) {
   return out;
 }
 const tag = (it) => { const k = kindOf(it); return k === "film" || k === "yt" ? `<span class="playtag"><i></i>Play</span>` : k === "play" ? `<span class="playtag open">Open →</span>` : ""; };
-const curOf = (it) => (kindOf(it) === "film" || kindOf(it) === "yt" ? "Play" : "");
+const curOf = (it) => ((kindOf(it) === "film" && !it.gif) || kindOf(it) === "yt" ? "Play" : "");
 function piece(it, cls = "") {
-  return `<figure class="pc ${cls} k-${kindOf(it)}" data-k="${it.k}"${curOf(it) ? ` data-cur="${curOf(it)}"` : ""} style="--a:${(it.w / it.h).toFixed(4)}"><i class="cm" aria-hidden="true"></i><div class="pm"><img src="${cls && it.sm ? it.sm : it.still}" alt="" loading="lazy" decoding="async">${tag(it)}</div></figure>`;
+  return `<figure class="pc ${cls} k-${kindOf(it)}" data-k="${it.k}"${curOf(it) ? ` data-cur="${curOf(it)}"` : ""} style="--a:${(it.w / it.h).toFixed(4)}"><i class="cm" aria-hidden="true"></i><div class="pm">${it.gif ? `<video src="${it.loop}" poster="${it.still}" autoplay muted loop playsinline preload="metadata"></video>` : `<img src="${cls && it.smu ? it.smu : it.still}" alt="" loading="lazy" decoding="async">`}${it.gif ? "" : tag(it)}</div></figure>`;
 }
 function slate(p, s, it) {
   // a title and a line under it, nothing else
@@ -181,7 +183,10 @@ function wire(p) {
     ["prev", "next"].forEach((d) => { const b = document.createElement("button"); b.type = "button"; b.className = "st-" + d; b.textContent = d === "next" ? "→" : "←"; b.setAttribute("aria-label", d);
       b.addEventListener("click", () => tr.scrollBy({ left: (d === "next" ? 1 : -1) * tr.clientWidth * .7, behavior: "smooth" })); st.appendChild(b); });
     const upd = () => { st.classList.toggle("at-start", tr.scrollLeft < 8); st.classList.toggle("at-end", tr.scrollLeft + tr.clientWidth > tr.scrollWidth - 8); };
-    tr.addEventListener("scroll", upd, { passive: true }); upd(); });
+    tr.addEventListener("scroll", upd, { passive: true }); upd();
+    // films running off the edge of the strip sit back, so it's clear there are more
+    const io = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle("out", e.intersectionRatio < .97)), { root: tr, threshold: [0, .5, .97, 1] });
+    $$(".cell", tr).forEach((c) => io.observe(c)); });
   vtMeasure();
 }
 
