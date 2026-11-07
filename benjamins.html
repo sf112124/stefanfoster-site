@@ -459,7 +459,7 @@ const wakeSound = (e) => { if (e.target.closest?.(".snd")) return; if (soundOn &
 class Film {
   constructor(box) {
     this.box = box; const small = innerWidth < 1100;
-    const src = M + box.dataset.src + (small ? "-1080.mp4" : "-4k.mp4");
+    const src = M + box.dataset.src + "-1080.mp4";   // 1080p for everyone
     box.innerHTML = `<video muted playsinline preload="metadata" poster="${M + box.dataset.poster}" src="${src}"></video>
       <button class="big" aria-label="Play">${icon.play}</button>
       <div class="ui"><button class="pp" aria-label="Play">${icon.play}</button><span class="time">0:00</span><div class="bar" role="slider" aria-label="Seek" tabindex="0"><i><b></b></i></div><span class="time dur"></span><button class="snd" aria-label="Sound on">${icon.mute}</button><button class="fs" aria-label="Full screen">${icon.full}</button></div>`;
