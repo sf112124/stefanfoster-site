@@ -61,7 +61,7 @@ const layers = LIST.map((p) => {
   d.innerHTML = p.cover?.v ? `<video muted loop playsinline preload="none" poster="${p.cover.i}" data-src="${p.cover.v}"></video>` : `<img src="${p.cover?.i || ""}" alt="" loading="lazy">`;
   bg.appendChild(d); return d;
 });
-list.innerHTML = LIST.map((p, i) => `<li><a href="${p.page ? p.page : "#" + p.slug}" data-i="${i}"><span class="n">${pad(i + 1)}</span><span class="t" data-vt>${esc(p.title)}</span><span class="k">${esc(p.client)}</span></a></li>`).join("");
+list.innerHTML = LIST.map((p, i) => `<li><a href="${p.page ? p.page : "#" + p.slug}" data-i="${i}"><span class="n">${pad(i + 1)}</span><span class="t" data-vt>${esc(p.title)}</span></a></li>`).join("");
 let cueI = -1, cueV = null;
 function cue(i) {
   if (i === cueI) return; cueI = i;
@@ -69,8 +69,19 @@ function cue(i) {
   cueV = $("video", layers[i]);
   $$("a", list).forEach((a, k) => a.classList.toggle("on", k === i));
   const p = LIST[i], n = p.pieces.length;
-  if (innerWidth > 820) info.style.left = bg.offsetLeft + layers[i].offsetLeft + "px"; else info.style.left = "";
-  info.innerHTML = `<span>${esc(p.kind || "")}</span><span class="dim">${n ? pad(n) + (n === 1 ? " piece" : " pieces") : "Film"}</span>`;
+  info.innerHTML = `<span>${esc(p.client)}</span><span class="dim">${esc(p.kind || "")}</span><span class="dim">${n ? pad(n) + (n === 1 ? " piece" : " pieces") : "Film"}</span>`;
+  place(i);
+}
+// on a desktop the clip pops up right beside the name you're on, at its own shape
+function place(i) {
+  const l = layers[i];
+  if (innerWidth <= 820) { l.style.cssText = l.style.cssText.replace(/(left|top|width|height):[^;]+;?/g, ""); info.style.left = info.style.top = tcEl.style.left = tcEl.style.top = ""; return; }
+  const a = LIST[i].cover?.a || 16 / 9, row = $$("a", list)[i].getBoundingClientRect(), lr = Math.max(...$$(".list .t").map((t) => t.getBoundingClientRect().right));
+  const w = a >= 1 ? Math.min(innerWidth * .3, 560) : Math.min(innerHeight * .44, 420) * a, h = w / a;
+  const x = lr + Math.max(40, innerWidth * .04), y = Math.max(80, Math.min(innerHeight - h - 90, row.top + row.height / 2 - h / 2));
+  Object.assign(l.style, { left: x + "px", top: y + "px", width: w + "px", height: h + "px" });
+  Object.assign(info.style, { left: x + "px", top: y + h + 10 + "px" });
+  Object.assign(tcEl.style, { left: x + w + "px", top: y + h + 10 + "px" });
 }
 $$("a", list).forEach((a) => { a.addEventListener("pointerenter", () => { cue(+a.dataset.i); sound.tick?.(.5, .015); }); a.dataset.cur = "Open"; });
 cue(0);
@@ -201,7 +212,7 @@ addEventListener("keydown", (e) => {
 
 // timecodes run off the films themselves
 function ticker() {
-  if (!home.hidden && cueV) tcEl.textContent = `TC ${tc(cueV.currentTime)}`;
+  if (!home.hidden) tcEl.textContent = cueV ? `TC ${tc(cueV.currentTime)}` : "";
   if (!pl.hidden && plV) { $(".pl-tc", pl).innerHTML = `${tc(plV.currentTime)} <span class="dim">/ ${tc(plV.duration)}</span>`; if (plV.duration) $(".pl-bar b", pl).style.transform = `scaleX(${(plV.currentTime / plV.duration).toFixed(4)})`; }
   requestAnimationFrame(ticker);
 }
@@ -222,7 +233,7 @@ if (!touch) {
   const vtLoop = () => {
     const sy = view.hidden ? 0 : view.scrollTop, R = 150;
     for (const L of VT) { const y = L.fixed ? L.y : L.y - sy, d = Math.hypot(L.x - cx, y - cy), t = Math.max(0, 1 - d / R), e = t * t * (3 - 2 * t);
-      L.k += (e - L.k) * .2; const w = Math.round(500 + L.k * 260); if (L._w !== w) { L._w = w; L.l.style.fontVariationSettings = `"wght" ${w}`; } }
+      L.k += (e - L.k) * .2; const w = Math.round(400 + L.k * 190); if (L._w !== w) { L._w = w; L.l.style.fontVariationSettings = `"wght" ${w}`; } }
     requestAnimationFrame(vtLoop);
   };
   requestAnimationFrame(vtLoop);
