@@ -255,10 +255,11 @@ body:not(.viewing) .dim,body:not(.viewing) .nav a,body:not(.viewing) .nav button
 }
 /* the contact sheet (desktop) */
 body.sheeted .bg,body.sheeted .list{display:none}
-.sheet{position:absolute;left:50%;top:calc(50% + 8px);translate:-50% -50%;display:grid;z-index:3}
+.sheet{position:absolute;left:50%;top:calc(50% + 8px);translate:-50% -50%;display:grid;grid-auto-flow:row dense;z-index:3}
 .fr{display:flex;flex-direction:column;gap:4px;transition:opacity .35s ease}
-.fr .im{position:relative;aspect-ratio:3/2;overflow:hidden;background:#0d0d0d}
-.fr img,.fr video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.fr .im{position:relative;height:var(--ch);display:flex;gap:1px;overflow:hidden;background:#000}
+.fr .im img{position:static;flex:1;min-width:0;height:100%;object-fit:cover}
+.fr video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .fr .no{font-size:9px;letter-spacing:.08em;line-height:12px;font-variant-numeric:tabular-nums}
 .sheet.hot .fr:not(.lit){opacity:.42}
 .fr .im::after{content:"";position:absolute;inset:0;border:1px solid #fff;opacity:0;transition:opacity .15s;pointer-events:none}
@@ -268,3 +269,7 @@ body.sheeted .bg,body.sheeted .list{display:none}
 .names a .n{font-size:.85em}
 .names a.on{background:#fff;color:#000}
 body.sheeted .info{bottom:calc(var(--gut) + env(safe-area-inset-bottom,0px))}
+.fr .tag{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;flex-direction:column;gap:1px;padding:18px 9px 7px;background:linear-gradient(transparent,rgba(0,0,0,.72));opacity:0;transition:opacity .15s;pointer-events:none}
+.fr .tag b{font-weight:400;text-transform:none;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr .tag span{font-size:10px}
+.fr.at .tag{opacity:1}

@@ -97,7 +97,7 @@ if (SHEETED) {
   const names = document.createElement("nav"); names.className = "names";
   const idxOf = Object.fromEntries(LIST.map((p, i) => [p.slug, i])), count = {};
   sheet.innerHTML = SHEET.map((f, k) => { const i = idxOf[f.p], p = LIST[i]; if (!p) return ""; count[i] = (count[i] || 0) + 1;
-    return `<a class="fr" href="${p.page || "#" + p.slug}" data-p="${i}" data-k="${k}" data-cur="${esc(p.title)}"><span class="im"><img src="${f.i}" alt="" loading="lazy" decoding="async"></span><span class="no">${pad(i + 1)}.${pad(count[i])}</span></a>`; }).join("");
+    return `<a class="fr" href="${p.page || "#" + p.slug}" data-p="${i}" data-k="${k}" style="grid-column:span ${f.f.length}"><span class="im">${f.f.map((src) => `<img src="${src}" alt="" loading="lazy" decoding="async">`).join("")}<span class="tag"><b>${esc(f.t)}</b><span>${esc(f.c)}</span></span></span><span class="no">${pad(i + 1)}.${pad(count[i])}</span></a>`; }).join("");
   names.innerHTML = LIST.map((p, i) => `<a href="${p.page || "#" + p.slug}" data-p="${i}" data-cur="Open"><span class="n">${pad(i + 1)}</span>${esc(p.title)}</a>`).join("");
   home.appendChild(sheet);
   let hot = -1, live = null;
@@ -112,7 +112,7 @@ if (SHEETED) {
   const play = (fr) => {
     if (live && live.fr !== fr) { live.v.remove(); live = null; }
     const f = SHEET[+fr.dataset.k]; if (!f?.v || live) return;
-    const v = document.createElement("video"); v.muted = true; v.loop = true; v.playsInline = true; v.src = f.v; v.poster = f.i;
+    const v = document.createElement("video"); v.muted = true; v.loop = true; v.playsInline = true; v.src = f.v;
     $(".im", fr).appendChild(v); v.play().catch(() => {}); live = { fr, v };
   };
   let cur_ = null;
@@ -122,10 +122,13 @@ if (SHEETED) {
   names.addEventListener("pointerleave", () => light(-1));
   // the sheet is sized so every frame fits on the one screen
   const lay = () => {
-    const n = $$(".fr", sheet).length, top = 78, bot = 62, side = 30, gap = 12, lab = 16, W = innerWidth - side * 2, H = innerHeight - top - bot;
+    const n = SHEET.reduce((t, f) => t + f.f.length, 0), top = 78, bot = 62, side = 30, gap = 12, lab = 16, W = innerWidth - side * 2, H = innerHeight - top - bot;
     let best = { w: 0 };
-    for (let c = 4; c <= 16; c++) { const r = Math.ceil(n / c), w = Math.min((W - gap * (c - 1)) / c, ((H - gap * (r - 1)) / r - lab) * 1.5); if (w > best.w) best = { w, c, r }; }
+    for (let c = 6; c <= 18; c++) { const r = Math.ceil(n / c) + (n % c ? 0 : 0), w = Math.min((W - gap * (c - 1)) / c, ((H - gap * (r - 1)) / r - lab) * 1.5); if (w > best.w) best = { w, c, r }; }
     sheet.style.gridTemplateColumns = `repeat(${best.c}, ${best.w.toFixed(1)}px)`; sheet.style.columnGap = gap + "px"; sheet.style.rowGap = gap + "px";
+    sheet.style.setProperty("--ch", (best.w / 1.5).toFixed(1) + "px");
+    // if the packing ran onto an extra row, step the frames down until it fits
+    requestAnimationFrame(() => { const r = sheet.getBoundingClientRect(); if (r.height > H + 4 && best.w > 40) { const k = H / r.height; const w = best.w * k; sheet.style.gridTemplateColumns = `repeat(${best.c}, ${w.toFixed(1)}px)`; sheet.style.setProperty("--ch", (w / 1.5).toFixed(1) + "px"); } });
   };
   lay(); addEventListener("resize", lay);
 }
