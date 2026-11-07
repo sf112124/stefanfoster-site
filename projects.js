@@ -96,8 +96,13 @@ export const PROJECTS = [
   {
     slug: "coca-cola", title: "Coca-Cola", client: "Coca-Cola", kind: "Film",
     blurb: "Coca-Cola’s taste is beyond words, so we didn’t use any. Just Ahhh. Oooh. Yeah.",
-    youtube: [{ id: "eOMhOjgNd7Q", title: "Open that Coca-Cola", note: "Music by Tyler, The Creator" }],
-    items: [],
+    youtube: [{ id: "eOMhOjgNd7Q", title: "Open that Coca-Cola", note: "Music by Tyler, The Creator", thumb: "still-1.webp" }],
+    items: [
+      { head: "Stills", thumbs: true },
+      { file: "still-2.png" },
+      { file: "still-3.png" },
+      { file: "still-4.png" },
+    ],
   },
   {
     slug: "gumtree", title: "Gumtree", client: "Gumtree", kind: "Campaign",

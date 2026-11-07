@@ -23,7 +23,7 @@ const ORDER = ["ai-experiments", "la-croisiere", "les-benjamins", "relax", "summ
 const LIST = [...PROJECTS].sort((a, b) => (ORDER.indexOf(a.slug) + 1 || 99) - (ORDER.indexOf(b.slug) + 1 || 99));
 // full-quality loops made for the index background
 const HI = ["ai-experiments"];
-const STILL = { "coca-cola": "media/coca-cola/hover-1.jpg", gumtree: "media/gumtree/hover-1.jpg" };
+const STILL = { "coca-cola": "media/coca-cola/still-1.webp", gumtree: "media/gumtree/hover-1.jpg" };
 LIST.forEach((p) => {
   const lib = MEDIA[p.slug] || {}; let sec = null; p.pieces = [];
   (p.youtube || []).forEach((y) => p.pieces.push({ yt: y, w: 16, h: 9, caption: y.title, stat: y.note, still: y.thumb ? url(p.slug, y.thumb) : `https://i.ytimg.com/vi/${y.id}/hqdefault.jpg` }));
