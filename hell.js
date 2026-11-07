@@ -131,6 +131,7 @@ if (ON) {
   }
   root.addEventListener("pointerleave", () => exit());
   addEventListener("keydown", (e) => { if (active && e.key === "Escape") exit(); });
+  addEventListener("hashchange", () => { if (active) exit(true); });
   addEventListener("soundswitch", (e) => { if (e.detail.off && gain) { gain.gain.setValueAtTime(0, ac.currentTime); } });
 
   // ---------- the frame ----------

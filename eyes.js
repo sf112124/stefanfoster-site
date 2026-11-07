@@ -31,6 +31,7 @@ if (ON) {
   addEventListener("pointermove", (e) => { P.x = e.clientX; P.y = e.clientY; });
   addEventListener("tunhover", (e) => { const { i, a } = e.detail; if (row) close(); if (i >= 0 && a && !document.documentElement.classList.contains("in-hell") && !document.documentElement.classList.contains("devouring")) open(i, a); });
 
+  addEventListener("hashchange", () => close());
   function open(i, a) {
     const t = a.querySelector(".t"); if (!t) return;
     t.dataset.txt = t.textContent;

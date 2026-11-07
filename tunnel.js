@@ -255,7 +255,8 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
   // the stack always comes to rest with one name dead centre; target is where it's heading
   let off = (start ?? 0) + .5, target = (start ?? 0) + .5, vel = 0, hover = 0, hoverT = 0, last = performance.now(), active = -1, dragging = false, py = 0, fpsA = 60, t0 = performance.now(), idle = performance.now(), dragV = 0, moved = 0, wheelT = 0;
   const W = () => cv.clientWidth, H = () => cv.clientHeight;
-  const fit = () => { const d = Math.min(1.5, devicePixelRatio || 1); cv.width = Math.round(W() * d); cv.height = Math.round(H() * d); gl.viewport(0, 0, cv.width, cv.height); if (fluid) fluid.resize(cv.width / cv.height); };
+  // never size to nothing: while a project page is open the index is hidden and measures 0 x 0
+  const fit = () => { if (!W() || !H()) return; const d = Math.min(1.5, devicePixelRatio || 1); cv.width = Math.round(W() * d); cv.height = Math.round(H() * d); gl.viewport(0, 0, cv.width, cv.height); if (fluid) fluid.resize(cv.width / cv.height); };
   addEventListener("resize", fit); fit();
   const snap = (x) => Math.round(x - .5) + .5;
   const poke = () => (idle = performance.now());
@@ -306,7 +307,7 @@ export function tunnel({ LIST, mount, media, esc, touch, reduce, onOpen, onTick,
     requestAnimationFrame(frame);
     if (mount.closest("[hidden]")) { wasHidden = true; return; }
     // coming back from a page: start fully flown-in and pull back out to the stack
-    if (wasHidden) { wasHidden = false; outK = touch || W() < 700 ? 0 : 1;   // phones just come straight back to the list
+    if (wasHidden) { wasHidden = false; fit(); outK = touch || W() < 700 ? 0 : 1;   // phones just come straight back to the list
       going = null; lab.classList.remove("gone"); last = now; }
     if (going) { outK = Math.min(1, (now - going.t) / 240); if (outK >= 1) { const p = going.p; going = null; onOpen(p); } }
     else if (outK > 0) outK = Math.max(0, outK - Math.min(.05, (now - last) / 1000) / .32);
