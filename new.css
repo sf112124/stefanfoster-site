@@ -659,3 +659,9 @@ body.viewing .snd{display:none}
 @media (hover:none){.carw>button{display:none}}
 .gm.car .tile{transition:opacity .35s ease}
 .gm.car .tile.out{opacity:.28}
+
+/* easter egg: the project title goes death metal on hover */
+.pj-t.metal{font-family:Morveth,"Metal Mania",serif!important;text-transform:none!important;letter-spacing:.01em!important;font-weight:400!important;font-stretch:100%!important;font-variation-settings:normal!important;transform:scale(2.1);transform-origin:center 60%;transition:transform .35s cubic-bezier(.2,.9,.3,1.3);position:relative;z-index:5}
+.pj-t{transition:transform .3s ease}
+.pj-t.metal .clip{overflow:visible!important;clip-path:none!important}
+.pj-t.metal .c{transition:none!important}
