@@ -214,3 +214,18 @@ body.viewing .top::before{content:"";position:absolute;inset:0 0 -34px;backgroun
 .strip .st-prev{left:var(--side)}.strip .st-next{right:var(--side)}
 .strip .st-prev:hover,.strip .st-next:hover{background:#fff;color:#000}
 .strip.at-start .st-prev,.strip.at-end .st-next{opacity:0;pointer-events:none}
+/* project pages are set on the centre line: titles, captions and rows */
+.pj-h{align-items:center;text-align:center}
+.pj-h p{margin:0 auto}
+.pj-m{justify-content:center}
+.slate{left:50%;right:auto;translate:-50% 0;width:min(720px,calc(100% - 2 * var(--side)));flex-direction:column;align-items:center;text-align:center;gap:3px}
+.slate .sl-l{max-width:none;align-items:center}
+.slate .sl-r{flex-direction:row;gap:12px;align-items:center;text-align:center}
+.gh{align-items:center;text-align:center}
+.gm{justify-content:center}
+.tile figcaption,.cell figcaption{justify-content:center;text-align:center}
+.nx{text-align:center}
+.nx a{justify-content:center}
+.row:not(.thumbs) .cell{height:calc(100% - 34px)}
+.row:not(.thumbs) .track{align-items:flex-start}
+.tile figcaption,.cell figcaption{flex-direction:column;align-items:center;gap:1px}

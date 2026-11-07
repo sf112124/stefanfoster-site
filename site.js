@@ -132,8 +132,8 @@ function renderProject(p) {
       if (s.row) {
         const A = s.items.reduce((t, it) => t + it.w / it.h, 0);
         return `<section class="scr row${s.thumbs ? " thumbs" : ""}${s.strip ? " strip" : ""}" style="--sa:${A.toFixed(4)};--n:${s.items.length}">
-          <div class="track">${s.items.map((it) => piece(it, "cell").replace("</figure>", s.thumbs || s.strip ? `<figcaption><span>${esc(it.caption || "")}</span><span class="dim">${esc(it.stat || "")}</span></figcaption></figure>` : "</figure>")).join("")}</div>
-          ${slate(p, s, s.thumbs || s.strip ? null : s.items[0], total)}</section>`;
+          <div class="track">${s.items.map((it) => piece(it, "cell").replace("</figure>", it.caption || it.stat ? `<figcaption><span>${esc(it.caption || "")}</span><span class="dim">${esc(it.stat || "")}</span></figcaption></figure>` : "</figure>")).join("")}</div>
+          ${slate(p, s, null, total)}</section>`;
       }
       const it = s.items[0];
       return `<section class="scr one">${piece(it)}${slate(p, s, it, total)}</section>`;
