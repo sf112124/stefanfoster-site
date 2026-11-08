@@ -138,7 +138,7 @@ function renderProject(p) {
     // the old layout: sections, and rows of pictures at their own shapes, as tall as the screen allows
     const groups = []; p.pieces.forEach((it) => { const g = groups[groups.length - 1]; if (!g || g.sec !== it.sec) groups.push({ sec: it.sec, items: [it] }); else g.items.push(it); });
     body = groups.map((g, k) => `<section class="grp" data-n="${k + 1}">${g.sec ? `<div class="gh"><h2>${esc(g.sec.head)}</h2><span class="dim">${pad(g.items.length)} ${g.items.length === 1 ? "piece" : "pieces"}</span><p class="dim prose">${esc(g.sec.text || "")}</p></div>` : ""}
-      <div class="gm">${g.items.map((it) => piece(it, "tile").replace("</figure>", `<figcaption>${it.caption ? `<span>${esc(it.caption)}</span>` : ""}${it.stat ? `<span class="dim">${esc(it.stat)}</span>` : ""}</figcaption></figure>`)).join("")}</div></section>`).join("");
+      <div class="gm${g.items.every(portrait) ? " tall" : ""}">${g.items.map((it) => piece(it, "tile").replace("</figure>", `<figcaption>${it.caption ? `<span>${esc(it.caption)}</span>` : ""}${it.stat ? `<span class="dim">${esc(it.stat)}</span>` : ""}</figcaption></figure>`)).join("")}</div></section>`).join("");
   } else {
     const SC = screens(p), NS = SC.length;
     // each section opens with a chapter line: its number, a rule, the project and how far through you are
@@ -195,50 +195,93 @@ function wire(p) {
   vtMeasure();
 }
 
-// ---------- the player: click a piece and it opens full screen, with its own controls ----------
+// ---------- the theatre: click a piece and it lifts out of the page, the page dims behind it. In a series, the
+// neighbours wait at the sides; arrows, keys or a swipe slide the next one up as the last one steps back ----------
 const pl = document.createElement("div"); pl.className = "pl"; pl.hidden = true;
-pl.innerHTML = `<div class="pl-st"></div>
-  <div class="pl-top"><div class="pl-t"></div><button type="button" class="pl-x">Close</button></div>
-  <div class="pl-bot"><button type="button" class="pl-pp">Pause</button><span class="pl-tc"></span><div class="pl-bar"><b></b></div><button type="button" class="pl-snd">Sound on</button><button type="button" class="pl-fs">Full screen</button><span class="pl-nav"><button type="button" class="pl-pv">Prev</button><button type="button" class="pl-nx">Next</button></span></div>`;
+pl.innerHTML = `<div class="pl-bg"></div><div class="pl-rail"></div>
+  <div class="pl-top"><div class="pl-t"></div><span class="pl-n"></span><button type="button" class="pl-x">Close</button></div>
+  <button type="button" class="pl-pv" aria-label="Previous">←</button><button type="button" class="pl-nx" aria-label="Next">→</button>
+  <div class="pl-bot"><button type="button" class="pl-pp">Pause</button><span class="pl-tc"></span><div class="pl-bar"><b></b></div><button type="button" class="pl-snd">Sound on</button><button type="button" class="pl-fs">Full screen</button></div>`;
 document.body.appendChild(pl);
-const plSt = $(".pl-st", pl); let plP = null, plK = -1, plV = null, idle = 0;
-const plList = () => plP.pieces.filter((x) => !x.play);
-function plOpen(p, k) { plP = p; plK = k; pl.hidden = false; document.documentElement.classList.add("playing"); plShow(); history.pushState({ pl: 1 }, "", location.href); }
-function plShow() {
-  const it = plP.pieces[plK], L = plList(), n = L.indexOf(it);
-  plV = null; pl.classList.toggle("img", kindOf(it) === "img"); pl.classList.toggle("yt", kindOf(it) === "yt");
-  plSt.innerHTML = it.yt ? `<iframe src="https://www.youtube-nocookie.com/embed/${it.yt.id}?autoplay=1&rel=0&modestbranding=1" allow="autoplay; fullscreen" allowfullscreen></iframe>`
-    : it.film ? `<video src="${it.film}" poster="${it.still}" autoplay playsinline></video>` : `<img src="${it.still}" alt="">`;
-  $(".pl-t", pl).innerHTML = `<span>${esc(plP.title)}${it.sec?.head && it.sec.head !== plP.title ? ` <span class="dim">/</span> ${esc(it.sec.head)}` : ""}</span>${it.caption ? `<span class="dim">${esc(it.caption)}</span>` : ""}<span class="dim">${pad(n + 1)} / ${pad(L.length)}</span>`;
-  plV = $("video", plSt);
-  if (plV) { plV.addEventListener("click", plToggle); plV.addEventListener("play", plUI); plV.addEventListener("pause", plUI); plV.addEventListener("ended", () => { plV.currentTime = 0; plUI(); }); plV.muted = false; plV.play().catch(() => { plV.muted = true; plV.play().catch(() => {}); plUI(); }); }
-  plUI(); wake();
+const thRail = $(".pl-rail", pl); let plP = null, thS = [], thI = 0, plV = null, thIdle = 0, thEls = [], thOrigin = null;
+// the series: the other pieces in the same section (or the same run of phone films)
+const seriesOf = (p, it) => p.pieces.filter((x) => !x.play && x.sec === it.sec);
+// where each piece sits: the current one as big as the screen allows, its neighbours smaller at the sides
+function thBox(it) { const W = innerWidth, H = innerHeight, a = it.w / it.h, mw = W * (thS.length > 1 ? .8 : .95), mh = H - 150; let w = mw, h = w / a; if (h > mh) { h = mh; w = h * a; } return { w, h }; }
+function thPlace(animate = true) {
+  const W = innerWidth, H = innerHeight, b0 = thBox(thS[thI]);
+  thEls.forEach((el, i) => {
+    const d = i - thI, b = thBox(thS[i]), sc = d === 0 ? 1 : .72;
+    let x = W / 2; if (d) x = W / 2 + Math.sign(d) * (b0.w / 2 + 40 + b.w * sc / 2) + (Math.abs(d) - 1) * Math.sign(d) * (b.w * sc + 40);
+    el.style.width = b.w + "px"; el.style.height = b.h + "px";
+    el.style.transition = animate ? "" : "none";
+    el.style.transform = `translate(${(x - b.w / 2).toFixed(1)}px,${(H / 2 - 20 - b.h / 2).toFixed(1)}px) scale(${sc})`;
+    el.classList.toggle("on", d === 0); el.classList.toggle("near", Math.abs(d) === 1);
+  });
 }
-function plUI() { if (!plV) return; $(".pl-pp", pl).textContent = plV.paused ? "Play" : "Pause"; $(".pl-snd", pl).textContent = plV.muted ? "Sound off" : "Sound on"; pl.classList.toggle("paused", plV.paused); }
-const plToggle = () => { if (!plV) return; plV.paused ? plV.play() : plV.pause(); };
-const plHide = () => { pl.hidden = true; plSt.innerHTML = ""; plV = null; document.documentElement.classList.remove("playing"); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); };
+function plOpen(p, k) {
+  plP = p; const it = p.pieces[k]; thS = seriesOf(p, it); thI = thS.indexOf(it);
+  thRail.innerHTML = thS.map((x) => `<div class="pl-it"><img src="${x.still}" alt=""></div>`).join(""); thEls = [...thRail.children]; settle(thRail);
+  thEls.forEach((el, i) => el.addEventListener("click", () => { if (i !== thI) thStep(i - thI); else thToggle(); }));
+  pl.classList.toggle("series", thS.length > 1);
+  pl.hidden = false; document.documentElement.classList.add("playing");
+  // lift out from where the piece sits on the page
+  const src = $(`.pc[data-k="${k}"] .pm`, view), r = src?.getBoundingClientRect(); thOrigin = k;
+  thPlace(false);
+  if (r) { const b = thBox(it), el = thEls[thI]; el.style.transform = `translate(${r.left}px,${r.top}px) scale(${r.width / b.w})`; el.style.transformOrigin = "0 0"; }
+  requestAnimationFrame(() => requestAnimationFrame(() => { pl.classList.add("open"); thEls.forEach((e) => (e.style.transformOrigin = "")); thPlace(true); }));
+  thShow(); history.pushState({ pl: 1 }, "", location.href);
+}
+function thShow() {
+  const it = thS[thI];
+  thEls.forEach((el, i) => { if (i !== thI) { const v = $("video,iframe", el); if (v) v.remove(); } });
+  const el = thEls[thI]; plV = null;
+  pl.classList.toggle("img", kindOf(it) === "img"); pl.classList.toggle("yt", kindOf(it) === "yt");
+  if (it.yt && !$("iframe", el)) el.insertAdjacentHTML("beforeend", `<iframe src="https://www.youtube-nocookie.com/embed/${it.yt.id}?autoplay=1&rel=0&modestbranding=1" allow="autoplay; fullscreen" allowfullscreen></iframe>`);
+  if (it.film) { let v = $("video", el); if (!v) { v = document.createElement("video"); v.src = it.film; v.playsInline = true; v.autoplay = true; el.appendChild(v); }
+    plV = v; v.onplay = v.onpause = thUi; v.onended = () => { v.currentTime = 0; thUi(); }; v.muted = false; v.play().catch(() => { v.muted = true; v.play().catch(() => {}); thUi(); }); }
+  $(".pl-t", pl).innerHTML = `<span>${esc(it.sec?.head && it.sec.head !== plP.title ? it.sec.head : plP.title)}</span>${it.caption ? `<span class="dim">${esc(it.caption)}</span>` : ""}`;
+  $(".pl-n", pl).textContent = thS.length > 1 ? `${pad(thI + 1)} / ${pad(thS.length)}` : "";
+  pl.classList.toggle("at-start", thI === 0); pl.classList.toggle("at-end", thI === thS.length - 1);
+  thUi(); thWake();
+}
+function thStep(d) { const n = Math.max(0, Math.min(thS.length - 1, thI + d)); if (n === thI) return; thI = n; thPlace(true); thShow(); }
+function thUi() { if (!plV) return; $(".pl-pp", pl).textContent = plV.paused ? "Play" : "Pause"; $(".pl-snd", pl).textContent = plV.muted ? "Sound off" : "Sound on"; }
+const thToggle = () => { if (!plV) return; plV.paused ? plV.play() : plV.pause(); };
+function plHide() {
+  if (pl.hidden) return; if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  $$("video", thRail).forEach((v) => v.pause());
+  // settle back into the page where it came from
+  const k = thS[thI]?.k, src = $(`.pc[data-k="${k}"] .pm`, view), r = src?.getBoundingClientRect(), el = thEls[thI];
+  pl.classList.remove("open");
+  if (r && el) { const b = thBox(thS[thI]); el.style.transformOrigin = "0 0"; el.style.transform = `translate(${r.left}px,${r.top}px) scale(${r.width / b.w})`; }
+  setTimeout(() => { pl.hidden = true; thRail.innerHTML = ""; thEls = []; plV = null; document.documentElement.classList.remove("playing"); }, 420);
+}
 const plClose = () => { if (pl.hidden) return; if (history.state?.pl) history.back(); else plHide(); };
-const plStep = (d) => { const L = plList(), n = L.indexOf(plP.pieces[plK]); plK = L[(n + d + L.length) % L.length].k; plShow(); };
 addEventListener("popstate", () => { if (!pl.hidden) plHide(); });
-$(".pl-x", pl).onclick = plClose; $(".pl-pp", pl).onclick = plToggle; $(".pl-pv", pl).onclick = () => plStep(-1); $(".pl-nx", pl).onclick = () => plStep(1);
-$(".pl-snd", pl).onclick = () => { if (!plV) return; plV.muted = !plV.muted; plUI(); };
-$(".pl-fs", pl).onclick = () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else if (pl.requestFullscreen) pl.requestFullscreen().catch(() => {}); else plV?.webkitEnterFullscreen?.(); };
+addEventListener("resize", () => { if (!pl.hidden) thPlace(false); });
+$(".pl-bg", pl).onclick = plClose; $(".pl-x", pl).onclick = plClose; $(".pl-pp", pl).onclick = thToggle;
+$(".pl-pv", pl).onclick = () => thStep(-1); $(".pl-nx", pl).onclick = () => thStep(1);
+$(".pl-snd", pl).onclick = () => { if (!plV) return; plV.muted = !plV.muted; thUi(); };
+$(".pl-fs", pl).onclick = () => { const t = plV || $("iframe,img", thEls[thI]); if (!t) return; if (t.requestFullscreen) t.requestFullscreen().catch(() => {}); else t.webkitEnterFullscreen?.(); };
 $(".pl-bar", pl).addEventListener("pointerdown", (e) => { if (!plV?.duration) return; const r = e.currentTarget.getBoundingClientRect(), seek = (x) => (plV.currentTime = Math.max(0, Math.min(1, (x - r.left) / r.width)) * plV.duration); seek(e.clientX);
   const mv = (ev) => seek(ev.clientX), up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); }; addEventListener("pointermove", mv); addEventListener("pointerup", up); });
+// swipe sideways through a series on a phone or trackpad
+{ let sx = null; thRail.addEventListener("pointerdown", (e) => { sx = e.clientX; }); addEventListener("pointerup", (e) => { if (sx == null || pl.hidden) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 60 && thS.length > 1) thStep(dx < 0 ? 1 : -1); });
+  let wl = 0; pl.addEventListener("wheel", (e) => { if (thS.length < 2 || Math.abs(e.deltaX) < Math.abs(e.deltaY) || Math.abs(e.deltaX) < 20) return; const t = performance.now(); if (t - wl < 600) return; wl = t; thStep(e.deltaX > 0 ? 1 : -1); }, { passive: true }); }
 // the controls step back while the film plays and you're not moving
-function wake() { pl.classList.remove("idle"); clearTimeout(idle); idle = setTimeout(() => { if (plV && !plV.paused) pl.classList.add("idle"); }, 2400); }
-pl.addEventListener("pointermove", wake);
+function thWake() { pl.classList.remove("idle"); clearTimeout(thIdle); thIdle = setTimeout(() => { if (plV && !plV.paused) pl.classList.add("idle"); }, 2400); }
+pl.addEventListener("pointermove", thWake);
 addEventListener("keydown", (e) => {
   if (pl.hidden) return;
-  if (e.key === "Escape") { if (!document.fullscreenElement) plClose(); return; }
-  if (e.key === " ") { e.preventDefault(); plToggle(); wake(); }
-  if (e.key === "ArrowRight") { if (plV && !e.shiftKey) plV.currentTime += 5; else plStep(1); }
-  if (e.key === "ArrowLeft") { if (plV && !e.shiftKey) plV.currentTime -= 5; else plStep(-1); }
+  if (e.key === "Escape") { e.stopImmediatePropagation(); if (!document.fullscreenElement) plClose(); return; }
+  if (e.key === " ") { e.preventDefault(); thToggle(); thWake(); }
+  if (e.key === "ArrowRight") { if (thS.length > 1) thStep(1); else if (plV) plV.currentTime += 5; }
+  if (e.key === "ArrowLeft") { if (thS.length > 1) thStep(-1); else if (plV) plV.currentTime -= 5; }
 });
 
 // timecodes run off the films themselves
 function ticker() {
-  
   if (!pl.hidden && plV) { $(".pl-tc", pl).innerHTML = `${tc(plV.currentTime)} <span class="dim">/ ${tc(plV.duration)}</span>`; if (plV.duration) $(".pl-bar b", pl).style.transform = `scaleX(${(plV.currentTime / plV.duration).toFixed(4)})`; }
   requestAnimationFrame(ticker);
 }
@@ -351,7 +394,7 @@ addEventListener("hashchange", route);
 document.addEventListener("click", (e) => { const a = e.target.closest("a[data-home]"); if (!a) return; e.preventDefault(); if (location.hash) { history.pushState(null, "", location.pathname); route(); } });
 // keys: up and down step through the screens, space plays with sound
 addEventListener("keydown", (e) => {
-  if (view.hidden || !pl.hidden || e.metaKey || e.ctrlKey || document.documentElement.matches(".flying,.devouring")) return;
+  if (view.hidden || !pl.hidden || document.documentElement.classList.contains("playing") || e.metaKey || e.ctrlKey || document.documentElement.matches(".flying,.devouring")) return;
   if (e.key === "Escape" && !ctOn) { history.pushState(null, "", location.pathname); route(); }
 });
 
