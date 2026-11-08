@@ -260,3 +260,13 @@ body:not(.viewing) .dim{color:#fff}
 .grp:has(> .gh) > .gh p{max-width:34ch}
 .grp:has(> .gh) > .gm{justify-content:flex-start}
 @media (max-width:820px){ .grp:has(> .gh){grid-template-columns:1fr;row-gap:var(--s2)} }
+/* a strip of stills under a film: small, quiet, each one lifts when you're on it and opens in the theatre */
+.stills{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;margin-top:var(--s2)}
+.scr.one .stills .pc{height:auto!important;aspect-ratio:16/9;width:100%}
+.scr.one .stills .pc::before,.scr.one .stills .pc::after{display:none}
+.stills .pm{display:block}
+.stills .pc .pm{opacity:.62;transition:opacity var(--t) var(--ease)}
+.stills .pc:hover .pm{opacity:1}
+.stills .pc .pm::after{content:"";position:absolute;inset:0;border:1px solid #fff;opacity:0;transition:opacity var(--t) var(--ease)}
+.stills .pc:hover .pm::after{opacity:1}
+@media (max-width:820px){ .stills{display:flex;overflow-x:auto;width:100%;scrollbar-width:none} .stills::-webkit-scrollbar{display:none} .stills .pc{flex:0 0 38%} }

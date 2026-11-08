@@ -29,6 +29,7 @@ LIST.forEach((p) => {
   (p.youtube || []).forEach((y) => p.pieces.push({ yt: y, w: 16, h: 9, caption: y.title, stat: y.note, still: y.thumb ? url(p.slug, y.thumb) : `https://i.ytimg.com/vi/${y.id}/maxresdefault.jpg` }));
   p.items.forEach((it) => {
     if (it.head) { sec = it; return; }
+    if (it.strip) { p.pieces.push({ sec, strip: true, w: it.w, h: it.h, still: url(p.slug, it.strip), smu: url(p.slug, it.sm) }); return; }
     if (it.play) { p.pieces.push({ sec, play: it.play, w: 16, h: 10, caption: it.caption, stat: it.note, still: url(p.slug, it.img), smu: it.sm ? url(p.slug, it.sm) : null }); return; }
     const fs = it.from || p.slug, m = (it.from ? MEDIA[it.from] || {} : lib)[it.file]; if (!m) return;
     const x = { ...m, ...it, sec };
@@ -107,6 +108,8 @@ function screens(p) {
   // tall things that come together sit side by side (phone films, the toys); otherwise one per screen
   const out = []; let run = null;
   p.pieces.forEach((it) => {
+    // stills from a film ride along under it as a strip
+    if (it.strip) { const last = out[out.length - 1]; if (last) (last.extra ||= []).push(it); return; }
     const together = it.sec?.thumbs || (portrait(it) && (it.sec?.carousel || p.pieces.filter((q) => q.sec === it.sec && portrait(q)).length > 1));
     if (together && run && run.sec === it.sec) { run.items.push(it); return; }
     run = together ? { sec: it.sec, items: [it], row: true, thumbs: !!it.sec?.thumbs, strip: !it.sec?.thumbs && (it.sec?.carousel || false) } : null;
@@ -154,7 +157,8 @@ function renderProject(p) {
           </section>`;
       }
       const it = s.items[0];
-      return `<section class="scr one${portrait(it) ? " tall" : ""}" data-n="${k + 1}">${ch(k)}${piece(it)}${slate(p, s, it, total)}</section>`;
+      const strip = s.extra ? `<div class="stills">${s.extra.map((x) => `<figure class="pc still k-img" data-k="${x.k}"><span class="pm"><img src="${x.smu}" alt="" loading="lazy" decoding="async"></span></figure>`).join("")}</div>` : "";
+      return `<section class="scr one${portrait(it) ? " tall" : ""}" data-n="${k + 1}">${ch(k)}${piece(it)}${slate(p, s, it, total)}${strip}</section>`;
     }).join("");
   }
   const nxt = `<section class="nx"><a href="${nx.page || "#" + nx.slug}"><span class="dim">Next</span><b data-vt>${esc(nx.title)}</b><i>→</i></a></section>`;
@@ -192,8 +196,11 @@ function wire(p) {
     // films running off the edge of the strip sit back, so it's clear there are more
     const io = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle("out", e.intersectionRatio < .97)), { root: tr, threshold: [0, .5, .97, 1] });
     $$(".cell", tr).forEach((c) => io.observe(c)); });
-  vtMeasure();
+  fitStills(); vtMeasure();
 }
+// a strip of stills runs exactly as wide as the film above it
+function fitStills() { $$(".stills", view).forEach((st) => { const f = $(".pc:not(.still)", st.parentElement); if (f && innerWidth > 820) st.style.width = f.offsetWidth + "px"; else st.style.width = ""; }); }
+addEventListener("resize", () => { if (!view.hidden) fitStills(); });
 
 // ---------- the theatre: click a piece and it lifts out of the page, the page dims behind it. In a series, the
 // neighbours wait at the sides; arrows, keys or a swipe slide the next one up as the last one steps back ----------
