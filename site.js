@@ -137,7 +137,7 @@ function renderProject(p) {
   if (gal) {
     // the old layout: sections, and rows of pictures at their own shapes, as tall as the screen allows
     const groups = []; p.pieces.forEach((it) => { const g = groups[groups.length - 1]; if (!g || g.sec !== it.sec) groups.push({ sec: it.sec, items: [it] }); else g.items.push(it); });
-    body = groups.map((g, k) => `<section class="grp" data-n="${k + 1}">${g.sec ? `<div class="gh"><h2>${esc(g.sec.head)}</h2><span class="dim">${pad(g.items.length)} ${g.items.length === 1 ? "piece" : "pieces"}</span><p class="dim prose">${esc(g.sec.text || "")}</p></div>` : ""}
+    body = groups.map((g, k) => `<section class="grp" data-n="${k + 1}">${g.sec ? `<div class="gh"><h2>${esc(g.sec.head)}</h2>${g.sec.text ? `<p class="dim prose">${esc(g.sec.text)}</p>` : ""}</div>` : ""}
       <div class="gm${g.items.every(portrait) ? " tall" : ""}">${g.items.map((it) => piece(it, "tile").replace("</figure>", `<figcaption>${it.caption ? `<span>${esc(it.caption)}</span>` : ""}${it.stat ? `<span class="dim">${esc(it.stat)}</span>` : ""}</figcaption></figure>`)).join("")}</div></section>`).join("");
   } else {
     const SC = screens(p), NS = SC.length;

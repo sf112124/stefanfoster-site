@@ -253,3 +253,10 @@ body:not(.viewing) .dim{color:#fff}
 .row:not(.thumbs) .track:hover .cell:not(:hover) .pm,.strip .cell.out .pm{opacity:.32}
 .strip .track:hover .cell:hover .pm{opacity:1}
 .gm.tall{gap:var(--gap-tall)}
+/* picture layouts with a section heading: the heading on the left, the work beside it, their tops on one line */
+.grp:has(> .gh){display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,4fr);column-gap:var(--s3);align-items:start;border-top:1px solid var(--line);padding-top:var(--s3)}
+.pj.gal .pj-h + .grp:has(> .gh){border-top:0}
+.grp:has(> .gh) > .gh{display:flex;flex-direction:column;gap:6px;border:0;padding:0;margin:0}
+.grp:has(> .gh) > .gh p{max-width:34ch}
+.grp:has(> .gh) > .gm{justify-content:flex-start}
+@media (max-width:820px){ .grp:has(> .gh){grid-template-columns:1fr;row-gap:var(--s2)} }
