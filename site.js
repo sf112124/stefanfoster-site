@@ -69,7 +69,7 @@ const layers = LIST.map((p) => {
   d.innerHTML = p.cover?.v ? `<video muted loop playsinline preload="none" poster="${p.cover.i}" data-src="${p.cover.v}"></video>` : `<img src="${p.cover?.i || ""}" alt="" loading="lazy">`;
   bg.appendChild(d); return d;
 });
-list.innerHTML = LIST.map((p, i) => `<li><a href="${p.page ? p.page : "#" + p.slug}" data-i="${i}"><span class="n">${pad(i + 1)}</span><span class="t" data-vt>${esc(p.title)}</span><span class="k">${esc(p.client || "Personal")}</span></a></li>`).join("");
+list.innerHTML = LIST.map((p, i) => `<li><a href="${p.page ? p.page : "#" + p.slug}" data-i="${i}"><span class="n">${pad(i + 1)}</span><span class="t" data-vt>${esc(p.title)}</span>${(p.client || "Personal").toLowerCase() === p.title.toLowerCase() ? "" : `<span class="k">${esc(p.client || "Personal")}</span>`}</a></li>`).join("");
 let cueI = -1, cueV = null;
 function cue(i) {
   if (i === cueI) return; cueI = i;
@@ -324,9 +324,9 @@ if (!touch) {
   const M = { rows: null, box: null };
   const menuMeasure = () => {
     const rows = $$("a", list); if (home.hidden || !rows.length) return;
-    rows.forEach((a) => { $(".t", a).style.transform = ""; $(".n", a).style.transform = ""; $(".k", a).style.transform = ""; $$(".vl", a).forEach((l) => (l.style.transform = "")); });
+    rows.forEach((a) => { a.style.transform = ""; $(".t", a).style.transform = ""; $(".n", a).style.transform = ""; const k = $(".k", a); if (k) k.style.transform = ""; $$(".vl", a).forEach((l) => (l.style.transform = "")); });
     const q = list.getBoundingClientRect(); M.box = { l: q.left, r: q.right, t: q.top, b: q.bottom }; M.cx = q.left + q.width / 2;
-    M.rows = rows.map((a) => { const r = a.getBoundingClientRect(), t = $(".t", a); return { a, t, n: $(".n", a), k: $(".k", a), y: r.top + r.height / 2, h: r.height, w: t.offsetWidth, g: 0,
+    M.rows = rows.map((a) => { const r = a.getBoundingClientRect(), t = $(".t", a); return { a, t, n: $(".n", a), k: $(".k", a), y: r.top + r.height / 2, h: r.height, w: t.offsetWidth, th: t.offsetHeight, g: 0,
       ls: $$(".vl", a).map((l) => { const b = l.getBoundingClientRect(); return { l, k: 0, rx: b.left + b.width / 2 - M.cx }; }) }; });
   };
   document.fonts.ready.then(() => setTimeout(menuMeasure, 50)); addEventListener("resize", () => setTimeout(menuMeasure, 50));
@@ -339,7 +339,11 @@ if (!touch) {
       M.rows.forEach((R) => {
         const d = (my - R.y) / R.h, t = near ? Math.exp(-d * d / .5) : 0; R.g += (t - R.g) * ease;
         const s = 1 + .26 * R.g, push = R.w * (s - 1) / 2;
-        if (Math.abs((R.s || 1) - s) > .001) { R.s = s; R.t.style.transform = `scale(${s.toFixed(4)})`; R.n.style.transform = `translate(${(-push).toFixed(1)}px,-50%)`; R.k.style.transform = `translate(${push.toFixed(1)}px,-50%)`; }
+        if (Math.abs((R.s || 1) - s) > .001) { R.s = s; R.t.style.transform = `scale(${s.toFixed(4)})`; R.n.style.transform = `translate(${(-push).toFixed(1)}px,-50%)`; if (R.k) R.k.style.transform = `translate(-50%,${(R.th * (s - 1) / 2).toFixed(1)}px)`; }
+        // the rows part a little around the one you're on, to make room for its client line
+        const part = (gs, i) => gs.slice(0, i).reduce((t, x) => t + x, 0) * 13 - gs.reduce((t, x) => t + x, 0) * 13 / 2 + (R.k ? 0 : 0);
+        const gs = M.rows.map((x) => (x.k ? x.g : x.g * .4)), off = part(gs, M.rows.indexOf(R)) + gs[M.rows.indexOf(R)] * 13 / 2 - 13 * R.g / 2;
+        if (Math.abs((R.o || 0) - off) > .05) { R.o = off; R.a.style.transform = `translateY(${off.toFixed(1)}px)`; }
         const wRow = Math.max(R.a.classList.contains("on") ? 440 : 300, 300 + 140 * R.g);
         R.ls.forEach((L) => {
           // letters lift where the pointer is, in place
