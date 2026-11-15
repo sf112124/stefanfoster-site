@@ -45,6 +45,18 @@ LIST.forEach((p) => {
   else { const c = p.pieces.find((x) => x.loop) || p.pieces[0]; if (c) p.cover = { v: c.loop, i: c.still, a: c.w / c.h }; }
 });
 
+// the three latest films stand on their own; the rest of Ai Work stays together
+const AI = LIST.find((p) => p.slug === "ai-experiments");
+const SOLO = [["avatar", "Avatar"], ["tough-love", "Tough Love"], ["anywhere", "Anywhere"]].map(([slug, head]) => {
+  const pieces = AI.pieces.filter((x) => x.sec?.head === head);
+  AI.pieces = AI.pieces.filter((x) => x.sec?.head !== head);
+  return { slug, title: head, client: "Personal", kind: "AI film", solo: true, blurb: pieces[0]?.sec?.text || "", items: [], pieces, cover: { v: `media/wheel/${slug}.mp4`, i: pieces[0].still } };
+});
+AI.cover = { v: "media/wheel/grow.mp4", i: (AI.pieces.find((x) => x.sec?.head === "Grow") || AI.pieces[0]).still };
+// the running order of the wheel
+const WHEEL = [...SOLO, ...LIST], N = WHEEL.length;
+const hrefOf = (p) => p.page || "#" + p.slug;
+
 // pictures fade up once they've arrived, never pop in
 document.addEventListener("load", (e) => { if (e.target.tagName === "IMG") e.target.classList.add("in"); }, true);
 document.addEventListener("error", (e) => { const i = e.target; if (i.tagName === "IMG" && /maxresdefault/.test(i.src)) i.src = i.src.replace("maxresdefault", "hqdefault"); }, true);
@@ -61,44 +73,127 @@ if (!touch) {
   requestAnimationFrame(loop);
 }
 
-// ---------- index: the list sits quietly at the edge, the work plays behind it ----------
-const home = $("#home"), view = $("#view"), bg = $("#bg"), list = $("#list");
-const layers = LIST.map((p) => {
-  const d = document.createElement("div"); d.className = "layer";
-  d.style.setProperty("--a", (p.cover?.a || 16 / 9).toFixed(4)); d.classList.toggle("tall", (p.cover?.a || 1.7) < 1);
-  d.innerHTML = p.cover?.v ? `<video muted loop playsinline preload="none" poster="${p.cover.i}" data-src="${p.cover.v}"></video>` : `<img src="${p.cover?.i || ""}" alt="" loading="lazy">`;
-  bg.appendChild(d); return d;
+// ---------- index: a wheel of thumbnails turning toward you. The one in the middle is lit and playing; a flick moves
+// one stop and it always settles dead centre ----------
+const home = $("#home"), view = $("#view"), wheel = $("#wheel"), wlab = $("#wlab"), wrail = $("#wrail");
+wheel.innerHTML = WHEEL.map((p, i) => `<a class="wi" href="${hrefOf(p)}" data-i="${i}" draggable="false"><img src="${p.cover.i}" alt="${esc(p.title)}" draggable="false">${p.cover.v ? `<video muted loop playsinline preload="none" data-src="${p.cover.v}"></video>` : ""}</a>`).join("");
+wrail.innerHTML = WHEEL.map((p, i) => `<button type="button" data-i="${i}" aria-label="${esc(p.title)}"><i></i></button>`).join("");
+const wis = $$(".wi", wheel), rails = $$("button", wrail);
+const W = { pos: 0, vel: 0, target: 0, cur: -1, tw: 0, th: 0, R: 0, step: 28 * Math.PI / 180, drawn: null };
+function wheelSize() {
+  W.tw = innerWidth <= 820 ? innerWidth - 40 : Math.min(innerWidth * .5, innerHeight * .56 * 16 / 9); W.th = W.tw * 9 / 16;
+  W.R = W.th * 1.07 / (2 * Math.sin(W.step / 2));
+  home.style.setProperty("--tw", W.tw.toFixed(1) + "px"); home.style.setProperty("--th", W.th.toFixed(1) + "px"); W.drawn = null;
+}
+function wheelDraw() {
+  if (W.drawn === W.pos) return; W.drawn = W.pos;
+  wis.forEach((el, i) => {
+    const d = i - W.pos, ad = Math.abs(d);
+    if (ad > 3.4) { el.style.visibility = "hidden"; return; }
+    const a = d * W.step, y = W.R * Math.sin(a), z = W.R * (Math.cos(a) - 1);
+    el.style.visibility = "";
+    el.style.transform = `translate3d(-50%, calc(-50% + ${y.toFixed(1)}px), ${z.toFixed(1)}px) rotateX(${(-a * 180 / Math.PI).toFixed(2)}deg)`;
+    el.style.opacity = (ad < 1 ? 1 - ad * .7 : Math.max(0, .3 - (ad - 1) * .13)).toFixed(3);
+    el.style.zIndex = 100 - Math.round(ad * 10);
+  });
+}
+// the one in the middle plays; its name rolls over beside it like a counter
+function wheelCue(c) {
+  const dir = c > W.cur; W.cur = c; const p = WHEEL[c];
+  wis.forEach((el, i) => { el.classList.toggle("on", i === c); const v = $("video", el); if (!v) return;
+    if (i === c) { if (!v.src) { v.src = v.dataset.src; v.addEventListener("playing", () => v.classList.add("ready"), { once: true }); } v.play().catch(() => {}); } else v.pause(); });
+  rails.forEach((b, i) => b.classList.toggle("on", i === c));
+  const old = [...wlab.children], el = document.createElement("div"); el.className = "wl " + (dir ? "from-b" : "from-t");
+  el.innerHTML = `<span class="n">${pad(c + 1)} / ${pad(N)}</span><b>${esc(p.title)}</b><span>${esc(p.client && p.client !== "Personal" ? p.client : p.kind || "")}</span>`;
+  wlab.appendChild(el); void el.offsetWidth; el.classList.remove("from-b", "from-t");
+  old.forEach((o) => { o.classList.add(dir ? "to-t" : "to-b"); setTimeout(() => o.remove(), 450); });
+  sound.tick?.(.5, .015);
+}
+{ let last = performance.now();
+  const tick = (now) => {
+    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    if (!home.hidden) {
+      // a spring with a touch of give: quick to follow, soft to land
+      W.vel += ((W.target - W.pos) * 190 - W.vel * 23) * dt; W.pos += W.vel * dt;
+      if (Math.abs(W.target - W.pos) < .0004 && Math.abs(W.vel) < .002) { W.pos = W.target; W.vel = 0; }
+      wheelDraw();
+      const c = Math.max(0, Math.min(N - 1, Math.round(W.pos))); if (c !== W.cur) wheelCue(c);
+    }
+    requestAnimationFrame(tick);
+  };
+  wheelSize(); requestAnimationFrame(tick); addEventListener("resize", wheelSize); }
+
+// turning it: wheel, trackpad, drag, swipe, arrow keys, or click one above or below to bring it round
+let gStart = 0, gT = 0, snapT = 0, drag = null, dragged = 0;
+const idle = () => !ctOn && !document.documentElement.matches(".flying,.devouring,.playing");
+const lim = (t) => Math.max(-.3, Math.min(N - 1 + .3, Math.max(gStart - 3, Math.min(gStart + 3, t))));
+function wheelSnap() {
+  let t = Math.round(W.target);
+  // even a small flick moves one stop, never back to where it was
+  if (t === gStart && Math.abs(W.target - gStart) > .1) t = gStart + Math.sign(W.target - gStart);
+  W.target = Math.max(0, Math.min(N - 1, t));
+}
+const wheelGo = (i) => { gStart = W.target = Math.max(0, Math.min(N - 1, i)); };
+home.addEventListener("wheel", (e) => {
+  e.preventDefault(); if (!idle()) return;
+  const now = performance.now(); if (now - gT > 160) gStart = Math.round(W.target); gT = now;
+  const d = (Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * (e.deltaMode === 1 ? 32 : 1);
+  if (Math.abs(d) < 3) return;   // the long tail of a trackpad flick doesn't hold it between stops
+  W.target = lim(W.target + d / 420);
+  clearTimeout(snapT); snapT = setTimeout(wheelSnap, 110);
+}, { passive: false });
+wheel.addEventListener("pointerdown", (e) => { if (e.button || !idle()) return; gStart = Math.round(W.target); drag = { id: e.pointerId, y: e.clientY, t0: W.target, moved: 0, ly: e.clientY, lt: performance.now(), v: 0 }; });
+addEventListener("pointermove", (e) => {
+  if (!drag || e.pointerId !== drag.id) return; const dy = e.clientY - drag.y; drag.moved = Math.max(drag.moved, Math.abs(dy));
+  if (drag.moved < 6) return; wheel.classList.add("dragging");
+  const now = performance.now(); drag.v = (e.clientY - drag.ly) / Math.max(1, now - drag.lt); drag.ly = e.clientY; drag.lt = now;
+  W.target = lim(drag.t0 - dy / (W.th * 1.05));
 });
-list.innerHTML = LIST.map((p, i) => `<li><a href="${p.page ? p.page : "#" + p.slug}" data-i="${i}"><span class="n">${pad(i + 1)}</span><span class="t" data-vt>${esc(p.title)}</span></a></li>`).join("");
-let cueI = -1, cueV = null;
-function cue(i) {
-  if (i === cueI) return; cueI = i;
-  layers.forEach((l, k) => { l.classList.toggle("on", k === i); const v = $("video", l); if (!v) return; if (k === i) { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); } else setTimeout(() => { if (cueI !== k) v.pause(); }, 400); });
-  cueV = $("video", layers[i]);
-  $$("a", list).forEach((a, k) => a.classList.toggle("on", k === i));
-  const p = LIST[i], n = p.pieces.length;
-  place(i);
-}
-// on a desktop the clip pops up right beside the name you're on, at its own shape
-function place(i) {
-  // wide films fill the screen; tall phone films stand in the middle of it at their own shape
-  const l = layers[i], a = LIST[i].cover?.a || 16 / 9;
-  if (innerWidth <= 820 || a >= 1) { Object.assign(l.style, { left: "0px", top: "0px", width: "100%", height: "100%" }); return; }
-  const h = innerHeight, w = h * a;
-  Object.assign(l.style, { left: (innerWidth - w) / 2 + "px", top: (innerHeight - h) / 2 + "px", width: w + "px", height: h + "px" });
-}
-$$("a", list).forEach((a) => { a.addEventListener("pointerenter", () => { cue(+a.dataset.i); sound.tick?.(.5, .015); }); });
-// desktops get the contact sheet; phones keep the menu over the work
-cue(0);
-bg.addEventListener("click", () => { const p = LIST[cueI]; if (p) location.href = p.page ? p.page : "#" + p.slug; });
-{ let px = 0, py = 0; const drift = () => { if (!home.hidden) { const tx = (mx / innerWidth - .5) * -2.2, ty = (my / innerHeight - .5) * -2.2; px += (tx - px) * .05; py += (ty - py) * .05; bg.style.setProperty("--px", px.toFixed(3) + "%"); bg.style.setProperty("--py", py.toFixed(3) + "%"); } requestAnimationFrame(drift); }; if (!touch) requestAnimationFrame(drift); }
-// phones: the reel turns over on its own
-if (touch) setInterval(() => { if (!home.hidden) cue((cueI + 1) % LIST.length); }, 4200);
+const dragEnd = (e) => {
+  if (!drag || e.pointerId !== drag.id) return; const d = drag; drag = null; wheel.classList.remove("dragging");
+  if (d.moved < 6) return; dragged = performance.now();
+  W.target = lim(W.target - d.v * 170 / (W.th * 1.05)); wheelSnap();   // a throw carries on a little, then lands
+};
+addEventListener("pointerup", dragEnd); addEventListener("pointercancel", dragEnd);
+wheel.addEventListener("click", (e) => {
+  const a = e.target.closest(".wi"); if (!a) return; e.preventDefault();
+  if (performance.now() - dragged < 300 || !idle()) return;
+  const i = +a.dataset.i; if (i !== Math.round(W.target)) wheelGo(i); else wheelOpen(i);
+});
+wheel.addEventListener("dragstart", (e) => e.preventDefault());
+wrail.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) wheelGo(+b.dataset.i); });
+addEventListener("keydown", (e) => {
+  if (home.hidden || !idle() || e.metaKey || e.ctrlKey) return;
+  const k = e.key, t = Math.round(W.target);
+  if (k === "ArrowDown" || k === "ArrowRight" || k === "PageDown") { e.preventDefault(); wheelGo(t + 1); }
+  else if (k === "ArrowUp" || k === "ArrowLeft" || k === "PageUp") { e.preventDefault(); wheelGo(t - 1); }
+  else if (k === "Home") wheelGo(0); else if (k === "End") wheelGo(N - 1);
+  else if (k === "Enter") wheelOpen(t);
+});
 
-
+// opening: the thumbnail itself grows out of the wheel and becomes the page; closing, it settles back into its stop
+let zoomEl = null;
+const centreRect = () => ({ left: (innerWidth - W.tw) / 2, top: (innerHeight - W.th) / 2, width: W.tw, height: W.th });
+const fullRect = () => { const a = 16 / 9, w = Math.max(innerWidth, innerHeight * a), h = w / a; return { left: (innerWidth - w) / 2, top: (innerHeight - h) / 2, width: w, height: h }; };
+function zoomMake(p, r, frame) {
+  const z = document.createElement("div"); z.className = "zoom";
+  if (frame && frame.readyState >= 2) { const c = document.createElement("canvas"); c.width = frame.videoWidth; c.height = frame.videoHeight; try { c.getContext("2d").drawImage(frame, 0, 0); z.appendChild(c); } catch (e) {} }
+  if (!z.firstChild) z.innerHTML = `<img src="${p.cover.i}" alt="">`;
+  Object.assign(z.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px" });
+  document.body.appendChild(z); return z;
+}
+const zoomTo = (z, r) => new Promise((done) => { void z.offsetWidth; z.classList.add("go"); Object.assign(z.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px" }); setTimeout(done, 560); });
+const zoomEnd = (z) => { z.classList.add("out"); setTimeout(() => z.remove(), 420); };
+function wheelOpen(i) {
+  const p = WHEEL[i], el = wis[i]; if (!p || zoomEl) return;
+  const z = zoomMake(p, el.getBoundingClientRect(), $("video", el));
+  if (p.page) { document.body.classList.add("swap"); zoomTo(z, fullRect()).then(() => (location.href = p.page)); return; }
+  zoomEl = z; location.hash = p.slug;
+}
+// coming back from another page (the browser's back button), make sure nothing is left over the wheel
+addEventListener("pageshow", () => { $$(".zoom").forEach((z) => z.remove()); document.body.classList.remove("swap"); zoomEl = null; });
 
 // ---------- project pages ----------
-let homeY = 0;
 const kindOf = (it) => (it.yt ? "yt" : it.play ? "play" : it.film ? "film" : "img");
 const portrait = (it) => it.w / it.h < .9;
 const dur = (t) => t ? `${pad(Math.floor(t / 60))}:${pad(Math.round(t) % 60)}` : "";
@@ -132,7 +227,7 @@ function slate(p, s, it) {
 }
 function renderProject(p) {
   p.pieces.forEach((it, k) => (it.k = k));
-  const total = p.pieces.length, nx = LIST[(LIST.indexOf(p) + 1) % LIST.length], gal = GALLERY.includes(p.slug);
+  const total = p.pieces.length, nx = WHEEL[(WHEEL.indexOf(p) + 1) % N], gal = GALLERY.includes(p.slug);
   const head = `<header class="pj-h"><h1 data-vt>${esc(p.title)}</h1>
     ${p.client && p.client !== "Personal" ? `<div class="f"><span class="dim">Client</span><span>${esc(p.client)}</span></div>` : "<div></div>"}
     <p>${esc(p.blurb || "")}</p></header>`;
@@ -161,8 +256,8 @@ function renderProject(p) {
       return `<section class="scr one${portrait(it) ? " tall" : ""}" data-n="${k + 1}">${ch(k)}${piece(it)}${slate(p, s, it, total)}${strip}</section>`;
     }).join("");
   }
-  const nxt = `<section class="nx"><a href="${nx.page || "#" + nx.slug}"><span class="dim">Next</span><b data-vt>${esc(nx.title)}</b><i>→</i></a></section>`;
-  view.innerHTML = `<article class="pj${gal ? " gal" : ""}" data-slug="${p.slug}">${head}${body}${nxt}</article>`;
+  const nxt = `<section class="nx"><a href="${hrefOf(nx)}"><span class="dim">Next</span><b data-vt>${esc(nx.title)}</b><i>→</i></a></section>`;
+  view.innerHTML = `<article class="pj${gal ? " gal" : ""}${p.solo ? " solo" : ""}" data-slug="${p.slug}">${head}${body}${nxt}</article>`;
   view.scrollTop = 0; justify(); wire(p); settle(view); where(p);
   document.title = `${p.title} — Stefan Foster`;
 }
@@ -182,7 +277,7 @@ function justify() {
     }
   });
 }
-addEventListener("resize", () => { if (!view.hidden) justify(); else { const i = cueI; cueI = -1; cue(Math.max(0, i)); } });
+addEventListener("resize", () => { if (!view.hidden) justify(); });
 const tio = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("shown"); tio.unobserve(e.target); } }), { threshold: .12 });
 function wire(p) {
   $$(".tile", view).forEach((t) => tio.observe(t));
@@ -310,47 +405,11 @@ if (!touch) {
     const sy = view.hidden ? 0 : view.scrollTop, R = 150;
     for (const L of VT) { const y = L.fixed ? L.y : L.y - sy, d = Math.hypot(L.x - cx, y - cy), t = Math.max(0, 1 - d / R), e = t * t * (3 - 2 * t);
       // in the menu the name you're on runs heavy and the rest run light; elsewhere titles sit at regular
-      if (L.a === undefined) L.a = L.l.closest(".list a") || null;
-      if (L.a) continue;   // the menu has its own engine below
-      const base = L.a ? (L.a.classList.contains("on") ? 780 : 300) : 400; L.b = L.b == null ? base : L.b + (base - L.b) * .18;
-      L.k += (e - L.k) * .2; const w = Math.round(L.b + L.k * (L.a ? 120 : 190)); if (L._w !== w) { L._w = w; L.l.style.fontVariationSettings = `"wght" ${w}`; } }
+      L.k += (e - L.k) * .2; const w = Math.round(400 + L.k * 190); if (L._w !== w) { L._w = w; L.l.style.fontVariationSettings = `"wght" ${w}`; } }
     requestAnimationFrame(vtLoop);
   };
   requestAnimationFrame(vtLoop);
 
-  // ---------- the menu breathes like the old index: the names near the pointer swell, gradually, with no steps between
-  // rows; letters lean away from the pointer and thicken as it passes ----------
-  const M = { rows: null, base: 14, box: null };
-  const menuMeasure = () => {
-    const rows = $$("a", list); if (home.hidden || !rows.length) return;
-    rows.forEach((a) => { a.style.fontSize = ""; $$(".vl", a).forEach((l) => { l.style.transform = ""; l.style.fontSize = ""; }); });
-    M.base = parseFloat(getComputedStyle(rows[0]).fontSize) || 14;
-    const q = list.getBoundingClientRect(); M.box = { l: q.left, r: q.right, t: q.top, b: q.bottom }; M.cx = q.left + q.width / 2;
-    // where each letter sits at rest, measured from the menu's centre line (the menu stays centred as it swells)
-    M.rows = rows.map((a) => { const r = a.getBoundingClientRect(); return { a, y: r.top + r.height / 2, h: r.height, g: 0, ls: $$(".vl", a).map((l) => { const b = l.getBoundingClientRect(); return { l, k: 0, rx: b.left + b.width / 2 - M.cx }; }) }; });
-  };
-  document.fonts.ready.then(() => setTimeout(menuMeasure, 50)); addEventListener("resize", () => setTimeout(menuMeasure, 50));
-  addEventListener("routed", () => setTimeout(menuMeasure, 30));
-  const menuLoop = () => {
-    if (!home.hidden && M.rows) {
-      const B = M.box, near = mx > B.l - 180 && mx < B.r + 180 && my > B.t - 90 && my < B.b + 90;
-      // read everything first, then write, so the page lays out once a frame
-      M.rows.forEach((R, i) => {
-        const d = (my - R.y) / R.h, t = near ? Math.exp(-d * d / .6) : 0; R.g += (t - R.g) * .13;
-        const fs = M.base * (1 + .32 * R.g); if (Math.abs((R._fs || 0) - fs) > .02) { R._fs = fs; R.a.style.fontSize = fs.toFixed(2) + "px"; }
-        const wRow = Math.max(R.a.classList.contains("on") ? 440 : 300, 300 + 140 * R.g);
-        R.ls.forEach((L, j) => {
-          // letters swell where the pointer is, in place
-          const dx = M.cx + L.rx * (fs / M.base) - mx, f = Math.exp(-(dx * dx) / (80 * 80)) * R.g;
-          L.k += (f - L.k) * .12; const sz = 1 + .14 * L.k, w = Math.round(Math.min(560, wRow + 60 * L.k));
-          if (Math.abs((L.s || 1) - sz) > .002) { L.s = sz; L.l.style.fontSize = sz.toFixed(3) + "em"; }
-          if (L._w !== w) { L._w = w; L.l.style.fontVariationSettings = `"wght" ${w}`; }
-        });
-      });
-    }
-    requestAnimationFrame(menuLoop);
-  };
-  requestAnimationFrame(menuLoop);
 }
 
 // ---------- where you are: the project and section show small in the header once the title has scrolled away ----------
@@ -371,28 +430,48 @@ function where(p) {
     if (y < 120 || dy < -3) document.body.classList.remove("hdr-off"); else if (dy > 3) document.body.classList.add("hdr-off"); }, { passive: true }); }
 
 // ---------- routes ----------
+let booted = false, swapT = 0, curP = null;
 function route() {
   let h = decodeURIComponent(location.hash.slice(1));
   if (h === "ai-commissions") { h = "ai-experiments"; history.replaceState(null, "", "#ai-experiments"); }
-  const p = LIST.find((q) => q.slug === h);
+  const p = WHEEL.find((q) => q.slug === h);
   if (p && p.page) { location.href = p.page; return; }
   if (h === "about") { history.replaceState(null, "", location.pathname); ctOpen(); return; }
   if (!pl.hidden) plHide();
-  // one short fade carries you between the index and a project, both ways
-  if (booted) { document.body.classList.add("swap"); clearTimeout(swapT); swapT = setTimeout(() => { apply(p); requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove("swap"))); }, 240); }
-  else { booted = true; apply(p); }
+  clearTimeout(swapT);
+  if (!booted) { booted = true; if (p) wheelGo(WHEEL.indexOf(p)), (W.pos = W.target); apply(p); return; }
+  // out of the wheel: the thumbnail grows into the page (onto the film itself, for a film)
+  if (zoomEl && p) {
+    const z = zoomEl; zoomEl = null; document.body.classList.add("swap");
+    apply(p); home.hidden = false; setTimeout(() => { if (!view.hidden) home.hidden = true; }, 300);
+    const t = p.solo && innerWidth > 820 ? $(".scr.one .pc .pm", view)?.getBoundingClientRect() : null;
+    zoomTo(z, t && t.width ? t : fullRect()).then(() => zoomEnd(z));
+    setTimeout(() => document.body.classList.remove("swap"), 330);
+    return;
+  }
+  zoomEl?.remove(); zoomEl = null;
+  // back to the wheel: the page lets go and its picture settles into its stop
+  const from = curP, i = from ? WHEEL.indexOf(from) : -1;
+  if (!p && from && i >= 0 && !view.hidden) {
+    const f = from.solo ? $(".scr.one .pc .pm", view)?.getBoundingClientRect() : null, seen = f && f.bottom > 80 && f.top < innerHeight - 80;
+    const z = zoomMake(from, seen ? f : fullRect()); if (!seen) z.classList.add("soft");
+    document.body.classList.add("swap"); wheelGo(i); W.pos = i; W.vel = 0;
+    zoomTo(z, centreRect()).then(() => zoomEnd(z));
+    swapT = setTimeout(() => { apply(null); requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove("swap"))); }, 250);
+    return;
+  }
+  // between pages: one short fade
+  document.body.classList.add("swap"); swapT = setTimeout(() => { apply(p); requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove("swap"))); }, 240);
 }
-let booted = false, swapT = 0;
 function apply(p) {
-  document.body.classList.remove("hdr-off");
+  document.body.classList.remove("hdr-off"); curP = p || null;
   if (p) {
-    if (!home.hidden) homeY = scrollY;
     home.hidden = true; view.hidden = false; document.body.classList.add("viewing");
-    $$("video", bg).forEach((v) => v.pause());
+    $$("video", wheel).forEach((v) => v.pause());
     renderProject(p);
   } else {
     view.hidden = true; view.innerHTML = ""; home.hidden = false; document.body.classList.remove("viewing");
-    { const i = cueI; cueI = -1; cue(Math.max(0, i)); } vtMeasure();
+    W.cur = -1; W.drawn = null; vtMeasure();
     document.title = "Stefan Foster";
   }
   dispatchEvent(new Event("routed"));
@@ -417,11 +496,11 @@ addEventListener("keydown", (e) => { if (e.key === "Escape" && ctOn) ctClose(); 
 const crawler = new Crawler({
   holes: [$("#hole")], pads: [$("#pad")], eats: [$("#eat")], reduce: matchMedia("(prefers-reduced-motion: reduce)").matches,
   sfx: (k, a, b) => sound.critter(k, a, b),
-  sel: ".list a .t,.list a .n,.who,.nav a,.nav button,.brand,.slate span,.pj-h h1,.pj-h p,.pc,.gh h2,.nx b,.rh b",
-  letter: ".list a .n",
+  sel: ".wl b,.wl span,.wi.on,.who,.nav a,.nav button,.brand,.slate span,.pj-h h1,.pj-h p,.pc,.gh h2,.nx b,.rh b",
+  letter: ".wl .n",
   loose: ",.slate span",
   gentle: true,
-  anchors: () => { const out = []; $$(".list a .t,.pj-h h1,.pc").forEach((el) => { const q = el.getBoundingClientRect(); if (q.bottom < 0 || q.top > innerHeight || !q.width) return; out.push([q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]); }); return out; },
+  anchors: () => { const out = []; $$(".wi.on,.pj-h h1,.pc").forEach((el) => { const q = el.getBoundingClientRect(); if (q.bottom < 0 || q.top > innerHeight || !q.width) return; out.push([q.left, q.top], [q.right, q.top], [q.left, q.bottom], [q.right, q.bottom]); }); return out; },
 });
 { let ly = 0; view.addEventListener("scroll", () => { const dy = view.scrollTop - ly; ly = view.scrollTop; if (dy) crawler.shift(0, -dy); }, { passive: true }); }
 addEventListener("hashchange", () => { if (!touch) setTimeout(() => crawler.leap("bottom"), 60); });
