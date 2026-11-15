@@ -184,7 +184,26 @@ function justify() {
 }
 addEventListener("resize", () => { if (!view.hidden) justify(); else { const i = cueI; cueI = -1; cue(Math.max(0, i)); } });
 const tio = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("shown"); tio.unobserve(e.target); } }), { threshold: .12 });
+// previews: the films whose thumbnails are in the middle of the screen play a few silent seconds of themselves
+let pvIO = null; const pvIn = new Set();
+const pvRun = (el, on) => {
+  const pm = $(".pm", el); let v = $("video.pv", pm);
+  if (on) {
+    if (!v) { v = document.createElement("video"); v.className = "pv"; v.muted = true; v.loop = true; v.playsInline = true; v.preload = "auto"; v.src = el.dataset.pv;
+      v.addEventListener("playing", () => v.classList.add("in")); pm.insertBefore(v, $(".playtag", pm)); }
+    v.play().catch(() => {});
+  } else if (v) v.pause();
+};
+function previews(p) {
+  pvIO?.disconnect(); pvIn.clear();
+  $$(".pc:not(.still)", view).forEach((el) => { const it = p.pieces[+el.dataset.k]; if (it?.film && it.loop && !it.gif) el.dataset.pv = it.loop; });
+  pvIO = new IntersectionObserver((es) => es.forEach((e) => { e.isIntersecting ? pvIn.add(e.target) : pvIn.delete(e.target); pvRun(e.target, e.isIntersecting && !document.documentElement.classList.contains("playing")); }), { root: view, rootMargin: "-30% 0px -30% 0px" });
+  $$(".pc[data-pv]", view).forEach((el) => pvIO.observe(el));
+}
+// the theatre has the floor while it's open; previews pick up again when it closes
+new MutationObserver(() => { const on = document.documentElement.classList.contains("playing"); pvIn.forEach((el) => pvRun(el, !on)); }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 function wire(p) {
+  previews(p);
   $$(".tile", view).forEach((t) => tio.observe(t));
   $$(".pc", view).forEach((el) => el.addEventListener("click", () => { const it = p.pieces[+el.dataset.k]; if (!it) return; if (it.play) { location.href = it.play; return; } plOpen(p, it.k); }));
   // strips: the page scrolls on down as normal; arrows (or a sideways swipe) move along the strip
