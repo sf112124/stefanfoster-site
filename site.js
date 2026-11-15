@@ -69,7 +69,7 @@ const layers = LIST.map((p) => {
   d.innerHTML = p.cover?.v ? `<video muted loop playsinline preload="none" poster="${p.cover.i}" data-src="${p.cover.v}"></video>` : `<img src="${p.cover?.i || ""}" alt="" loading="lazy">`;
   bg.appendChild(d); return d;
 });
-list.innerHTML = LIST.map((p, i) => `<li><a href="${p.page ? p.page : "#" + p.slug}" data-i="${i}"><span class="n">${pad(i + 1)}</span><span class="t" data-vt>${esc(p.title)}</span></a></li>`).join("");
+list.innerHTML = LIST.map((p, i) => `<li><a href="${p.page ? p.page : "#" + p.slug}" data-i="${i}"><span class="n">${pad(i + 1)}</span><span class="t" data-vt>${esc(p.title)}</span><span class="k">${esc(p.client || "Personal")}</span></a></li>`).join("");
 let cueI = -1, cueV = null;
 function cue(i) {
   if (i === cueI) return; cueI = i;
