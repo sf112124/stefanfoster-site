@@ -63,11 +63,12 @@ body.viewing .to-idx{display:inline}
 #home{position:fixed;inset:0}
 /* the wheel */
 #home{touch-action:none}
-.wheel{position:absolute;inset:0;perspective:1500px;perspective-origin:50% 50%;overflow:hidden}
-.wi{position:absolute;left:50%;top:50%;width:var(--tw);height:var(--th);overflow:hidden;background:#0b0b0b;will-change:transform,opacity;backface-visibility:hidden;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+.wheel{position:absolute;inset:0;perspective:1400px;perspective-origin:50% 50%;overflow:hidden}
+.wi{position:absolute;left:50%;top:50%;width:var(--tw);height:var(--th);overflow:hidden;background:#0b0b0b;will-change:transform,opacity;opacity:var(--o,1);transition:filter var(--t) var(--ease);backface-visibility:hidden;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .wi img,.wi video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
 .wi video{opacity:0;transition:opacity .5s var(--ease)}
 .wi.on video.ready{opacity:1}
+.wi:not(.on):hover{opacity:calc(var(--o) + .3)}
 html:not(.dotc) .wi{cursor:pointer}
 .wheel.dragging,.wheel.dragging .wi{cursor:grabbing!important}
 /* its name, rolling over beside it */

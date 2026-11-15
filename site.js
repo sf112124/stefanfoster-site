@@ -73,27 +73,35 @@ if (!touch) {
   requestAnimationFrame(loop);
 }
 
-// ---------- index: a wheel of thumbnails turning toward you. The one in the middle is lit and playing; a flick moves
-// one stop and it always settles dead centre ----------
+// ---------- index: a column of thumbnails. The one in the middle is big, lit and playing; the rest sit smaller above and
+// below, a gentle curve away from you. Scrolling follows your hand, then glides to the nearest one ----------
 const home = $("#home"), view = $("#view"), wheel = $("#wheel"), wlab = $("#wlab"), wrail = $("#wrail");
 wheel.innerHTML = WHEEL.map((p, i) => `<a class="wi" href="${hrefOf(p)}" data-i="${i}" draggable="false"><img src="${p.cover.i}" alt="${esc(p.title)}" draggable="false">${p.cover.v ? `<video muted loop playsinline preload="none" data-src="${p.cover.v}"></video>` : ""}</a>`).join("");
 wrail.innerHTML = WHEEL.map((p, i) => `<button type="button" data-i="${i}" aria-label="${esc(p.title)}"><i></i></button>`).join("");
 const wis = $$(".wi", wheel), rails = $$("button", wrail);
-const W = { pos: 0, vel: 0, target: 0, cur: -1, tw: 0, th: 0, R: 0, step: 28 * Math.PI / 180, drawn: null };
+const labelOf = (p) => p.slug === "ai-experiments" ? "Films, commissions and toys" : p.client && p.client !== "Personal" ? p.client : p.kind || "";
+const W = { pos: 0, target: 0, cur: -1, tw: 0, th: 0, sm: .42, gap: 14, drawn: null };
 function wheelSize() {
-  W.tw = innerWidth <= 820 ? innerWidth - 40 : Math.min(innerWidth * .5, innerHeight * .56 * 16 / 9); W.th = W.tw * 9 / 16;
-  W.R = W.th * 1.07 / (2 * Math.sin(W.step / 2));
+  const phone = innerWidth <= 820;
+  W.th = phone ? Math.min(innerHeight * .26, (innerWidth - 40) * 9 / 16) : Math.min(innerHeight * .21, innerWidth * .3 * 9 / 16); W.tw = W.th * 16 / 9;
+  W.sm = phone ? .5 : .42; W.gap = phone ? 12 : 14;
   home.style.setProperty("--tw", W.tw.toFixed(1) + "px"); home.style.setProperty("--th", W.th.toFixed(1) + "px"); W.drawn = null;
 }
+// how far from the middle a thumbnail sits, d stops away: the big one, then a run of small ones
+const near = () => W.th / 2 + W.gap + W.th * W.sm / 2, pitch = () => W.th * W.sm + W.gap;
+const offset = (d) => { const ad = Math.abs(d); return Math.sign(d) * (ad <= 1 ? near() * ad : near() + pitch() * (ad - 1)); };
 function wheelDraw() {
   if (W.drawn === W.pos) return; W.drawn = W.pos;
+  const vis = innerHeight / 2 / pitch() + 1.5;
   wis.forEach((el, i) => {
     const d = i - W.pos, ad = Math.abs(d);
-    if (ad > 3.4) { el.style.visibility = "hidden"; return; }
-    const a = d * W.step, y = W.R * Math.sin(a), z = W.R * (Math.cos(a) - 1);
+    if (ad > vis) { el.style.visibility = "hidden"; return; }
+    const k = Math.min(1, ad), s = 1 - (1 - W.sm) * (k * k * (3 - 2 * k)), y = offset(d);
+    // a slight curve: things tip away and drop back the further they are from the middle
+    const tilt = Math.max(-26, Math.min(26, -d * 5)), z = -Math.min(ad, 6) * 22;
     el.style.visibility = "";
-    el.style.transform = `translate3d(-50%, calc(-50% + ${y.toFixed(1)}px), ${z.toFixed(1)}px) rotateX(${(-a * 180 / Math.PI).toFixed(2)}deg)`;
-    el.style.opacity = (ad < 1 ? 1 - ad * .7 : Math.max(0, .3 - (ad - 1) * .13)).toFixed(3);
+    el.style.transform = `translate3d(-50%, calc(-50% + ${y.toFixed(1)}px), ${z.toFixed(1)}px) rotateX(${tilt.toFixed(2)}deg) scale(${s.toFixed(4)})`;
+    el.style.setProperty("--o", (ad < 1 ? 1 - ad * .62 : Math.max(0, .38 - Math.max(0, ad - 3) * .14)).toFixed(3));
     el.style.zIndex = 100 - Math.round(ad * 10);
   });
 }
@@ -104,18 +112,21 @@ function wheelCue(c) {
     if (i === c) { if (!v.src) { v.src = v.dataset.src; v.addEventListener("playing", () => v.classList.add("ready"), { once: true }); } v.play().catch(() => {}); } else v.pause(); });
   rails.forEach((b, i) => b.classList.toggle("on", i === c));
   const old = [...wlab.children], el = document.createElement("div"); el.className = "wl " + (dir ? "from-b" : "from-t");
-  el.innerHTML = `<span class="n">${pad(c + 1)} / ${pad(N)}</span><b>${esc(p.title)}</b><span>${esc(p.client && p.client !== "Personal" ? p.client : p.kind || "")}</span>`;
+  el.innerHTML = `<span class="n">${pad(c + 1)} / ${pad(N)}</span><b>${esc(p.title)}</b><span>${esc(labelOf(p))}</span>`;
   wlab.appendChild(el); void el.offsetWidth; el.classList.remove("from-b", "from-t");
   old.forEach((o) => { o.classList.add(dir ? "to-t" : "to-b"); setTimeout(() => o.remove(), 450); });
   sound.tick?.(.5, .015);
 }
+let inputT = 0, held = false;
+const clampT = (t) => Math.max(-.35, Math.min(N - 1 + .35, t));
 { let last = performance.now();
   const tick = (now) => {
     const dt = Math.min(.05, (now - last) / 1000); last = now;
     if (!home.hidden) {
-      // a spring with a touch of give: quick to follow, soft to land
-      W.vel += ((W.target - W.pos) * 190 - W.vel * 23) * dt; W.pos += W.vel * dt;
-      if (Math.abs(W.target - W.pos) < .0004 && Math.abs(W.vel) < .002) { W.pos = W.target; W.vel = 0; }
+      // once your hand stops, it glides to the nearest one
+      if (!held && now - inputT > 90) W.target = Math.max(0, Math.min(N - 1, Math.round(W.target)));
+      W.pos += (W.target - W.pos) * (1 - Math.exp(-dt * (held ? 30 : 11)));
+      if (Math.abs(W.target - W.pos) < .0005) W.pos = W.target;
       wheelDraw();
       const c = Math.max(0, Math.min(N - 1, Math.round(W.pos))); if (c !== W.cur) wheelCue(c);
     }
@@ -123,42 +134,40 @@ function wheelCue(c) {
   };
   wheelSize(); requestAnimationFrame(tick); addEventListener("resize", wheelSize); }
 
-// turning it: wheel, trackpad, drag, swipe, arrow keys, or click one above or below to bring it round
-let gStart = 0, gT = 0, snapT = 0, drag = null, dragged = 0;
 const idle = () => !ctOn && !document.documentElement.matches(".flying,.devouring,.playing");
-const lim = (t) => Math.max(-.3, Math.min(N - 1 + .3, Math.max(gStart - 3, Math.min(gStart + 3, t))));
-function wheelSnap() {
-  let t = Math.round(W.target);
-  // even a small flick moves one stop, never back to where it was
-  if (t === gStart && Math.abs(W.target - gStart) > .1) t = gStart + Math.sign(W.target - gStart);
-  W.target = Math.max(0, Math.min(N - 1, t));
-}
-const wheelGo = (i) => { gStart = W.target = Math.max(0, Math.min(N - 1, i)); };
+const wheelGo = (i) => { W.target = Math.max(0, Math.min(N - 1, i)); inputT = 0; };
+// scrolling: a trackpad moves it with your fingers, one stop for every thumbnail's height; a mouse wheel's click moves one stop
+let lastNotch = 0;
 home.addEventListener("wheel", (e) => {
   e.preventDefault(); if (!idle()) return;
-  const now = performance.now(); if (now - gT > 160) gStart = Math.round(W.target); gT = now;
-  const d = (Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * (e.deltaMode === 1 ? 32 : 1);
-  if (Math.abs(d) < 3) return;   // the long tail of a trackpad flick doesn't hold it between stops
-  W.target = lim(W.target + d / 420);
-  clearTimeout(snapT); snapT = setTimeout(wheelSnap, 110);
+  const d = (Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1), now = performance.now();
+  const notch = e.deltaMode !== 0 || (Math.abs(d) >= 50 && Number.isInteger(d) && now - inputT > 60);
+  if (notch) { if (now - lastNotch > 60) { W.target = Math.max(0, Math.min(N - 1, Math.round(W.target) + Math.sign(d))); lastNotch = now; } inputT = 0; return; }
+  W.target = clampT(W.target + d / (pitch() * 1.6)); inputT = now;
 }, { passive: false });
-wheel.addEventListener("pointerdown", (e) => { if (e.button || !idle()) return; gStart = Math.round(W.target); drag = { id: e.pointerId, y: e.clientY, t0: W.target, moved: 0, ly: e.clientY, lt: performance.now(), v: 0 }; });
+// dragging: it stays under your finger, and a throw carries on in proportion to how hard you threw it
+let drag = null, dragged = 0;
+wheel.addEventListener("pointerdown", (e) => { if (e.button || !idle()) return; drag = { id: e.pointerId, y: e.clientY, t0: W.target, moved: 0, hist: [[performance.now(), e.clientY]] }; });
 addEventListener("pointermove", (e) => {
   if (!drag || e.pointerId !== drag.id) return; const dy = e.clientY - drag.y; drag.moved = Math.max(drag.moved, Math.abs(dy));
-  if (drag.moved < 6) return; wheel.classList.add("dragging");
-  const now = performance.now(); drag.v = (e.clientY - drag.ly) / Math.max(1, now - drag.lt); drag.ly = e.clientY; drag.lt = now;
-  W.target = lim(drag.t0 - dy / (W.th * 1.05));
+  if (drag.moved < 6) return; held = true; wheel.classList.add("dragging");
+  drag.hist.push([performance.now(), e.clientY]); if (drag.hist.length > 6) drag.hist.shift();
+  W.target = clampT(drag.t0 - dy / pitch()); inputT = performance.now();
 });
 const dragEnd = (e) => {
-  if (!drag || e.pointerId !== drag.id) return; const d = drag; drag = null; wheel.classList.remove("dragging");
+  if (!drag || e.pointerId !== drag.id) return; const d = drag; drag = null; held = false; wheel.classList.remove("dragging");
   if (d.moved < 6) return; dragged = performance.now();
-  W.target = lim(W.target - d.v * 170 / (W.th * 1.05)); wheelSnap();   // a throw carries on a little, then lands
+  const [t0, y0] = d.hist[0], [t1, y1] = d.hist[d.hist.length - 1], v = (y1 - y0) / Math.max(16, t1 - t0);
+  W.target = Math.max(0, Math.min(N - 1, Math.round(W.target - v * 220 / pitch()))); inputT = 0;
 };
 addEventListener("pointerup", dragEnd); addEventListener("pointercancel", dragEnd);
+// clicking: the one in the middle opens; any other glides to the middle and opens
 wheel.addEventListener("click", (e) => {
   const a = e.target.closest(".wi"); if (!a) return; e.preventDefault();
   if (performance.now() - dragged < 300 || !idle()) return;
-  const i = +a.dataset.i; if (i !== Math.round(W.target)) wheelGo(i); else wheelOpen(i);
+  const i = +a.dataset.i;
+  if (i === W.cur && Math.abs(W.pos - i) < .05) { wheelOpen(i); return; }
+  wheelGo(i); const t = Math.min(650, 260 + Math.abs(i - W.pos) * 70); setTimeout(() => { if (W.target === i && !home.hidden) wheelOpen(i); }, t);
 });
 wheel.addEventListener("dragstart", (e) => e.preventDefault());
 wrail.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) wheelGo(+b.dataset.i); });
@@ -439,7 +448,7 @@ function route() {
   if (h === "about") { history.replaceState(null, "", location.pathname); ctOpen(); return; }
   if (!pl.hidden) plHide();
   clearTimeout(swapT);
-  if (!booted) { booted = true; if (p) wheelGo(WHEEL.indexOf(p)), (W.pos = W.target); apply(p); return; }
+  if (!booted) { booted = true; if (p) { wheelGo(WHEEL.indexOf(p)); W.pos = W.target; } apply(p); return; }
   // out of the wheel: the thumbnail grows into the page (onto the film itself, for a film)
   if (zoomEl && p) {
     const z = zoomEl; zoomEl = null; document.body.classList.add("swap");
@@ -455,7 +464,7 @@ function route() {
   if (!p && from && i >= 0 && !view.hidden) {
     const f = from.solo ? $(".scr.one .pc .pm", view)?.getBoundingClientRect() : null, seen = f && f.bottom > 80 && f.top < innerHeight - 80;
     const z = zoomMake(from, seen ? f : fullRect()); if (!seen) z.classList.add("soft");
-    document.body.classList.add("swap"); wheelGo(i); W.pos = i; W.vel = 0;
+    document.body.classList.add("swap"); wheelGo(i); W.pos = i;
     zoomTo(z, centreRect()).then(() => zoomEnd(z));
     swapT = setTimeout(() => { apply(null); requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove("swap"))); }, 250);
     return;
