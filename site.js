@@ -320,30 +320,32 @@ if (!touch) {
 
   // ---------- the menu breathes like the old index: the names near the pointer swell, gradually, with no steps between
   // rows; letters lean away from the pointer and thicken as it passes ----------
-  const M = { rows: null, base: 14, box: null };
+  // everything moves by transform only, so nothing on the page has to lay out again while you move: light and quick
+  const M = { rows: null, box: null };
   const menuMeasure = () => {
     const rows = $$("a", list); if (home.hidden || !rows.length) return;
-    rows.forEach((a) => { a.style.fontSize = ""; $$(".vl", a).forEach((l) => { l.style.transform = ""; l.style.fontSize = ""; }); });
-    M.base = parseFloat(getComputedStyle(rows[0]).fontSize) || 14;
+    rows.forEach((a) => { $(".t", a).style.transform = ""; $(".n", a).style.transform = ""; $(".k", a).style.transform = ""; $$(".vl", a).forEach((l) => (l.style.transform = "")); });
     const q = list.getBoundingClientRect(); M.box = { l: q.left, r: q.right, t: q.top, b: q.bottom }; M.cx = q.left + q.width / 2;
-    // where each letter sits at rest, measured from the menu's centre line (the menu stays centred as it swells)
-    M.rows = rows.map((a) => { const r = a.getBoundingClientRect(); return { a, y: r.top + r.height / 2, h: r.height, g: 0, ls: $$(".vl", a).map((l) => { const b = l.getBoundingClientRect(); return { l, k: 0, rx: b.left + b.width / 2 - M.cx }; }) }; });
+    M.rows = rows.map((a) => { const r = a.getBoundingClientRect(), t = $(".t", a); return { a, t, n: $(".n", a), k: $(".k", a), y: r.top + r.height / 2, h: r.height, w: t.offsetWidth, g: 0,
+      ls: $$(".vl", a).map((l) => { const b = l.getBoundingClientRect(); return { l, k: 0, rx: b.left + b.width / 2 - M.cx }; }) }; });
   };
   document.fonts.ready.then(() => setTimeout(menuMeasure, 50)); addEventListener("resize", () => setTimeout(menuMeasure, 50));
   addEventListener("routed", () => setTimeout(menuMeasure, 30));
-  const menuLoop = () => {
+  let mlast = performance.now();
+  const menuLoop = (now) => {
+    const dt = Math.min(.05, (now - mlast) / 1000); mlast = now;
     if (!home.hidden && M.rows) {
-      const B = M.box, near = mx > B.l - 180 && mx < B.r + 180 && my > B.t - 90 && my < B.b + 90;
-      // read everything first, then write, so the page lays out once a frame
-      M.rows.forEach((R, i) => {
-        const d = (my - R.y) / R.h, t = near ? Math.exp(-d * d / .6) : 0; R.g += (t - R.g) * .13;
-        const fs = M.base * (1 + .32 * R.g); if (Math.abs((R._fs || 0) - fs) > .02) { R._fs = fs; R.a.style.fontSize = fs.toFixed(2) + "px"; }
+      const B = M.box, near = mx > B.l - 180 && mx < B.r + 180 && my > B.t - 90 && my < B.b + 90, ease = 1 - Math.exp(-dt * 16);
+      M.rows.forEach((R) => {
+        const d = (my - R.y) / R.h, t = near ? Math.exp(-d * d / .5) : 0; R.g += (t - R.g) * ease;
+        const s = 1 + .26 * R.g, push = R.w * (s - 1) / 2;
+        if (Math.abs((R.s || 1) - s) > .001) { R.s = s; R.t.style.transform = `scale(${s.toFixed(4)})`; R.n.style.transform = `translate(${(-push).toFixed(1)}px,-50%)`; R.k.style.transform = `translate(${push.toFixed(1)}px,-50%)`; }
         const wRow = Math.max(R.a.classList.contains("on") ? 440 : 300, 300 + 140 * R.g);
-        R.ls.forEach((L, j) => {
-          // letters swell where the pointer is, in place
-          const dx = M.cx + L.rx * (fs / M.base) - mx, f = Math.exp(-(dx * dx) / (80 * 80)) * R.g;
-          L.k += (f - L.k) * .12; const sz = 1 + .14 * L.k, w = Math.round(Math.min(560, wRow + 60 * L.k));
-          if (Math.abs((L.s || 1) - sz) > .002) { L.s = sz; L.l.style.fontSize = sz.toFixed(3) + "em"; }
+        R.ls.forEach((L) => {
+          // letters lift where the pointer is, in place
+          const dx = M.cx + L.rx * s - mx, f = Math.exp(-(dx * dx) / (70 * 70)) * R.g;
+          L.k += (f - L.k) * ease; const sz = 1 + .1 * L.k, w = Math.round(Math.min(560, wRow + 60 * L.k));
+          if (Math.abs((L.s || 1) - sz) > .002) { L.s = sz; L.l.style.transform = `scale(${sz.toFixed(3)})`; }
           if (L._w !== w) { L._w = w; L.l.style.fontVariationSettings = `"wght" ${w}`; }
         });
       });
