@@ -51,7 +51,8 @@ body.hdr-off .top{transform:translateY(-100%);opacity:0}
 .brand{display:block;position:relative;margin:-6px 0 -6px -6px}
 .brand video{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .brand canvas{width:60px;display:block;transform-origin:30% 50%;will-change:transform;filter:invert(1) grayscale(1) contrast(1.1)}
-.who{line-height:1.35}
+.who{line-height:1.35;text-align:left;pointer-events:auto;transition:opacity var(--t) var(--ease)}
+.who:hover{opacity:.55}
 body.viewing .who{visibility:hidden}
 .where{position:absolute;left:50%;top:calc(var(--gut) + 3px + env(safe-area-inset-top,0px));translate:-50% 0;display:flex;gap:var(--s2);white-space:nowrap;opacity:0;transition:opacity var(--t) var(--ease);font-variant-numeric:tabular-nums}
 body.viewing.past .where{opacity:1}

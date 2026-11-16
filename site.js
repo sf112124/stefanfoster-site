@@ -434,7 +434,7 @@ addEventListener("keydown", (e) => {
 const ct = $("#ct"); let ctOn = false;
 function ctOpen() { ct.hidden = false; requestAnimationFrame(() => ct.classList.add("on")); ctOn = true; }
 function ctClose() { ct.classList.remove("on"); ctOn = false; setTimeout(() => { if (!ctOn) ct.hidden = true; }, 350); }
-$("#ctBtn").onclick = ctOpen; $("#ctX").onclick = ctClose;
+$("#ctBtn").onclick = ctOpen; $("#whoBtn").onclick = ctOpen; $("#ctX").onclick = ctClose;
 ct.addEventListener("click", (e) => { if (e.target === ct || e.target.classList.contains("ct-in")) ctClose(); });
 addEventListener("keydown", (e) => { if (e.key === "Escape" && ctOn) ctClose(); });
 
