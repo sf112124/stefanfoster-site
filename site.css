@@ -77,7 +77,7 @@ body.viewing .to-idx{display:inline}
 .list a:hover .k{opacity:1}
 .list a .t{display:inline-block;transform-origin:50% 55%;will-change:transform}
 .list a .vl{transform-origin:50% 100%}
-.list a .t{font:inherit;letter-spacing:.24em;margin-right:-.24em;text-transform:uppercase;font-variation-settings:"wght" 420}
+.list a .t{font:inherit;letter-spacing:.17em;margin-right:-.17em;text-transform:uppercase;font-variation-settings:"wght" 420}
 .list a.on .t{font-variation-settings:"wght" 560}
 .vw{display:inline-block;white-space:nowrap}
 .vl{display:inline-block}
