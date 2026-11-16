@@ -363,11 +363,11 @@ if (!touch) {
         const part = (gs, i) => gs.slice(0, i).reduce((t, x) => t + x, 0) * 13 - gs.reduce((t, x) => t + x, 0) * 13 / 2 + (R.k ? 0 : 0);
         const gs = M.rows.map((x) => (x.k ? x.g : x.g * .4)), off = part(gs, M.rows.indexOf(R)) + gs[M.rows.indexOf(R)] * 13 / 2 - 13 * R.g / 2;
         if (Math.abs((R.o || 0) - off) > .05) { R.o = off; R.a.style.transform = `translateY(${off.toFixed(1)}px)`; }
-        const wRow = Math.max(R.a.classList.contains("on") ? 440 : 300, 300 + 140 * R.g);
+        const wRow = Math.max(R.a.classList.contains("on") ? 560 : 420, 420 + 140 * R.g);
         R.ls.forEach((L) => {
           // letters lift where the pointer is, in place
           const dx = M.cx + L.rx * s - mx, f = Math.exp(-(dx * dx) / (70 * 70)) * R.g;
-          L.k += (f - L.k) * ease; const sz = 1 + .1 * L.k, w = Math.round(Math.min(560, wRow + 60 * L.k));
+          L.k += (f - L.k) * ease; const sz = 1 + .1 * L.k, w = Math.round(Math.min(640, wRow + 60 * L.k));
           if (Math.abs((L.s || 1) - sz) > .002) { L.s = sz; L.l.style.transform = `scale(${sz.toFixed(3)})`; }
           if (L._w !== w) { L._w = w; L.l.style.fontVariationSettings = `"wght" ${w}`; }
         });
