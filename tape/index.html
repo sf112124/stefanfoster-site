@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Stefan Foster — The Tape Room</title>
+<meta name="theme-color" content="#050605">
+<script type="importmap">
+{ "imports": {
+  "three": "../vendor/three/three.module.js",
+  "three/addons/": "../vendor/three/addons/"
+} }
+</script>
+<style>
+@font-face{font-family:"Geist";src:url(../vendor/fonts/geist.woff2) format("woff2");font-weight:100 900;font-display:swap}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:#050605;color:#fff;overflow:hidden}
+body{font:400 11px/1.4 "Geist",ui-sans-serif,system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;-webkit-font-smoothing:antialiased}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;background:none;border:0;padding:0;cursor:pointer}
+[hidden]{display:none!important}
+body.nofilms .film{display:none!important}
+.ui{position:fixed;z-index:2}
+/* grain + vignette over everything: placeholder for a real post-processing pass */
+.grain{position:fixed;inset:-50%;z-index:1;pointer-events:none;opacity:.07;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");animation:g .4s steps(3) infinite}
+.vig{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 50% 55%,transparent 45%,rgba(0,0,0,.75) 100%)}
+@keyframes g{0%{transform:translate(0,0)}33%{transform:translate(-4%,3%)}66%{transform:translate(3%,-2%)}}
+.top{top:22px;left:24px;right:24px;display:flex;justify-content:space-between;pointer-events:none}
+.top>*{pointer-events:auto}
+.top b{font-weight:560}
+.top .r{opacity:.55}
+.foot{bottom:22px;left:24px;right:24px;display:flex;justify-content:space-between;opacity:.5;pointer-events:none}
+#hint{position:fixed;z-index:3;pointer-events:none;transform:translate(16px,14px);display:grid;gap:3px;padding:8px 10px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
+#hint b{font-weight:560}
+#hint span{opacity:.6;font-size:10px}
+/* the player: thin strip under the TV once a tape is in */
+#player{bottom:22px;left:24px;right:24px;display:flex;align-items:end;justify-content:space-between;gap:20px}
+#now{display:grid;gap:4px}
+#now b{font-weight:560;font-size:13px}
+#now span{opacity:.6;text-transform:none;letter-spacing:.02em;font-size:12px}
+.ctl{display:flex;gap:18px;align-items:center;font-variant-numeric:tabular-nums}
+.ctl button,.ctl a{opacity:.7}
+.ctl button:hover,.ctl a:hover{opacity:1}
+#tc{opacity:.5}
+#desk{bottom:22px;left:24px;right:24px;display:flex;justify-content:space-between;opacity:.75}
+@media (max-width:700px){.ctl{gap:12px;flex-wrap:wrap;justify-content:end}#player{flex-direction:column;align-items:start}.foot .k{display:none}}
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div class="grain"></div><div class="vig"></div>
+
+<header class="ui top">
+  <a href="/#about"><b>Stefan Foster</b></a>
+  <a class="r" href="/">Exit to index</a>
+</header>
+
+<div id="room-ui" class="ui foot">
+  <span>Pick a tape</span>
+  <span class="k">Or use the computer</span>
+</div>
+
+<div id="hint" hidden></div>
+
+<div id="player" class="ui" hidden>
+  <div id="now"></div>
+  <div class="ctl">
+    <!-- film controls, hidden while PLAY_FILMS is false in main.js -->
+    <span class="film" id="tc">00:00 / 00:00</span>
+    <button class="film" id="prev">Prev</button>
+    <button class="film" id="pp">Pause</button>
+    <button class="film" id="next">Next</button>
+    <button class="film" id="snd">Sound on</button>
+    <button class="film" id="full">Full screen</button>
+    <a id="page" href="/">Project</a>
+    <button id="eject">Eject</button>
+  </div>
+</div>
+
+<div id="desk" class="ui" hidden>
+  <span>Click a file to open it · ↑ ↓ Enter</span>
+  <button id="desk-back">Back</button>
+</div>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>
